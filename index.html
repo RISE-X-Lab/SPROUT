@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SPROUT · Scaling Agentic Reinforcement Learning for Long-Horizon Software Engineering</title>
+<meta name="description" content="SPROUT checkpoints the sandbox filesystem and the agent context after every turn, resumes a failed rollout from the turn before its mistake, and trains the policy on the branches.">
+<meta property="og:title" content="SPROUT · Scaling Agentic RL for Long-Horizon Software Engineering">
+<meta property="og:description" content="Checkpoint every turn. Branch from the turn before the mistake. Train on the branches.">
+<link rel="icon" type="image/svg+xml" href="static/logo.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="static/css/sprout.css">
+<script src="static/js/episode.js"></script>
+<script src="static/js/charts.js"></script>
+</head>
+<body>
+
+<nav class="top">
+  <div class="wrap">
+    <a class="brand" href="#top"><img src="static/logo.svg" alt="">SPROUT</a>
+    <div class="links">
+      <a href="#why">Why</a><a href="#method">Method</a><a href="#results">Results</a><a href="#scaling">Depth vs breadth</a><a href="#bibtex">Cite</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <div class="grid">
+      <div>
+        <div class="kicker"><span>SnaPshot-based RollOUT</span></div>
+        <h1><em>SPROUT</em>: Scaling Agentic Reinforcement Learning for Long-Horizon Software Engineering</h1>
+        <p class="sub">SPROUT checkpoints the environment and the agent context after every turn. When a rollout fails, the same policy reads the failure, picks the turn before the mistake, and continues from there.</p>
+        <div class="authors">
+          <span>Mengyang Liu<sup>1,2</sup></span><span>Weiming Wang<sup>1</sup></span><span>Haixin Nan<sup>3</sup></span><span>Yu Wu<sup>1</sup></span><span>Peize Li<sup>4</sup></span><span>Shihong Huang<sup>1</sup></span><span>Xuning He<sup>1</sup></span><span>Xue Jiang<sup>5</sup></span><span>Yihong Dong<sup>1,✉</sup></span>
+        </div>
+        <div class="affils">
+          <span><sup>1</sup>Shanghai Jiao Tong University</span><span><sup>2</sup>Amazon</span><span><sup>3</sup>Nanjing University</span><span><sup>4</sup>King's College London</span><span><sup>5</sup>Peking University</span>
+        </div>
+        <div class="buttons">
+          <a class="btn primary" href="https://github.com/RISE-X-Lab/SPROUT"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .5A12 12 0 0 0 0 12.6c0 5.3 3.4 9.9 8.2 11.5.6.1.8-.3.8-.6v-2.1c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1.1-.8.1-.8.1-.8 1.2.1 1.8 1.3 1.8 1.3 1.1 1.9 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.4-5.5-6a4.7 4.7 0 0 1 1.2-3.3 4.4 4.4 0 0 1 .1-3.2s1-.3 3.3 1.3a11.3 11.3 0 0 1 6 0c2.3-1.6 3.3-1.3 3.3-1.3a4.4 4.4 0 0 1 .1 3.2 4.7 4.7 0 0 1 1.2 3.3c0 4.6-2.8 5.7-5.5 6 .4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 24 12.6 12 12 0 0 0 12 .5z"/></svg>Code</a>
+          <span class="btn soon" title="The paper is being prepared for arXiv"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h8l6 6v14H6zm7 1.5V9h5.5"/></svg>Paper · soon</span>
+          <a class="btn" href="#bibtex"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14v18l-7-4-7 4z"/></svg>BibTeX</a>
+        </div>
+      </div>
+      <aside class="note">
+        <img class="logo" src="static/logo.svg" alt="">
+        <h3>In one breath</h3>
+        <ol>
+          <li><span class="ic" style="background: var(--sun-2)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--sun-ink)" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 4v6h8V4M8 20v-5h8v5"/></svg></span><div><b>Checkpoint every turn</b>an environment snapshot paired with the agent context, <span class="stat">about 0.1 s</span> per turn in the released code</div></li>
+          <li><span class="ic" style="background: var(--leaf-2)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><path d="M4 20V4M4 14c6 0 8-4 16-4M20 10l-3-3M20 10l-3 3"/></svg></span><div><b>Branch from the turn before the mistake</b>beats four independent attempts on every model with <span class="stat">32–52%</span> of their tokens</div></li>
+          <li><span class="ic" style="background: var(--sky-2)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--sky)" stroke-width="2"><path d="M4 18l5-6 4 3 7-9"/><path d="M15 6h5v5"/></svg></span><div><b>Train on the branches</b>Qwen3.8-27B gains <span class="stat">+13.9 points</span> over GRPO on three benchmarks, at 39.5% less time per step</div></li>
+        </ol>
+      </aside>
+    </div>
+
+    <div class="episode" id="episode">
+      <div class="ep-head">
+        <div>
+          <h2>One round of SPROUT</h2>
+          <p class="sub">An illustrative episode. Press play or step through; hover over anything for what it is.</p>
+        </div>
+        <div class="ep-ctl">
+          <button class="ep-btn" type="button" data-act="prev" aria-label="Previous step">‹</button>
+          <button class="ep-btn primary" type="button" data-act="play">▶ Play</button>
+          <button class="ep-btn" type="button" data-act="next" aria-label="Next step">›</button>
+        </div>
+      </div>
+      <div class="ep-body">
+        <ol class="steps"></ol>
+        <div class="ep-canvas">
+          <div class="ep-scroll"><svg role="img" aria-label="One SPROUT round: the policy runs six turns, each followed by a checkpoint; the verifier fails the attempt; the same policy as analyst names turn 4 and as reviewer writes a starting turn at checkpoint 3; a branch restored from checkpoint 3 passes; root and branch form a training group."></svg></div>
+          <div class="legend"><span><i class="sq" style="background: var(--sun); border: 1px solid var(--soil)"></i>Checkpoint = environment snapshot + agent context</span><span><i style="background: var(--soil-2)"></i>Root rollout</span><span><i style="background: var(--green-2)"></i>Branch</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section class="sec" id="why">
+  <div class="wrap cols">
+    <div class="num">01<small>Why</small></div>
+    <div>
+      <h2>One wrong turn zeroes the rollout. Restarting throws away the rest.</h2>
+      <p class="lead">A long-horizon attempt reads an unfamiliar codebase, installs dependencies, builds and runs tests, sometimes for hours. The verifier's reward is binary, so one bad decision anywhere makes it zero, and in group-relative RL a task whose attempts all fail contributes no gradient. The hardest tasks burn the most compute and teach the least.</p>
+      <div class="compare">
+        <div class="cmp bad">
+          <h3>Resample from scratch</h3>
+          <p>Every new attempt redoes the exploration and the setup, and may repeat the same mistake. Branching only inside the conversation does not help either: the files the agent edited, the packages it installed and the artifacts it built are gone.</p>
+          <span class="cost">Pass@4 = 4× the tokens for a few more solved tasks</span>
+        </div>
+        <div class="cmp good">
+          <h3>Branch from a checkpoint</h3>
+          <p>Keep the turns before the mistake. Restore the environment snapshot and the agent context to exactly that boundary, let the verifier's feedback decide where and how to continue, and spend new turns only on what was wrong.</p>
+          <span class="cost">SPROUT beats Pass@4 with 32–52% of its tokens</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sec alt" id="method">
+  <div class="wrap cols">
+    <div class="num">02<small>Method</small></div>
+    <div>
+      <h2>Two halves of a checkpoint, one policy in three roles, one group to train on.</h2>
+      <p class="lead">A checkpoint is a turn boundary with two halves: the environment snapshot after the turn's tool calls, and the agent context up to the same observation. Restoring both gives a continuation the exact state of its prefix, with nothing re-executed.</p>
+      <div class="mech">
+        <div class="m"><div class="k">i</div><h3>Restorable execution layer</h3><p>Each attempt runs in its own microVM. After every turn the environment's changed disk blocks are saved as an incremental snapshot layer, so a checkpoint grows with what the turn wrote, not with the size of the environment. Tool calls are synchronous shell commands with no background processes, so nothing persists only in memory and guest memory is never stored. Branches write to their own copy-on-write layer.</p></div>
+        <div class="m"><div class="k">ii</div><h3>Verifier-guided backtracking</h3><p>The actor also plays analyst and reviewer under role prompts; the roles share weights. The analyst reads a failed attempt with the verifier's diagnostics. The reviewer picks a parent attempt and a boundary and writes the starting turn that replaces the parent's turn there. Two rounds, 4 then 3 branches, stopping at the first pass.</p></div>
+        <div class="m"><div class="k">iii</div><h3>GRPO on branched rollouts</h3><p>Each task gets two roots and three children per root. When both roots fail, the children start with reviewer-written turns; otherwise they continue unguided from a chosen boundary. Successes are credited, shared prefixes are counted once, and the analysis never enters the learner's input, so the policy learns the corrective turn from its ordinary context.</p></div>
+      </div>
+      <h3 style="margin-top: 32px; font-size: 20px;">One policy, three prompts: who sees what</h3>
+      <div class="tbl">
+        <table class="roles">
+          <thead><tr><th>Role</th><th>Reads</th><th>Writes</th></tr></thead>
+          <tbody>
+            <tr><td><b>Actor</b></td><td>the task and its own history in the sandbox</td><td>a turn: reasoning, then shell calls</td></tr>
+            <tr><td><b>Analyst</b></td><td>one failed attempt, its patch and the verifier's diagnostics</td><td>why it failed, what is worth keeping, candidate boundaries</td></tr>
+            <tr><td><b>Reviewer</b></td><td>all analyses, the attempts' histories, earlier starting turns and their outcomes</td><td>for each branch: a parent, a boundary, and the starting turn in the actor's voice</td></tr>
+            <tr><td><b>Learner</b></td><td>the retained prefix, the starting turn and the continuation, never the analysis or the corrective direction</td><td>one GRPO step over roots and branches</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="cap">The three roles share weights; only the analyst and reviewer prompts carry verifier diagnostics. Boundaries lie between turns, never inside one: within a turn the actor has already committed to all of its calls.</p>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="results">
+  <div class="wrap cols">
+    <div class="num">03<small>Results</small></div>
+    <div>
+      <h2>Beats four attempts with the tokens of two.</h2>
+      <p class="lead">DeepSWE, Terminal-Bench 2.1 and SWE-bench Pro v2 Hard, all with mini-swe-agent and a single shell tool. Pass@1 is the mean of four independent passes; Pass@4 counts a task solved by any of them.</p>
+      <div class="headline">
+        <div><div class="v">98.2<small>%</small></div><div class="l">Kimi K3 on DeepSWE with SPROUT</div><div class="d">vs 92.0 Pass@4 · 72.3 Pass@1</div></div>
+        <div><div class="v">32–52<small>%</small></div><div class="l">of Pass@4's tokens</div><div class="d">while beating it on all five models</div></div>
+        <div><div class="v">+13.9</div><div class="l">points over GRPO after RL</div><div class="d">Qwen3.8-27B, mean of three benchmarks</div></div>
+      </div>
+      <div class="viz">
+        <div class="t">Resolve rate on DeepSWE</div>
+        <div class="s">Each row is a model; the green bar is SPROUT's gain over the strongest baseline. SPROUT runs one attempt plus up to two rounds of branches (4, then 3). Hover a row for tokens.</div>
+        <div class="legend" id="legend-deepswe" style="margin: 0 0 8px;"></div>
+        <svg id="chart-deepswe" role="img" aria-label="Resolve rate on DeepSWE per model for Pass@1, Pass@4, Shepherd and SPROUT"></svg>
+        <p class="fn">SPROUT beats Pass@4 on every model and Shepherd by 3.6–23.0 points, recovering 64.8–93.6% of the tasks a single attempt fails. The entropy-based selector needs token log-probabilities, so it runs only with Qwen3.8-27B (71.7%). The largest gain over Pass@4 is Qwen3.8-27B on Terminal-Bench 2.1: 66.3% → 89.9% with 61.3% fewer tokens.</p>
+      </div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Qwen3.8-27B</th><th>Pass@1</th><th>Pass@4</th><th>Entropy-based</th><th>Shepherd</th><th>SPROUT</th></tr></thead>
+          <tbody>
+            <tr><td>DeepSWE · resolve rate, %</td><td>37.2</td><td>71.7</td><td>71.7</td><td>67.3</td><td class="win">78.6</td></tr>
+            <tr><td class="dim">&nbsp;&nbsp;&nbsp;tokens, M</td><td class="dim">1,921</td><td class="dim">8,673</td><td class="dim">8,589</td><td class="dim">9,026</td><td class="dim">4,123</td></tr>
+            <tr><td>Terminal-Bench 2.1 · resolve rate, %</td><td>49.4</td><td>66.3</td><td>76.4</td><td>79.8</td><td class="win">89.9</td></tr>
+            <tr><td class="dim">&nbsp;&nbsp;&nbsp;tokens, M</td><td class="dim">27.7</td><td class="dim">319.9</td><td class="dim">112.8</td><td class="dim">103.9</td><td class="dim">123.7</td></tr>
+            <tr><td>SWE-bench Pro v2 Hard · resolve rate, %</td><td>62.7</td><td>88.2</td><td>90.2</td><td>78.4</td><td class="win">94.1</td></tr>
+            <tr><td class="dim">&nbsp;&nbsp;&nbsp;tokens, M</td><td class="dim">550.8</td><td class="dim">1,918.5</td><td class="dim">1,238.9</td><td class="dim">1,004.0</td><td class="dim">771.3</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="margin-top: 40px;">RL training</h3>
+      <p class="lead" style="font-size: 16px;">Qwen3.8-27B, full-parameter, on SWE-bench Rebench v2 Filtered (the top 2,115 tasks by golden-patch length). GRPO and SPROUT share the data and the configuration: 32 prompts × 8 rollouts per update, 128K context, no KL penalty, 8 NVIDIA B300.</p>
+      <div class="viz">
+        <div class="t">Resolve rate after training</div>
+        <div class="s">Official evaluation protocol of each benchmark. Hover a row for the gap over GRPO.</div>
+        <div class="legend" id="legend-rl" style="margin: 0 0 8px;"></div>
+        <svg id="chart-rl" role="img" aria-label="Resolve rate after RL training on three benchmarks for the base model, GRPO and SPROUT"></svg>
+      </div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Training</th><th>SWE-bench Pro v2 Hard</th><th>DeepSWE</th><th>Terminal-Bench 2.1</th><th>Hours per step</th></tr></thead>
+          <tbody>
+            <tr><td>Base (no RL)</td><td>62.7</td><td>37.2</td><td>49.4</td><td>–</td></tr>
+            <tr><td>GRPO</td><td>74.5</td><td>33.6</td><td>39.3</td><td>3.77</td></tr>
+            <tr class="ours"><td>SPROUT</td><td>84.3</td><td>40.7</td><td>64.0</td><td>2.28</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="cap" style="font-size: 15px; color: var(--ink-2);">GRPO helps on SWE-bench Pro v2 Hard, the benchmark closest to the training tasks, and hurts on the other two. SPROUT rollouts improve the base model on all three, by 9.8, 7.1 and 24.7 points over GRPO, and a training step takes 2.28 h instead of 3.77 h because branches reuse their prefixes.</p>
+
+    </div>
+  </div>
+</section>
+
+<section class="sec alt" id="scaling">
+  <div class="wrap cols">
+    <div class="num">04<small>Depth vs breadth</small></div>
+    <div>
+      <h2>More rounds beat more branches, and cost less.</h2>
+      <p class="lead">With the same budget of branches, more review rounds with fewer branches each resolve more tasks for fewer tokens, because each round starts from the previous round's failures and their diagnostics. Breadth alone saturates: 32 branches in one round barely improve on 4, though they still beat eight independent attempts with a third fewer tokens.</p>
+      <div class="viz">
+        <div class="t">Resolve rate against total tokens, GPT 5.6 Luna on DeepSWE</div>
+        <div class="s">Labels are rounds × branches per round. Every SPROUT configuration starts from the same baseline rollout, which is also Pass@1; tokens include the baseline and all actor, analyst and reviewer calls. Official verifier verdicts.</div>
+        <div class="legend" style="margin: 0 0 6px;"><span><i style="background: var(--green)"></i>k rounds × 1 branch</span><span><i style="background: var(--sky)"></i>1 round × k branches</span><span><i class="sq" style="background: #fff; border: 2px solid #8a9790"></i>independent sampling, Pass@k</span><span><i class="sq" style="background: #d98b4f"></i>8 branches split across rounds</span><span><i class="sq" style="background: #b5473b"></i>4 branches split across rounds</span><span>★ as reported: 2 rounds, 4 then 3</span></div>
+        <svg id="chart-scaling" role="img" aria-label="Resolve rate and tokens for 1x8, 2x4, 4x2 and 8x1, and for one round with 4, 8, 16 and 32 branches"></svg>
+        <p class="fn">Eight branches in one round: 76.1% for 0.75B tokens. The same eight over eight rounds: 92.0% for 0.53B, recovering 52 instead of 34 of the 61 tasks the baseline fails. Widening one round from 4 to 32 branches adds 3.5 points for 3.2× the tokens. Depth does add sequential dependencies between rounds; these runs measure the success–token trade-off, not latency.</p>
+      </div>
+      <h3 style="margin-top: 36px;">Why branching works</h3>
+      <div class="mech">
+        <div class="m"><div class="k">i</div><h3>Partial progress is worth keeping</h3><p>A trajectory passing 45 of 46 tests scores the same as one passing none, yet it has localized the problem to one test. Of 26 branch points in the SWE-bench Pro case study, 21 fall in the middle or final third of the parent's progress.</p></div>
+        <div class="m"><div class="k">ii</div><h3>The starting turn decides</h3><p>Four Ansible branches resume from the same checkpoint and only one passes 46 of 46: the one whose fix matches the caller's real constraints, which the verifier's error message exposed and the agent's own assumptions did not.</p></div>
+        <div class="m"><div class="k">iii</div><h3>Failed branches seed the next round</h3><p>On the Flipt ECR task, 4 baseline attempts, 7 BPO branches and 7 Shepherd branches all fail. SPROUT's first round fails 2 of 6 tests; the verifier names two undefined constants; the second round resumes from that branch and passes in ten more turns.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="bibtex">
+  <div class="wrap cols">
+    <div class="num">05<small>Cite</small></div>
+    <div>
+      <h2>BibTeX</h2>
+      <div class="bib">
+        <button class="copy" type="button">Copy</button>
+<pre class="code">@misc{liu2026sprout,
+  title={Scaling Agentic Reinforcement Learning for Long-Horizon Software Engineering},
+  author={Mengyang Liu and Weiming Wang and Haixin Nan and Yu Wu and Peize Li and Shihong Huang and Xuning He and Xue Jiang and Yihong Dong},
+  year={2026},
+  url={https://github.com/RISE-X-Lab/SPROUT},
+}</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot">
+    <div class="brandcol">
+      <img src="static/logo.svg" alt="">
+      <div><b>SPROUT</b><div class="muted" style="font-size: 13.5px; margin-top: 4px;">Snapshot-based rollouts for long-horizon coding agents.<br>RISE-X Lab, Shanghai Jiao Tong University.</div></div>
+    </div>
+    <div class="col"><h4>Built on</h4><ul>
+      <li><a href="https://github.com/SWE-agent/mini-swe-agent">mini-swe-agent</a></li>
+      <li><a href="https://github.com/dreamyang-liu/firecracker">Firecracker</a> microVMs via <a href="https://github.com/dreamyang-liu/AgentENV">AgentENV</a></li>
+      <li>rootless <a href="https://podman.io">podman</a> on btrfs</li>
+      <li>RL with <a href="https://github.com/radixark/miles">Miles</a></li>
+    </ul></div>
+    <div class="col"><h4>Benchmarks</h4><ul>
+      <li><a href="https://github.com/datacurve-ai/deep-swe">DeepSWE</a></li>
+      <li><a href="https://github.com/harbor-framework/terminal-bench-2-1">Terminal-Bench 2.1</a></li>
+      <li><a href="https://github.com/scaleapi/SWE-bench_Pro-os/tree/main/v2">SWE-bench Pro v2 Hard</a></li>
+      <li><a href="https://github.com/SWE-rebench/SWE-rebench-V2">SWE-rebench V2</a> (RL training)</li>
+    </ul></div>
+    <div class="col"><h4>Resources</h4><ul>
+      <li><a href="https://github.com/RISE-X-Lab/SPROUT">Code on GitHub</a></li>
+      <li><span class="muted">Paper · soon</span></li>
+      <li><a href="#bibtex">BibTeX</a></li>
+      <li><a href="https://github.com/RISE-X-Lab/SPROUT/blob/main/LICENSE">MIT license</a></li>
+    </ul></div>
+  </div>
+</footer>
+
+</body>
+</html>
