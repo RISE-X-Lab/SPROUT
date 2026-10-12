@@ -1,0 +1,38 @@
+# Harbor runs TB2.1 / HARD-51 trials; harbor_plugin/ plugs Sprout in through
+# BaseEnvironment and BaseAgent. These are the surfaces those plugins and
+# methods.evaluate call, pinned to the version they were validated against.
+name: harbor
+upstream:
+  package: harbor
+  verified_versions:
+    sdk: "0.22.0"
+  exact_version: true
+python_api:
+  module: harbor.trial.trial
+  exports: [Trial]
+classes:
+  - module: harbor.trial.trial
+    cls: Trial
+    methods: [create, run]
+  - module: harbor.environments.base
+    cls: BaseEnvironment
+    methods: [start, stop, exec, upload_file, upload_dir, download_file, download_dir,
+              _apply_network_policy, type, capabilities, resource_capabilities]
+  - module: harbor.agents.base
+    cls: BaseAgent
+    methods: [name, version, setup, run]
+  - module: harbor.models.trial.config
+    cls: TrialConfig
+    methods: [model_validate]
+  - module: harbor.models.task.task
+    cls: Task
+  - module: harbor.models.agent.context
+    cls: AgentContext
+  - module: harbor.environments.capabilities
+    cls: EnvironmentCapabilities
+    fields: [disable_internet, dynamic_network_policy]
+  # Harbor's task model ignores unknown keys, so these fields are the only static
+  # guard that the separate-verifier flow still reads what task.toml declares.
+  - module: harbor.models.task.config
+    cls: VerifierConfig
+    fields: [environment_mode, environment, collect]

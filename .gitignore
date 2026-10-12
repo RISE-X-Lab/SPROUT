@@ -1,0 +1,50 @@
+# Build artifacts
+/target/
+Cargo.lock
+*.whl
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.claude
+.pytest_cache
+# OS
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+*.log
+
+# Generated man pages (runtime)
+/man/
+runtime/sprout-runtime
+k8s-scaffold/gateway/k8s-gateway
+__pycache__/
+results/*
+
+# Run artefacts: journals, resource ledger, extracted answers.
+runs/
+
+# Local credentials and experiment environments
+.env
+.env.*
+.venv*/
+*.pem
+*.key
+
+# Paper sources (ICLR submission), kept out of the code repository
+/SPROUT_ICLR/
+/SPROUT_ICLR.zip
+
+# Regenerable paper figures (.claude/skills/paper-figures writes here)
+figures/
+
+# Docs images the README does not show; docs/gen_*.py regenerate them
+/docs/**/*.svg
+/docs/**/*.pdf
+/docs/**/*.png
+!/docs/architecture.svg
+!/docs/assets/logo.svg
+!/docs/assets/logo-dark.svg

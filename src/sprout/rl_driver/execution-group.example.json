@@ -1,0 +1,35 @@
+{
+  "rollout_job_id": "experiment-1-group-0",
+  "prompt_group_id": "task-0",
+  "context": {"experiment": "experiment-1", "training_step": 0},
+  "samples": [
+    {
+      "sample_slot_id": "sample-0",
+      "run": {
+        "kind": "rollout",
+        "profile": "mini",
+        "spec": {
+          "prompt": "Inspect the repository and implement the requested fix.",
+          "slot": "mini-swe-agent",
+          "model": "YOUR_MODEL",
+          "sandbox_image": "YOUR_PREPARED_IMAGE_OR_SNAPSHOT",
+          "timeout_s": 900
+        }
+      }
+    },
+    {
+      "sample_slot_id": "sample-1",
+      "run": {
+        "kind": "rollout",
+        "profile": "mini",
+        "spec": {
+          "prompt": "Inspect the repository and implement the requested fix.",
+          "slot": "mini-swe-agent",
+          "model": "YOUR_MODEL",
+          "sandbox_image": "YOUR_PREPARED_IMAGE_OR_SNAPSHOT",
+          "timeout_s": 900
+        }
+      }
+    }
+  ]
+}

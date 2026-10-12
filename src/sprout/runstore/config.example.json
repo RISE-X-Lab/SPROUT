@@ -1,0 +1,98 @@
+{
+  "artifact_root": "/home/ubuntu/sprout-runstore-data",
+  "profiles": {
+    "mini": {
+      "python": "/home/ubuntu/projects/sprout/.venv/bin/python",
+      "run_defaults": {
+        "slot": "mini-swe-agent",
+        "runtime_bin": "/home/ubuntu/projects/sprout/runtime/sprout-runtime",
+        "sandbox_resources": {
+          "cpu": 2,
+          "memory_mb": 12288
+        },
+        "backend": {
+          "backend": "podman",
+          "podman": {
+            "store": "/home/ubuntu/sprout-btrfs",
+            "runtime_bin": "/home/ubuntu/projects/sprout/runtime/sprout-runtime",
+            "allow_internet": false
+          }
+        }
+      },
+      "worker_env": {
+        "SPROUT_MODEL_API_KEY": {
+          "$env": "SPROUT_MODEL_API_KEY"
+        }
+      }
+    },
+    "grade": {
+      "python": "/home/ubuntu/projects/sprout/.venv/bin/python",
+      "grade_defaults": {
+        "backend": {
+          "backend": "podman",
+          "podman": {
+            "store": "/home/ubuntu/sprout-btrfs",
+            "runtime_bin": "/home/ubuntu/projects/sprout/runtime/sprout-runtime"
+          }
+        }
+      }
+    },
+    "mini-microvm": {
+      "python": "/home/ubuntu/projects/sprout/.venv/bin/python",
+      "snapshot_repository": "/opt/aenv-bench/home/snapshot-store/repository",
+      "run_defaults": {
+        "slot": "mini-swe-agent",
+        "runtime_bin": "/home/ubuntu/projects/sprout/runtime/sprout-runtime",
+        "sandbox_resources": {
+          "cpu": 2,
+          "memory_mb": 12288
+        },
+        "backend": {
+          "backend": "microvm",
+          "microvm": {
+            "server_url": "http://127.0.0.1:18000",
+            "api_key": {
+              "$env": "AENV_API_KEY"
+            },
+            "from_image": true,
+            "runtime_bin": "/home/ubuntu/projects/sprout/runtime/sprout-runtime",
+            "runtime_port": 34122,
+            "image_env": true,
+            "allow_internet": false
+          }
+        }
+      },
+      "worker_env": {
+        "SPROUT_MODEL_API_KEY": {
+          "$env": "SPROUT_MODEL_API_KEY"
+        }
+      }
+    },
+    "grade-microvm": {
+      "python": "/home/ubuntu/projects/sprout/.venv/bin/python",
+      "grade_defaults": {
+        "backend": {
+          "backend": "microvm",
+          "microvm": {
+            "server_url": "http://127.0.0.1:18000",
+            "api_key": {
+              "$env": "AENV_API_KEY"
+            },
+            "from_image": true,
+            "runtime_bin": "/home/ubuntu/projects/sprout/runtime/sprout-runtime",
+            "runtime_port": 34122,
+            "image_env": true
+          }
+        }
+      }
+    },
+    "review": {
+      "python": "/home/ubuntu/projects/sprout/.venv/bin/python",
+      "worker_env": {
+        "SPROUT_MODEL_API_KEY": {
+          "$env": "SPROUT_MODEL_API_KEY"
+        }
+      }
+    }
+  }
+}

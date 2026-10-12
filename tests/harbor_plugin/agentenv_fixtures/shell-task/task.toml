@@ -1,0 +1,18 @@
+schema_version = "1.4"
+
+[metadata]
+name = "AgentENV Harbor integration smoke test"
+
+[agent]
+timeout_sec = 60
+
+[verifier]
+timeout_sec = 60
+
+[environment]
+docker_image = "python:3.11-slim"
+build_timeout_sec = 240
+cpus = 1
+memory_mb = 512
+storage_mb = 65536
+workdir = "/"

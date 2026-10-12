@@ -1,0 +1,22 @@
+slot: mini-swe-agent
+upstream:
+  package: mini-swe-agent
+  verified_versions:
+    sdk: "2.4.6"
+  exact_version: true
+normalizer_module: sprout.harness.agents.mini_swe.history
+event_types: [mini.message, mini.turn]
+python_api:
+  module: minisweagent.agents.default
+  exports: [DefaultAgent]
+  client:
+    module: minisweagent.agents.default
+    cls: DefaultAgent
+    init_kwargs: [model, env]
+    methods: [run, query, execute_actions, add_messages]
+classes:
+  # runtime.py passes these AgentConfig names by keyword when it builds CheckpointAgent.
+  - module: minisweagent.agents.default
+    cls: AgentConfig
+    fields: [system_template, instance_template, step_limit, cost_limit,
+             wall_time_limit_seconds, output_path]

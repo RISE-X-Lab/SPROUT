@@ -1,0 +1,36 @@
+{
+  "rollout_job_id": "miles-1-3-34d7527f2ecc48c3b1a3d1c6bb6b2e9f",
+  "rollout_id": 1,
+  "prompt_group_id": "3",
+  "task_id": "task-1",
+  "image": "prime/primeintellect/task:base",
+  "prompt": [
+    {
+      "role": "user",
+      "content": "fix task"
+    }
+  ],
+  "model_endpoint": "http://model:30000",
+  "model": "policy",
+  "sample_slots": [
+    {
+      "sample_slot_id": "miles-1-3-34d7527f2ecc48c3b1a3d1c6bb6b2e9f:slot:11",
+      "sample_index": 11
+    }
+  ],
+  "max_samples": 1,
+  "minimum_returned_samples": 1,
+  "max_turns": 10,
+  "sampling_params": {
+    "temperature": 0.6,
+    "top_p": 1.0,
+    "top_k": -1,
+    "max_new_tokens": 512,
+    "stop": [
+      "stop-here"
+    ]
+  },
+  "budgets": {
+    "max_wall_time_seconds": 10.0
+  }
+}

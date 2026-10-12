@@ -1,0 +1,35 @@
+{
+  "tools": [
+    {
+      "description": "Execute a shell command and return its output",
+      "inputSchema": {
+        "properties": {
+          "command": {
+            "description": "Shell command to execute",
+            "type": "string"
+          },
+          "max_output_bytes": {
+            "default": 15728640,
+            "description": "Total captured bytes per output stream. Larger output is truncated to the first 40% and last 60% of the budget, and the outcome says so.",
+            "type": "integer"
+          },
+          "timeout": {
+            "default": 300,
+            "description": "Timeout in seconds",
+            "type": "integer"
+          },
+          "working_dir": {
+            "description": "Working directory",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command"
+        ],
+        "type": "object"
+      },
+      "name": "shell"
+    }
+  ],
+  "version": "0.2.0"
+}

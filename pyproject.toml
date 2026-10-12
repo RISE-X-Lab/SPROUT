@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sprout"
+version = "0.2.0"
+description = "Checkpointed mini-swe-agent rollouts that can be resumed or branched from any step"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.27,<1",
+    "jsonschema>=4",
+    "pyyaml>=6",
+]
+
+[project.optional-dependencies]
+# The agent and the trial runner the evaluations pin.
+mini = ["mini-swe-agent==2.4.6"]
+harbor = ["harbor==0.22.0"]
+# The Run Store queue and the RL driver.
+runstore = ["psycopg2-binary>=2.9,<3", "fastapi>=0.110,<1", "uvicorn>=0.29,<1"]
+rl = ["fastapi>=0.110,<1", "uvicorn>=0.29,<1"]
+dev = ["pytest>=8", "pyflakes"]
+# Regenerating the logo and architecture figures (docs/gen_*.py).
+docs = ["fonttools>=4", "uharfbuzz>=0.39"]
+
+[project.urls]
+Homepage = "https://github.com/dreamyang-liu/sprout"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sprout", "src/sprout_sandbox"]
+
+# The runtime's tool declaration, checked in beside the runtime that dumps it,
+# goes into the wheel as package data: an installed harness has no runtime/
+# directory to read it from (src/sprout/harness/tools/schema.py).
+[tool.hatch.build.targets.wheel.force-include]
+"runtime/schema/tools.json" = "sprout/harness/tools/tools.json"
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "."]
+testpaths = ["tests"]
+markers = [
+    "slow: needs live infrastructure (a reachable AgentENV and credentials, or podman with a btrfs store at SPROUT_PODMAN_STORE). Such tests skip themselves when it is absent; `-m \"not slow\"` excludes them outright.",
+]

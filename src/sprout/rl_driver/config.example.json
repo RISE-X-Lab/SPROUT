@@ -1,0 +1,40 @@
+{
+  "runstore_url": "http://127.0.0.1:18110",
+  "runstore_token_env": "SPROUT_RUNSTORE_TOKEN",
+  "driver_token_env": null,
+  "ledger": "~/sprout-runs/rl-driver/groups.sqlite3",
+  "poll_interval_s": 1,
+  "miles": {
+    "profile": "mini",
+    "run_defaults": {
+      "slot": "mini-swe-agent"
+    },
+    "image_resources": {
+      "cpu": 2,
+      "memory_mb": 12288
+    },
+    "api_key_env": "SPROUT_MODEL_API_KEY",
+    "tasks": {
+      "task-1": {
+        "grade": {
+          "profile": "grade",
+          "spec": {
+            "benchmark": "swe-rebench-v2",
+            "instance_id": "task-1",
+            "dataset_path": "/sprout/tasks.jsonl",
+            "dataset_sha256": "<sha256 of the frozen rows>",
+            "grader_revision": "sha256:<sha256 of the parser file>",
+            "parser_path": "/sprout/log_parsers.py"
+          }
+        }
+      }
+    },
+    "grade_wall_seconds": 600,
+    "review": {
+      "profile": "review",
+      "max_output_tokens": 16384,
+      "prompt_chars": 300000,
+      "temperature": 0.8
+    }
+  }
+}

