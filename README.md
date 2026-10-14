@@ -19,7 +19,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/architecture.svg" width="1000" alt="Sprout architecture. A task and its verifier go to a strategy (SPROUT's analyst and reviewer, or Baseline, BPO, Shepherd), which queues rollout jobs in the Run Store; a worker claims a job and checkpoints every turn; a verifier grades the finished rollout, and its feedback informs the next attempt. Inside each worker, mini-swe-agent reaches the model through a gateway and the sandbox through ToolAccess and the Sprout runtime, on podman + btrfs or Firecracker / AgentENV. Below, branches grow from saved checkpoints C2 and C4 and pass where the original continuation failed; each checkpoint pairs the agent's context with an environment snapshot."/>
+  <img src="docs/architecture.svg" width="1000" alt="Sprout architecture. A task and its verifier go to a strategy (SPROUT's analyst and reviewer), which queues rollout jobs in the Run Store; a worker claims a job and checkpoints every turn; a verifier grades the finished rollout, and its feedback informs the next attempt. Inside each worker, mini-swe-agent reaches the model through a gateway and the sandbox through ToolAccess and the Sprout runtime, on podman + btrfs or Firecracker / AgentENV. Below, branches grow from saved checkpoints C2 and C4 and pass where the original continuation failed; each checkpoint pairs the agent's context with an environment snapshot."/>
 </p>
 <p align="center">
   <sub>A checkpoint pairs the agent's context with a snapshot of its sandbox. When a rollout fails,
