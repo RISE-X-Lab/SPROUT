@@ -11,6 +11,12 @@
 </p>
 
 <p align="center">
+  <a href="https://arxiv.org/abs/2610.14405"><img src="docs/assets/btn-paper.svg" height="40" alt="Paper on arXiv"></a>&nbsp;
+  <a href="https://rise-x-lab.github.io/SPROUT/"><img src="docs/assets/btn-project.svg" height="40" alt="Project page"></a>&nbsp;
+  <a href="#citation"><img src="docs/assets/btn-citation.svg" height="40" alt="Citation"></a>
+</p>
+
+<p align="center">
   <a href="#license"><img src="https://img.shields.io/badge/License-MIT-4BB85E.svg?style=flat-square&amp;labelColor=1F4A33" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/python-3.12%2B-4BB85E.svg?style=flat-square&amp;labelColor=1F4A33" alt="Python 3.12 or later">
   <img src="https://img.shields.io/badge/go-1.25%2B-4BB85E.svg?style=flat-square&amp;labelColor=1F4A33" alt="Go 1.25 or later">
@@ -183,6 +189,20 @@ tasks and grades each trial with the task's own verifier. The microVMs run on ou
 [AgentENV](https://github.com/dreamyang-liu/AgentENV); the container backend is stock
 rootless [podman](https://podman.io) over [btrfs](https://btrfs.readthedocs.io) snapshots.
 BPO and Shepherd follow the branch-point selection of their papers.
+
+## Citation
+
+```bibtex
+@misc{liu2026sproutscalingagenticreinforcement,
+  title={SPROUT: Scaling Agentic Reinforcement Learning for Long-Horizon Software Engineering},
+  author={Mengyang Liu and Weiming Wang and Haixin Nan and Yu Wu and Peize Li and Shihong Huang and Xuning He and Xue Jiang and Yihong Dong},
+  year={2026},
+  eprint={2610.14405},
+  archivePrefix={arXiv},
+  primaryClass={cs.SE},
+  url={https://arxiv.org/abs/2610.14405},
+}
+```
 
 ## License
 
