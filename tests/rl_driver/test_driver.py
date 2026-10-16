@@ -419,6 +419,6 @@ def test_example_is_valid_and_package_has_no_execution_calls():
         tree = ast.parse(path.read_text())
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom) and node.module not in pure_contracts:
-                assert not (node.module or "").startswith(("sprout.harness.", "sprout_sandbox", "swebench", "sprout.runstore.worker", "sprout.runstore.store"))
+                assert not (node.module or "").startswith(("sprout.harness", "sprout_sandbox", "swebench", "sprout.runstore.worker", "sprout.runstore.store"))
             if isinstance(node, ast.Import):
                 assert not any(alias.name in {"subprocess", "psycopg2", "docker"} for alias in node.names)
