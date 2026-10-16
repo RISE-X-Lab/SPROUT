@@ -4,9 +4,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from sprout.harness_core.control import RunControl
-from sprout.harness_core.slot import SlotResult
-from sprout.harness_orchestrator.run import Orchestrator, RunOutcome
+from sprout.worker.run.control import RunControl
+from sprout.worker.agents.slot import SlotResult
+from sprout.worker.run.runner import Orchestrator, RunOutcome
 from sprout.runstore.child import execute
 from sprout.runstore.messages import complete_message_result
 from sprout.contract.messages import is_truncated_result
@@ -16,7 +16,7 @@ def write_history(directory):
     home = directory / "native-home"
     home.mkdir(exist_ok=True)
     path = home / "native.jsonl"
-    # mini's native history (harness_agents.mini_swe.history).
+    # mini's native history (worker.agents.mini_swe.history).
     items = [
         {"type": "mini.session", "format": "sprout-mini-v1", "mini_version": "2.4.6"},
         {"type": "mini.message", "message": {"role": "user", "content": "fix the task"}},
@@ -41,7 +41,7 @@ def test_child_captures_final_state_and_exports_native_identity_on_cutoff(tmp_pa
     monkeypatch.setattr(Orchestrator, "_wire_sandbox", lambda *args: owned)
     monkeypatch.setattr(Orchestrator, "_wire_gateway", lambda *args: None)
     # The stand-in sandbox has no shell for mini's workspace probe.
-    monkeypatch.setattr("sprout.harness_agents.mini_swe.sandbox.resolve_workspace", lambda session, extra, journal: extra)
+    monkeypatch.setattr("sprout.worker.agents.mini_swe.sandbox.resolve_workspace", lambda session, extra, journal: extra)
 
     class Slot:
         def run(self, task, journal, tools):
@@ -58,7 +58,7 @@ def test_child_captures_final_state_and_exports_native_identity_on_cutoff(tmp_pa
                 assert task.control.stop_reason == "timeout"
             return SlotResult(status="error", error="stopped")
 
-    monkeypatch.setattr("sprout.harness_orchestrator.run.MiniSweSlot", Slot)
+    monkeypatch.setattr("sprout.worker.run.runner.MiniSweSlot", Slot)
     request = {
         "kind": "rollout", "attempt_id": "attempt", "profile_config": {}, "effective_spec": {
             "prompt": "fix", "slot": "mini-swe-agent", "sandbox_image": "image", "extra": {

@@ -10,7 +10,7 @@ from sprout.contract.messages import (
     failure_kind,
     is_truncated_result,
 )
-from sprout.harness_core.journal import journal_events
+from sprout.worker.run.journal import journal_events
 
 
 def export_messages(directory, session_id, slot, *, allow_incomplete_tail=False):
@@ -161,7 +161,7 @@ def complete_message_result(result: dict, directory, slot: str, recovery=None, b
             # A timeout between two actions in one response cannot train the
             # half response against the later disk. Keep a proven earlier pair.
             from sprout.contract.mini_history import read_entries, read_prefix, training_messages
-            from sprout.harness_agents.mini_swe.history import index_mini
+            from sprout.worker.agents.mini_swe.history import index_mini
 
             files = list((directory / "native-home").glob(f"**/*{session_id}.jsonl"))
             try:

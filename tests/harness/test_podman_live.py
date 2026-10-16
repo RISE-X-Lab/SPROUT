@@ -30,12 +30,12 @@ import pytest
 
 from tests.conftest import default_podman_bin, podman_store_in_use, sandbox_networks
 
-import sprout.harness.cli as cli
-from sprout.harness_checkpoint.checkpointer import Checkpointer
-from sprout.harness_orchestrator.reap import PodmanClient, Reaper
-from sprout.harness_orchestrator.resources import ResourceLedger
-from sprout.harness_sandbox.commands import checked, shell
-from sprout.harness_sandbox.session import SandboxSession
+import sprout.worker.cli as cli
+from sprout.worker.checkpoint.checkpointer import Checkpointer
+from sprout.worker.run.reap import PodmanClient, Reaper
+from sprout.worker.run.resources import ResourceLedger
+from sprout.worker.sandbox.commands import checked, shell
+from sprout.worker.sandbox.session import SandboxSession
 from sprout_sandbox import PodmanPool
 from sprout_sandbox.btrfs_store import mount_problem
 

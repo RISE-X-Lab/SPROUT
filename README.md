@@ -41,7 +41,7 @@ git clone https://github.com/dreamyang-liu/sprout.git sprout && cd sprout
 ops/setup_podman.sh                # podman 6 for this user, a btrfs store, .venv, the runtime binary
 source .venv/bin/activate
 export OPENAI_BASE_URL=<url> OPENAI_API_KEY=<key>   # any OpenAI-compatible Chat Completions endpoint
-python -m sprout.harness run --model <model> --runtime-bin runtime/sprout-runtime \
+python -m sprout.worker run --model <model> --runtime-bin runtime/sprout-runtime \
     --sandbox-image docker.io/library/python:3.11-slim --cwd /tmp --journal runs/first.jsonl \
     "write fizzbuzz.py, run it, and check that 15 prints FizzBuzz"
 python -m sprout.inspect snapshots runs/first.jsonl            # every snapshot the run took
@@ -83,7 +83,7 @@ cloned as in the [experiments guide](docs/EXPERIMENTS.md): every attempt on
 [Harbor](https://github.com/harbor-framework/harbor) `Trial`, graded afterwards by the
 task's own verifier, in a separate sandbox for the patch-graded datasets. Leaked sandboxes,
 on either backend:
-`python -m sprout.harness reap`.
+`python -m sprout.worker reap`.
 
 ## Checkpoint every turn
 
@@ -178,23 +178,23 @@ any other.
 
 ```
 .
-├── src/sprout/harness/               # the agent runtime: one run, end to end
-├── src/sprout/harness_agents/        # mini-swe-agent, the one agent
-├── src/sprout/harness_checkpoint/    # a snapshot per turn, and rollback to one
-├── src/sprout/harness_core/          # the journal, its events, run control, the slot contract
-├── src/sprout/harness_gateway/       # the model gateway: routing, budget, the wire-level tap
-├── src/sprout/harness_orchestrator/  # one run start to finish, what it holds, reaping
-├── src/sprout/harness_sandbox/       # sandbox sessions, backends, image templates
-├── src/sprout/harness_tools/         # ToolAccess, the runtime's schema, interceptors
-├── src/sprout/harbor_plugin/         # Sprout as a Harbor environment and agent
-├── src/sprout/methods/               # evaluate (one task, one method), branching, prompts, gate
-├── src/sprout/inspect/               # read-only CLI over run output
-├── src/sprout/runstore/              # PostgreSQL job queue, worker, SWE-rebench grader, training export
-├── src/sprout/rl_driver/             # the RL trainer's (Miles) rollout adapter over the Run Store
-├── src/sprout/services/              # the host's long-running pieces: db, LiteLLM proxy, Run Store, RL driver
-├── src/sprout_sandbox/               # the sandbox clients: AgentENV microVMs and rootless podman
-├── runtime/                          # the Go binary inside every sandbox: shell, text_editor, grep, web, over JSON-RPC
-├── gate/                             # checks every commit must pass (pre-commit hook and CI)
+├── src/sprout/contract/           # the request formats RunStore, the RL driver and the worker agree on
+├── src/sprout/worker/             # the machine that runs jobs: one rollout end to end
+├── src/sprout/worker/run/         # one run start to finish: runner, journal, control, reaping
+├── src/sprout/worker/agents/      # the slot contract and mini-swe-agent, the one agent
+├── src/sprout/worker/sandbox/     # sandbox sessions, backends, image templates
+├── src/sprout/worker/tools/       # ToolAccess, the runtime's schema, interceptors
+├── src/sprout/worker/checkpoint/  # a snapshot per turn, and rollback to one
+├── src/sprout/worker/gateway/     # the model gateway: routing, budget, the wire-level tap
+├── src/sprout/harbor_plugin/      # Sprout as a Harbor environment and agent
+├── src/sprout/methods/            # evaluate (one task, one method), branching, prompts, gate
+├── src/sprout/inspect/            # read-only CLI over run output
+├── src/sprout/runstore/           # PostgreSQL job queue, worker, SWE-rebench grader, training export
+├── src/sprout/rl_driver/          # the RL trainer's (Miles) rollout adapter over the Run Store
+├── src/sprout/services/           # the host's long-running pieces: db, LiteLLM proxy, Run Store, RL driver
+├── src/sprout_sandbox/            # the sandbox clients: AgentENV microVMs and rootless podman
+├── runtime/                       # the Go binary inside every sandbox: shell, text_editor, grep, web, over JSON-RPC
+├── gate/                          # checks every commit must pass (pre-commit hook and CI)
 └── tests/  docs/  examples/  ops/
 ```
 

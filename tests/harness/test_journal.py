@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 import threading
 
-from sprout.harness_core.events import AGENT_MESSAGE, JOURNAL_SCHEMA_VERSION, Usage
-from sprout.harness_core.journal import JournalWriter, read_journal
+from sprout.worker.run.events import AGENT_MESSAGE, JOURNAL_SCHEMA_VERSION, Usage
+from sprout.worker.run.journal import JournalWriter, read_journal
 
 
 def test_envelope_and_monotonic_seq(tmp_path):

@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import pytest
 
-from sprout.harness.atif import ATIF_VERSION, journal_to_atif
-from sprout.harness_core import events as E
-from sprout.harness_core.journal import JournalWriter, read_journal
-from sprout.harness_checkpoint.rollback import branch_checkpoints, closed_turns, uncaptured_turns
+from sprout.worker.run.atif import ATIF_VERSION, journal_to_atif
+from sprout.worker.run import events as E
+from sprout.worker.run.journal import JournalWriter, read_journal
+from sprout.worker.checkpoint.rollback import branch_checkpoints, closed_turns, uncaptured_turns
 
 
 def capture(journal, step, turn_id, snapshot_id, reason="captured", session="ses_1", **extra):

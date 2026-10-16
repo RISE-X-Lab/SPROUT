@@ -13,16 +13,16 @@ from sprout_sandbox.pool import Snapshot
 from harbor.models.task.config import EnvironmentConfig, NetworkMode, NetworkPolicy
 from harbor.models.trial.paths import TrialPaths
 from harbor.models.agent.context import AgentContext
-from sprout.harness_core.journal import JournalWriter, read_journal
-from sprout.harness_core.result import CommandOutcome, ToolResult
-from sprout.harness_orchestrator.run import OwnedSandbox, RunOutcome
+from sprout.worker.run.journal import JournalWriter, read_journal
+from sprout.worker.tools.result import CommandOutcome, ToolResult
+from sprout.worker.run.runner import OwnedSandbox, RunOutcome
 from sprout.contract.run_spec import RunSpec
-from sprout.harness_tools.interceptors import shell_command
+from sprout.worker.tools.interceptors import shell_command
 from sprout.harbor_plugin import environment as sandbox_environment
 from sprout.harbor_plugin.agentenv import AgentENVEnvironment
 from sprout.harbor_plugin.agentenv_agent import AgentENVOrchestrator
 from sprout.harbor_plugin.agentenv_mini import AgentENVMini
-from sprout.harness_agents.mini_swe.tools import DEFAULT_COMMAND_TIMEOUT_S
+from sprout.worker.agents.mini_swe.tools import DEFAULT_COMMAND_TIMEOUT_S
 from sprout.harbor_plugin.environment import overlay_for
 
 
@@ -57,7 +57,7 @@ def test_unsupported_requirements_fail_before_start(tmp_path, change, files, err
 def test_the_server_is_the_one_the_memory_snapshot_release_assumes(tmp_path, monkeypatch):
     """methods.evaluate releases a trial's memory snapshot through
     AgentEnvClient; named nowhere, the two once defaulted to different ports."""
-    from sprout.harness_orchestrator.reap import AgentEnvClient
+    from sprout.worker.run.reap import AgentEnvClient
 
     monkeypatch.delenv("AENV_SERVER_URL", raising=False)
     assert environment(tmp_path).server_url == AgentEnvClient().base_url == "http://127.0.0.1:8000"
@@ -260,7 +260,7 @@ def test_the_command_timeout_reaches_every_command_and_is_validated(tmp_path, mo
 
 def test_harbor_deadline_finalizes_snapshot_and_usage_before_verification(tmp_path, monkeypatch):
     import time
-    from sprout.harness_core.control import RunControl
+    from sprout.worker.run.control import RunControl
 
     env = environment(tmp_path)
     env.session = harbor_session()
@@ -294,7 +294,7 @@ def test_harbor_deadline_finalizes_snapshot_and_usage_before_verification(tmp_pa
 
 
 def test_mini_prompt_is_task_plus_the_pinned_mini_tool_primer(tmp_path, monkeypatch):
-    from sprout.harness_agents.mini_swe.tools import mini_tool_primer
+    from sprout.worker.agents.mini_swe.tools import mini_tool_primer
 
     env = environment(tmp_path, task_env_config=EnvironmentConfig(docker_image="image", workdir="/app"))
     env.session = harbor_session()

@@ -12,14 +12,14 @@ from types import SimpleNamespace
 import pytest
 
 from sprout_sandbox.pool import Snapshot
-from sprout.harness_checkpoint.checkpointer import Checkpointer
-from sprout.harness_checkpoint.rollback import branch_checkpoints, uncaptured_turns
-from sprout.harness_core.control import RunAborted, RunControl
-from sprout.harness_core.journal import JournalWriter, read_journal
-from sprout.harness_core.result import CommandOutcome, ToolResult
-from sprout.harness_tools.access import ToolAccess, ToolInfraError
-from sprout.harness_tools.interceptors import MutationTracker
-from sprout.harness_tools.pipeline import Reject, ToolInterceptor, ToolPipeline
+from sprout.worker.checkpoint.checkpointer import Checkpointer
+from sprout.worker.checkpoint.rollback import branch_checkpoints, uncaptured_turns
+from sprout.worker.run.control import RunAborted, RunControl
+from sprout.worker.run.journal import JournalWriter, read_journal
+from sprout.worker.tools.result import CommandOutcome, ToolResult
+from sprout.worker.tools.access import ToolAccess, ToolInfraError
+from sprout.worker.tools.interceptors import MutationTracker
+from sprout.worker.tools.pipeline import Reject, ToolInterceptor, ToolPipeline
 
 
 class Session:

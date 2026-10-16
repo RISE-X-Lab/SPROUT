@@ -10,10 +10,10 @@ from pathlib import Path
 import httpx
 
 from sprout.contract.sampling import endpoint
-from sprout.harness_gateway.auth import bearer_headers, bearer_key
 from sprout.methods import structured_review
 from sprout.methods.branch_plan import PromptRejected, ReviewResponseTruncated
 from sprout.methods.prompts import DEFAULT_PROMPTS
+from sprout.worker.gateway.auth import bearer_headers, bearer_key
 
 #: Replies that say nothing about the request: the gateway or the model behind
 #: it was unavailable or rate-limited for the moment. One such reply once cost

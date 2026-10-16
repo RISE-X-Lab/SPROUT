@@ -15,7 +15,7 @@ from __future__ import annotations
 import pytest
 
 from sprout_sandbox.pool import Snapshot
-from sprout.harness_checkpoint.checkpointer import SQUASH_LINEAGE_AT, Checkpointer
+from sprout.worker.checkpoint.checkpointer import SQUASH_LINEAGE_AT, Checkpointer
 
 
 class Session:

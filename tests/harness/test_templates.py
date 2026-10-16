@@ -2,9 +2,9 @@
 
 import pytest
 
-from sprout.harness_sandbox.spawn import builder_from_backend
-from sprout.harness_sandbox.template_recipe import RUNTIME_PATH, TemplateError, env_salt, template_name
-from sprout.harness_sandbox.templates import TemplateBuilder
+from sprout.worker.sandbox.spawn import builder_from_backend
+from sprout.worker.sandbox.template_recipe import RUNTIME_PATH, TemplateError, env_salt, template_name
+from sprout.worker.sandbox.templates import TemplateBuilder
 
 
 IMAGE = "swebench/sweb.eval.x86_64.django__django-11848:latest"
@@ -50,7 +50,7 @@ def test_image_env_changes_the_start_command_and_the_name(monkeypatch, runtime_b
     # have satisfied. With image_env the runtime is launched under the image's
     # ENV -- and under a different template name, so a plain template built
     # earlier is never mistaken for one that carries the environment.
-    import sprout.harness_sandbox.templates as templates
+    import sprout.worker.sandbox.templates as templates
     env = ["PATH=/opt/venv/bin:/usr/bin:/bin", "LANG=C.UTF-8", "MSG=has space"]
     monkeypatch.setattr(templates, "image_config_env", lambda image, regctl, **kw: env)
     client = FakeClient(exists=False)
@@ -71,7 +71,7 @@ def test_image_env_changes_the_start_command_and_the_name(monkeypatch, runtime_b
 
 
 def test_image_env_without_regctl_is_refused_at_wiring(monkeypatch, runtime_bin):
-    import sprout.harness_sandbox.spawn as spawn
+    import sprout.worker.sandbox.spawn as spawn
     monkeypatch.setattr(spawn, "find_regctl", lambda: None)
     monkeypatch.setattr(spawn, "ensure_ripgrep", lambda: None)
     with pytest.raises(TemplateError, match="regctl"):
@@ -153,7 +153,7 @@ class FakeClient:
 
 
 def builder(monkeypatch, client, runtime_bin):
-    import sprout.harness_sandbox.templates as templates
+    import sprout.worker.sandbox.templates as templates
     monkeypatch.setattr(templates.httpx, "Client", lambda **kw: client)
     monkeypatch.setattr(templates.time, "sleep", lambda _s: None)
     return TemplateBuilder(server_url="http://server", api_key="k",
@@ -327,7 +327,7 @@ def test_ripgrep_is_staged_and_part_of_the_identity(monkeypatch, runtime_bin,
     b_with.ripgrep_bin = None  # rebuild fingerprints via a fresh instance
     b_with = TemplateBuilder(server_url="http://server", api_key="k",
                              runtime_bin=runtime_bin, ripgrep_bin=rg)
-    import sprout.harness_sandbox.templates as templates
+    import sprout.worker.sandbox.templates as templates
     monkeypatch.setattr(templates.httpx, "Client", lambda **kw: client)
     b_with.template_for(IMAGE)
 
@@ -380,7 +380,7 @@ class _FakeClient:
 def bare_builder():
     """A TemplateBuilder with no I/O wiring: these tests exercise lookup
     logic, which must not need a server or a runtime binary."""
-    from sprout.harness_sandbox.templates import TemplateBuilder
+    from sprout.worker.sandbox.templates import TemplateBuilder
     return TemplateBuilder.__new__(TemplateBuilder)
 
 
@@ -421,8 +421,8 @@ def test_a_poisoned_name_is_routed_around_not_retried():
 def test_the_search_for_a_name_is_bounded():
     """Needing many variants means something fails repeatably, and a loud
     error beats a longer search."""
-    from sprout.harness_sandbox.template_recipe import TemplateError
-    from sprout.harness_sandbox.templates import MAX_TEMPLATE_ATTEMPTS
+    from sprout.worker.sandbox.template_recipe import TemplateError
+    from sprout.worker.sandbox.templates import MAX_TEMPLATE_ATTEMPTS
     import pytest
 
     b = bare_builder()

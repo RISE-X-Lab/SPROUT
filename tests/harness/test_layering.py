@@ -8,7 +8,7 @@
           |
        harbor_plugin         Sprout inside a Harbor trial
           |
-       harness, harness_*    the agent runtime (mini-swe-agent, sandbox, tools, checkpoints)
+       worker                the agent runtime (mini-swe-agent, sandbox, tools, checkpoints)
 
 The layers live under ``src/sprout/``; ``examples`` and ``ops`` sit beside
 ``src``, and ``ops`` may use any layer. ``src/sprout_sandbox`` (the sandbox
@@ -31,13 +31,13 @@ REPO = Path(__file__).resolve().parents[2]
 ALLOWED = {
     # The formats RunStore, the RL driver and the worker agree on; it imports no other layer.
     "contract": set(),
-    "harness": {"contract"},
-    "harbor_plugin": {"contract", "harness"},
-    "methods": {"contract", "harness", "harbor_plugin"},
-    "runstore": {"contract", "harness", "methods"},
-    "inspect": {"contract", "harness", "harbor_plugin", "methods"},
+    "worker": {"contract"},
+    "harbor_plugin": {"contract", "worker"},
+    "methods": {"contract", "worker", "harbor_plugin"},
+    "runstore": {"contract", "worker", "methods"},
+    "inspect": {"contract", "worker", "harbor_plugin", "methods"},
     "rl_driver": {"contract", "runstore"},
-    "examples": {"contract", "harness", "harbor_plugin", "methods"},
+    "examples": {"contract", "worker", "harbor_plugin", "methods"},
     # The service manager starts the layers above; it imports none of them
     # (stdlib + PyYAML), so it works before the extras are installed.
     "services": set(),
@@ -82,7 +82,7 @@ def _sprout_imports(path: Path) -> set[str]:
 
 def test_the_sdk_imports_nothing_from_sprout():
     """The harness drives the SDK; the SDK knows nothing of the harness. The
-    one-line temptation is `from sprout.harness_sandbox.template_recipe import
+    one-line temptation is `from sprout.worker.sandbox.template_recipe import
     RUNTIME_PATH` in the podman pool, which carries its own copy instead."""
     paths = sorted((REPO / "src" / "sprout_sandbox").rglob("*.py"))
     assert paths, "sprout_sandbox has no modules to check"
@@ -106,9 +106,9 @@ def test_every_package_imports_only_the_layers_below_it():
 def test_the_harness_package_root_imports_nothing():
     """`python -m sprout.inspect` is stdlib plus three harness modules. The
     package root once re-exported the journal and the slot contract, so any
-    import under sprout.harness also loaded the run control and httpx."""
-    probe = ("import json, sys, sprout.harness; print(json.dumps(sorted("
+    import under sprout.worker also loaded the run control and httpx."""
+    probe = ("import json, sys, sprout.worker; print(json.dumps(sorted("
              "m for m in sys.modules if m.split('.')[0] in ('sprout', 'httpx'))))")
     loaded = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True,
                             check=True, timeout=60).stdout
-    assert json.loads(loaded) == ["sprout", "sprout.harness"]
+    assert json.loads(loaded) == ["sprout", "sprout.worker"]

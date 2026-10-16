@@ -21,7 +21,7 @@ import importlib
 import pathlib
 
 SEATS_DIR = (pathlib.Path(__file__).resolve().parents[2]
-             / "src" / "sprout" / "harness_tools" / "interceptors")
+             / "src" / "sprout" / "worker" / "tools" / "interceptors")
 
 #: Every interceptor module and the class it must export. Adding an interceptor
 #: means adding a line here -- deliberately, so the structural rules below cover
@@ -51,7 +51,7 @@ def test_every_interceptor_is_its_own_module():
 
 def test_each_module_exports_its_interceptor():
     for module_name, cls in INTERCEPTORS.items():
-        module = importlib.import_module("sprout.harness_tools.interceptors.%s" % module_name)
+        module = importlib.import_module("sprout.worker.tools.interceptors.%s" % module_name)
         assert hasattr(module, cls), "%s does not export %s" % (module_name, cls)
 
 
@@ -71,7 +71,7 @@ def test_no_interceptor_imports_another_interceptor():
 
 
 def test_interceptors_are_reachable_from_one_place():
-    from sprout.harness_tools.interceptors import INTERCEPTORS, MutationTracker, ShellContext
+    from sprout.worker.tools.interceptors import INTERCEPTORS, MutationTracker, ShellContext
 
     assert MutationTracker and ShellContext
     assert set(INTERCEPTORS) == {"shell_context"}, INTERCEPTORS
@@ -81,7 +81,7 @@ def test_declared_interceptors_are_built_by_name_and_unknown_names_are_refused()
     """A run declares its rules as data; a typo must not become a silently missing rule."""
     import pytest
 
-    from sprout.harness_tools.interceptors import ShellContext, build_interceptors
+    from sprout.worker.tools.interceptors import ShellContext, build_interceptors
 
     [built] = build_interceptors([{"name": "shell_context", "cwd": "/app", "env": {"A": "1"}, "user": "nobody"}])
     assert isinstance(built, ShellContext) and built.cwd == "/app" and built.env == {"A": "1"}

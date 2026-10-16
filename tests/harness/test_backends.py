@@ -1,4 +1,4 @@
-"""Backend selection (harness_sandbox/backends.py).
+"""Backend selection (worker/sandbox/backends.py).
 
 The session names no concrete pool: it hands its execution section here and gets
 back a pool built from the named backend's settings -- `MicroVMPool` from the
@@ -28,7 +28,7 @@ from pathlib import Path
 import pytest
 
 from sprout_sandbox import MicroVMPool, PodmanPool
-from sprout.harness_sandbox.backends import (BACKENDS, DEFAULT_AENV_SERVER_URL, BackendError,
+from sprout.worker.sandbox.backends import (BACKENDS, DEFAULT_AENV_SERVER_URL, BackendError,
                                              backend_name, build_pool, default_aenv_server_url,
                                              snapshot_store, with_sandbox_budget)
 
@@ -267,7 +267,7 @@ def test_the_callers_that_assume_a_server_assume_one(monkeypatch):
     none is named, and a trial's memory snapshot is released through the second:
     they once fell back to different ports. AgentENV's own default is 8000;
     AENV_SERVER_URL comes first and a named URL before both."""
-    from sprout.harness_orchestrator.reap import AgentEnvClient
+    from sprout.worker.run.reap import AgentEnvClient
 
     monkeypatch.delenv("AENV_SERVER_URL", raising=False)
     assert default_aenv_server_url() == DEFAULT_AENV_SERVER_URL == "http://127.0.0.1:8000"
@@ -296,7 +296,7 @@ def test_no_template_is_built_for_podman(store, runtime_bin):
     """Templates exist because a microVM cold-started from a plain image has no
     runtime; the podman pool mounts it into every container, so the session must
     not go looking for AgentENV to build one."""
-    from sprout.harness_sandbox.spawn import builder_from_backend
+    from sprout.worker.sandbox.spawn import builder_from_backend
 
     assert builder_from_backend({"backend": "podman",
                                  "podman": {"store": str(store), "runtime_bin": str(runtime_bin)}}) is None
@@ -310,9 +310,9 @@ def test_no_call_site_names_a_concrete_pool():
     """The point of this module: one place decides how a pool is built, so its
     settings are a config change rather than an edit in several files."""
     repo = Path(__file__).resolve().parents[2]
-    session = (repo / "src" / "sprout" / "harness_sandbox" / "session.py").read_text()
+    session = (repo / "src" / "sprout" / "worker" / "sandbox" / "session.py").read_text()
     assert "build_pool(" in session, "the session should build its pool via backends.py"
-    for path in sorted((repo / "src" / "sprout" / "harness").rglob("*.py")):
+    for path in sorted((repo / "src" / "sprout" / "worker").rglob("*.py")):
         if "tests" in path.parts or path.name == "backends.py":
             continue
         text = path.read_text()
@@ -329,7 +329,7 @@ def test_what_the_cli_hands_over_is_what_build_pool_takes(backend, pool_type, st
     reference, and only the cold-start path accepts one); unknown keys are
     rejected rather than ignored, so build_pool has to declare it or every CLI
     microVM run would be refused as a typo."""
-    from sprout.harness.cli import _backend_section
+    from sprout.worker.cli import _backend_section
 
     # The endpoint is the one setting the CLI leaves to the environment.
     monkeypatch.setenv("AENV_SERVER_URL", "http://from-env:8000")
@@ -343,7 +343,7 @@ def test_what_the_cli_hands_over_is_what_build_pool_takes(backend, pool_type, st
 def test_both_clients_mount_the_runtime_at_one_path():
     """The SDK may not import from `sprout`, so podman_containers carries its own
     copy of the template's RUNTIME_PATH; this keeps the two from drifting."""
-    from sprout.harness_sandbox import template_recipe
+    from sprout.worker.sandbox import template_recipe
     from sprout_sandbox import podman_containers
 
     assert podman_containers.RUNTIME_PATH == template_recipe.RUNTIME_PATH

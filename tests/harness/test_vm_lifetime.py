@@ -5,8 +5,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from sprout.harness_sandbox.backends import BackendError
-from sprout.harness_orchestrator.run import Orchestrator
+from sprout.worker.sandbox.backends import BackendError
+from sprout.worker.run.runner import Orchestrator
 from sprout.contract.run_spec import RunSpec
 
 
@@ -25,7 +25,7 @@ def recorded_session(monkeypatch):
         observed["constructor"] = kwargs
         return session
 
-    monkeypatch.setattr("sprout.harness_sandbox.session.SandboxSession", make_session)
+    monkeypatch.setattr("sprout.worker.sandbox.session.SandboxSession", make_session)
     return observed
 
 
@@ -78,7 +78,7 @@ def test_longer_vm_lifetime_reaches_agentenv_request(recorded_session):
 
     import httpx
 
-    from sprout.harness_sandbox.backends import build_pool
+    from sprout.worker.sandbox.backends import build_pool
 
     spec = RunSpec(prompt="fixture", sandbox_image="ready-template", timeout_s=1800,
                    backend={"backend": "microvm", "microvm": {"server_url": "http://fixture"}})

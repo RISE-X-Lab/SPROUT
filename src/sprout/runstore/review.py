@@ -78,7 +78,6 @@ from typing import Any
 
 from sprout.contract.messages import clean_messages
 from sprout.contract.mini_history import training_messages
-from sprout.harness_agents.mini_swe.history import available_branch_points
 from sprout.methods.branching import (
     Attempt,
     BranchChoice,
@@ -92,6 +91,7 @@ from sprout.methods.leak import hidden_terms_of, leak_terms, visible_text
 from sprout.methods.leak_judge import REVIEW_ATTEMPTS, REVIEW_TIMEOUT_S, HiddenText, JevLeakJudge, check_turn
 from sprout.methods.review_transport import RequestStopped, ReviewTransport
 from sprout.runstore.specs import ReviewSpec
+from sprout.worker.agents.mini_swe.history import available_branch_points
 
 
 def grade_of(record: dict) -> Grade:

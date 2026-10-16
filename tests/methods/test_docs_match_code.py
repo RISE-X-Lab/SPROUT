@@ -58,7 +58,7 @@ TOP_README = REPO / "README.md"
 
 def test_top_readme_project_tree_names_files_that_exist():
     """Nested entries belong to the directory above them, so the tree is walked
-    rather than grepped -- a bare `slots/` is `harness/slots/`."""
+    rather than grepped -- a bare `slots/` is `worker/slots/`."""
     block = re.search(r"```\n\.\n(.*?)```", TOP_README.read_text(), re.S)
     assert block, "the README has no project tree"
     parent, missing = "", []

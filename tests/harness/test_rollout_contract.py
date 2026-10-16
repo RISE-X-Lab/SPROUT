@@ -4,14 +4,14 @@ from types import SimpleNamespace
 import httpx
 import pytest
 
-from sprout.harness_core.control import RunControl
-from sprout.harness_core.journal import read_journal
-from sprout.harness_core.result import ToolResult
-from sprout.harness_core.slot import SlotResult
-from sprout.harness_tools.pipeline import CallContext
-from sprout.harness_orchestrator.run import Orchestrator
+from sprout.worker.run.control import RunControl
+from sprout.worker.run.journal import read_journal
+from sprout.worker.tools.result import ToolResult
+from sprout.worker.agents.slot import SlotResult
+from sprout.worker.tools.pipeline import CallContext
+from sprout.worker.run.runner import Orchestrator
 from sprout.contract.run_spec import RunSpec
-from sprout.harness_orchestrator.rollout import RolloutControls
+from sprout.worker.run.rollout import RolloutControls
 from sprout.contract.messages import export_tools
 from tests.harness.test_gateway import upstream as upstream
 
@@ -33,7 +33,7 @@ def test_orchestrator_mounts_real_endpoint_sampling_and_turn_limit(tmp_path, ups
                             destroy=lambda: destroyed.append(True))
     monkeypatch.setattr(Orchestrator, "_wire_sandbox", lambda *args: owned)
     # The stand-in sandbox has no shell for mini's workspace probe.
-    monkeypatch.setattr("sprout.harness_agents.mini_swe.sandbox.resolve_workspace",
+    monkeypatch.setattr("sprout.worker.agents.mini_swe.sandbox.resolve_workspace",
                         lambda session, extra, journal: extra)
 
     class Slot:
@@ -57,7 +57,7 @@ def test_orchestrator_mounts_real_endpoint_sampling_and_turn_limit(tmp_path, ups
             assert httpx.post(url, headers=headers, json={"model": "agent-requested"}, timeout=5).status_code == 400
             return SlotResult(status="completed")
 
-    monkeypatch.setattr("sprout.harness_orchestrator.run.MiniSweSlot", Slot)
+    monkeypatch.setattr("sprout.worker.run.runner.MiniSweSlot", Slot)
     path = tmp_path / "journal.jsonl"
     result = Orchestrator().run(RunSpec(prompt="task", slot="mini-swe-agent", journal_path=path,
                                        extra={"rollout_contract": contract(upstream.base_url + "/v1")}))
@@ -93,7 +93,7 @@ def test_controls_reject_malformed_contract(changes, match):
 
 
 def test_expired_group_never_allocates_a_sandbox(tmp_path, monkeypatch):
-    monkeypatch.setattr("sprout.harness_orchestrator.run.MiniSweSlot", lambda: SimpleNamespace())
+    monkeypatch.setattr("sprout.worker.run.runner.MiniSweSlot", lambda: SimpleNamespace())
     monkeypatch.setattr(Orchestrator, "_wire_sandbox", lambda *args: pytest.fail("Expired group allocated a VM"))
     result = Orchestrator().run(RunSpec(prompt="task", journal_path=tmp_path / "journal",
                                        extra={"rollout_contract": contract("http://model", deadline_at=time.time() - 1)}))

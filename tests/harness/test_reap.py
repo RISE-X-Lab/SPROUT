@@ -17,8 +17,8 @@ from datetime import timedelta
 
 import pytest
 
-from sprout.harness_orchestrator.reap import PodmanClient, ReapPlan, Reaper, parse_duration
-from sprout.harness_orchestrator.resources import ResourceLedger
+from sprout.worker.run.reap import PodmanClient, ReapPlan, Reaper, parse_duration
+from sprout.worker.run.resources import ResourceLedger
 from tests.conftest import fake_networks, recorded_calls, recorded_sequence
 
 
@@ -404,7 +404,7 @@ def test_sweep_deletes_a_podman_journals_subvolumes_through_the_store(tmp_path, 
     """A podman run's snapshot ids are subvolumes of the store its journal
     names; sweep deletes them through BtrfsStore -- no pool, no runtime binary,
     no AgentENV -- and one already gone counts as deleted, as a 404 does."""
-    import sprout.harness.cli as cli
+    import sprout.worker.cli as cli
 
     monkeypatch.setattr(cli, "AgentEnvClient", NoAgentEnv)
     ids = ["sprout-000000000009-0001", "sprout-000000000009-0002", "sprout-000000000009-0003-final"]
@@ -435,8 +435,8 @@ def test_sweep_reads_a_killed_runs_torn_journal(tmp_path, store, monkeypatch, ca
     moves into the swept marker, so the journal stays a file of whole lines
     that every reader parses (glued to the fragment, the marker would have made
     one corrupt line)."""
-    import sprout.harness.cli as cli
-    from sprout.harness_core.journal import journal_events
+    import sprout.worker.cli as cli
+    from sprout.worker.run.journal import journal_events
 
     monkeypatch.setattr(cli, "AgentEnvClient", NoAgentEnv)
     ids = ["sprout-000000000009-0001", "sprout-000000000009-0002"]
@@ -461,7 +461,7 @@ def test_sweep_needs_the_store_for_a_podman_journal_that_names_none(tmp_path, st
     """A journal written before the store was recorded, or a store that moved:
     --store says where the subvolumes are; without it, or with a store that is
     not on btrfs, nothing is deleted and nothing is marked swept."""
-    import sprout.harness.cli as cli
+    import sprout.worker.cli as cli
 
     monkeypatch.setattr(cli, "AgentEnvClient", NoAgentEnv)
     ids = ["sprout-000000000009-0001"]
@@ -486,7 +486,7 @@ def test_sweep_needs_the_store_for_a_podman_journal_that_names_none(tmp_path, st
 def test_sweep_is_a_dry_run_unless_told_otherwise(tmp_path, monkeypatch, capsys):
     """Deleting history must take two deliberate acts: naming the journal AND
     typing --yes. The default prints what WOULD die and touches nothing."""
-    import sprout.harness.cli as cli
+    import sprout.worker.cli as cli
 
     journal = tmp_path / "run.jsonl"
     _journal_with_snapshots(journal, ["s1", "s2"])
@@ -511,7 +511,7 @@ def test_sweep_is_a_dry_run_unless_told_otherwise(tmp_path, monkeypatch, capsys)
 
 
 def test_sweep_refuses_to_double_sweep_and_missing_journals(tmp_path, monkeypatch, capsys):
-    import sprout.harness.cli as cli
+    import sprout.worker.cli as cli
 
     journal = tmp_path / "run.jsonl"
     _journal_with_snapshots(journal, ["s1"])
@@ -532,7 +532,7 @@ def test_sweep_refuses_to_double_sweep_and_missing_journals(tmp_path, monkeypatc
 def test_reap_cli_plans_sandboxes_of_both_backends(tmp_path, monkeypatch, capsys):
     """The command a person types habitually: it names sandboxes, never
     snapshots, and frees each through the backend that made it."""
-    import sprout.harness.cli as cli
+    import sprout.worker.cli as cli
 
     ledger = tmp_path / "res.jsonl"
     ResourceLedger(ledger)._append("claim", run_id="dead", kind="sandbox", id="sb", pid=999999999)
@@ -566,9 +566,9 @@ def test_nothing_in_the_run_lifecycle_calls_snapshot_deletion():
     from pathlib import Path
 
     root = Path(__file__).resolve().parents[2]
-    for module in ("src/sprout/harness_orchestrator/run.py", "src/sprout/harness_tools/access.py",
-                   "src/sprout/harness_checkpoint/checkpointer.py", "src/sprout/harness_sandbox/session.py",
-                   "src/sprout/harness_sandbox/session_loop.py", "src/sprout/harness_sandbox/spawn.py"):
+    for module in ("src/sprout/worker/run/runner.py", "src/sprout/worker/tools/access.py",
+                   "src/sprout/worker/checkpoint/checkpointer.py", "src/sprout/worker/sandbox/session.py",
+                   "src/sprout/worker/sandbox/session_loop.py", "src/sprout/worker/sandbox/spawn.py"):
         text = (root / module).read_text()
         assert "delete_snapshot" not in text, \
             "%s must not delete snapshots -- runs end, history stays" % module

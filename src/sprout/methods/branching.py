@@ -19,10 +19,6 @@ from functools import partial
 from pathlib import Path
 
 from sprout.contract.mini_history import load_prefix, training_messages, validate_assistant_turn
-from sprout.harness_agents.mini_swe.history import actor_tools_at, conversation_restore, reference_at
-from sprout.harness_checkpoint.rollback import Checkpoint, load_checkpoints
-from sprout.harness_core.journal import read_journal
-from sprout.harness_orchestrator.run import RunOutcome
 from sprout.methods import structured_review
 from sprout.methods.branch_plan import (
     PromptRejected,
@@ -33,6 +29,10 @@ from sprout.methods.branch_plan import (
     review_with_feedback,
 )
 from sprout.methods.prompts import DEFAULT_PROMPTS, Prompts
+from sprout.worker.agents.mini_swe.history import actor_tools_at, conversation_restore, reference_at
+from sprout.worker.checkpoint.rollback import Checkpoint, load_checkpoints
+from sprout.worker.run.journal import read_journal
+from sprout.worker.run.runner import RunOutcome
 
 
 @dataclass
@@ -778,7 +778,7 @@ def review(
     Either way every branch keeps its result in ``BranchChoice.turn_check``,
     and every refusal is in the plan.
     """
-    from sprout.harness_agents.mini_swe.history import available_branch_points
+    from sprout.worker.agents.mini_swe.history import available_branch_points
 
     points = {a.name: available_branch_points(a.outcome.journal_path) for a in attempts}
     points = {

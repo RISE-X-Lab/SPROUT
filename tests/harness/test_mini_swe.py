@@ -15,11 +15,11 @@ from uuid import uuid4
 
 import pytest
 
-from sprout.harness_core.journal import read_journal
-from sprout.harness_core.result import CommandOutcome, ToolResult
-from sprout.harness_orchestrator.run import Orchestrator, OwnedSandbox
+from sprout.worker.run.journal import read_journal
+from sprout.worker.tools.result import CommandOutcome, ToolResult
+from sprout.worker.run.runner import Orchestrator, OwnedSandbox
 from sprout.contract.run_spec import RunSpec
-from sprout.harness_checkpoint.rollback import branch_checkpoints
+from sprout.worker.checkpoint.rollback import branch_checkpoints
 from sprout.contract.mini_history import read_entries, training_messages
 from sprout.contract.messages import clean_messages
 

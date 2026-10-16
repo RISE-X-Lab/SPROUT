@@ -30,8 +30,8 @@ from types import SimpleNamespace
 from harbor.models.task.task import Task
 from harbor.trial.trial import Trial
 
-from sprout.harness_sandbox.backends import default_podman_store
 from sprout.methods.evaluate import ENVIRONMENTS, trial_config
+from sprout.worker.sandbox.backends import default_podman_store
 
 MODES = ("oracle", "nop")
 

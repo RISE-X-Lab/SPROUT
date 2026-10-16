@@ -3,16 +3,16 @@ import json
 
 import pytest
 
-from sprout.harness_core.journal import read_journal
-from sprout.harness_orchestrator.run import Orchestrator
-from sprout.harness_checkpoint.rollback import branch_checkpoints
+from sprout.worker.run.journal import read_journal
+from sprout.worker.run.runner import Orchestrator
+from sprout.worker.checkpoint.rollback import branch_checkpoints
 from sprout.contract.mini_history import read_entries
 from tests.harness.test_mini_swe import FilesystemSession, model_server, owned_filesystem, pytestmark, reply, spec
 from sprout.runstore.messages import export_messages
-from sprout.harness_agents.mini_swe.history import index_native
+from sprout.worker.agents.mini_swe.history import index_native
 from sprout.contract.mini_history import materialize, read_prefix
-from sprout.harness_agents.mini_swe.tools import malformed_tool_calls
-from sprout.harness.atif import journal_to_atif
+from sprout.worker.agents.mini_swe.tools import malformed_tool_calls
+from sprout.worker.run.atif import journal_to_atif
 from tests.runstore.test_assistant_turn_branch import restore_files
 
 

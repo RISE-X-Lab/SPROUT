@@ -74,7 +74,7 @@ class Owned:
         self.sessions = []
 
     def create(self, image_or_snapshot: str):
-        from sprout.harness_sandbox.session import SandboxSession
+        from sprout.worker.sandbox.session import SandboxSession
 
         session = SandboxSession(quiet=True, backend=_backend())
         assert session.create(image_or_snapshot), \

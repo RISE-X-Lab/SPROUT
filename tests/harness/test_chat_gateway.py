@@ -9,14 +9,14 @@ import threading
 import httpx
 import pytest
 
-from sprout.harness_core.control import RunAborted, RunControl
-from sprout.harness_gateway.routing import ModelRoute, RoutingTable
-from sprout.harness_gateway.server import GatewayServer
+from sprout.worker.run.control import RunAborted, RunControl
+from sprout.worker.gateway.routing import ModelRoute, RoutingTable
+from sprout.worker.gateway.server import GatewayServer
 
 
 def test_stop_cancels_silent_http_transport(monkeypatch):
     import asyncio
-    from sprout.harness_core.control import post
+    from sprout.worker.run.control import post
 
     started, closed = threading.Event(), threading.Event()
     control = RunControl()
@@ -40,8 +40,8 @@ def test_stop_cancels_silent_http_transport(monkeypatch):
 
 
 def test_plain_success_metadata_is_specific_to_shell():
-    from sprout.harness_core.result import ToolResult
-    from sprout.harness_tools.access import _settled
+    from sprout.worker.tools.result import ToolResult
+    from sprout.worker.tools.access import _settled
 
     def plain():
         return ToolResult(True, "stdout\n")

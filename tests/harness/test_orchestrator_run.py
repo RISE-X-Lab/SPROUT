@@ -18,10 +18,10 @@ from typing import Any, List, Optional
 
 import pytest
 
-from sprout.harness_core import events as E
-from sprout.harness_core.journal import read_journal
-from sprout.harness_core.slot import AgentSlot, SlotResult
-from sprout.harness_orchestrator import Orchestrator, RunSpec
+from sprout.worker.run import events as E
+from sprout.worker.run.journal import read_journal
+from sprout.worker.agents.slot import AgentSlot, SlotResult
+from sprout.worker.run import Orchestrator, RunSpec
 
 #: The real sandbox wiring, for the tests that exercise it directly; every other
 #: test gets a fake sandbox from the autouse fixture below.
@@ -65,7 +65,7 @@ class RecordingSlot(AgentSlot):
 def fake_slot(monkeypatch):
     RecordingSlot.calls = []
     RecordingSlot.raises = None
-    monkeypatch.setattr("sprout.harness_orchestrator.run.MiniSweSlot", RecordingSlot)
+    monkeypatch.setattr("sprout.worker.run.runner.MiniSweSlot", RecordingSlot)
     yield RecordingSlot
 
 
@@ -115,7 +115,7 @@ def fake_workspace(monkeypatch):
         probed.append(session)
         return {**extra, "mini_workspace": dict(WORKSPACE)}
 
-    monkeypatch.setattr("sprout.harness_agents.mini_swe.sandbox.resolve_workspace", resolve)
+    monkeypatch.setattr("sprout.worker.agents.mini_swe.sandbox.resolve_workspace", resolve)
     return probed
 
 
@@ -147,7 +147,7 @@ class FakeSession:
         return True
 
     def call(self, name, args, timeout=300):
-        from sprout.harness_core.result import CommandOutcome, ToolResult
+        from sprout.worker.tools.result import CommandOutcome, ToolResult
 
         return ToolResult(True, "", outcome=CommandOutcome(exit_code=0))
 
@@ -213,7 +213,7 @@ def test_a_bad_spec_is_refused_before_a_sandbox_or_the_agent_exists(tmp_path, mo
     check comes first, so a typo'd slot never pays for a sandbox (one wired too
     early would surface as the image error instead), and a missing image is
     named before the backend fails opaquely on create(None)."""
-    import sprout.harness_sandbox.session as session_module
+    import sprout.worker.sandbox.session as session_module
 
     session = _FakeSession()
     monkeypatch.setattr(session_module, "SandboxSession", lambda **kw: session)
@@ -256,7 +256,7 @@ def test_everything_is_released_when_the_slot_raises(tmp_path, monkeypatch):
     provisioned = FakeProvisioned()
     gateway = FakeGateway()
     monkeypatch.setattr(Orchestrator, "_wire_sandbox", lambda self, run_spec, claim: provisioned)
-    monkeypatch.setattr("sprout.harness_gateway.GatewayServer", lambda *a, **k: gateway)
+    monkeypatch.setattr("sprout.worker.gateway.GatewayServer", lambda *a, **k: gateway)
     RecordingSlot.raises = RuntimeError("agent exploded")
 
     outcome = Orchestrator(out_dir=tmp_path).run(
@@ -276,7 +276,7 @@ def test_a_failing_teardown_step_does_not_block_the_others(tmp_path, monkeypatch
     gateway = FakeGateway()
     stubborn = Stubborn()
     monkeypatch.setattr(Orchestrator, "_wire_sandbox", lambda self, run_spec, claim: stubborn)
-    monkeypatch.setattr("sprout.harness_gateway.GatewayServer", lambda *a, **k: gateway)
+    monkeypatch.setattr("sprout.worker.gateway.GatewayServer", lambda *a, **k: gateway)
 
     outcome = Orchestrator(out_dir=tmp_path).run(
         spec(tmp_path, sandbox_image="img", extra=controlled()))
@@ -331,13 +331,13 @@ def test_a_reboard_moves_the_claim_and_the_record_to_the_replacement(tmp_path, m
     The replacement has to be claimed before that -- a process killed afterwards
     would otherwise leave a sandbox `harness reap` cannot attribute -- and the
     release at teardown and the outcome must name it, not the destroyed one."""
-    import sprout.harness_sandbox.session as session_module
-    from sprout.harness_orchestrator import ResourceLedger
+    import sprout.worker.sandbox.session as session_module
+    from sprout.worker.run import ResourceLedger
 
     session = ReboardingSession()
     monkeypatch.setattr(Orchestrator, "_wire_sandbox", REAL_WIRE_SANDBOX)
     monkeypatch.setattr(session_module, "SandboxSession", lambda **kw: session)
-    monkeypatch.setattr("sprout.harness_orchestrator.run.MiniSweSlot", ThreeTurns)
+    monkeypatch.setattr("sprout.worker.run.runner.MiniSweSlot", ThreeTurns)
     ledger = ResourceLedger(tmp_path / "ledger.jsonl")
     outcome = Orchestrator(out_dir=tmp_path, ledger=ledger).run(
         spec(tmp_path, run_id="r1", sandbox_image="img", backend={"backend": "microvm"}))
@@ -392,9 +392,9 @@ class _FakeSession:
 
 def _own(monkeypatch, session, **spec_kwargs):
     """Drive the real sandbox wiring with a fake session, returning (orchestrator, owned)."""
-    import sprout.harness_sandbox.session as session_module
+    import sprout.worker.sandbox.session as session_module
 
-    from sprout.harness_orchestrator.run import Orchestrator
+    from sprout.worker.run.runner import Orchestrator
     from sprout.contract.run_spec import RunSpec
 
     monkeypatch.setattr(session_module, "SandboxSession", lambda **kw: session)
@@ -410,11 +410,11 @@ def test_one_run_start_to_finish_on_the_sandbox_it_owns(tmp_path, monkeypatch):
     the slot's result and still names the sandbox after teardown; and the ledger
     reads claim, release under the same id, done -- what `harness reap` has to go
     on, since a killed *process* releases nothing."""
-    import sprout.harness_sandbox.session as session_module
+    import sprout.worker.sandbox.session as session_module
 
-    from sprout.harness_orchestrator import ResourceLedger
-    from sprout.harness_tools.access import ToolAccess
-    from sprout.harness_tools.schema import runtime_tools
+    from sprout.worker.run import ResourceLedger
+    from sprout.worker.tools.access import ToolAccess
+    from sprout.worker.tools.schema import runtime_tools
 
     session = _FakeSession()
     monkeypatch.setattr(session_module, "SandboxSession", lambda **kw: session)
@@ -446,10 +446,10 @@ def test_one_run_start_to_finish_on_the_sandbox_it_owns(tmp_path, monkeypatch):
 def test_the_ledger_claim_names_the_backend(monkeypatch, tmp_path):
     """`harness reap` frees AgentENV's sandboxes; a podman container's claim
     has to say so, or reap reads it as "already gone" forever."""
-    import sprout.harness_sandbox.session as session_module
+    import sprout.worker.sandbox.session as session_module
 
-    from sprout.harness_orchestrator import ResourceLedger
-    from sprout.harness_orchestrator.run import Orchestrator
+    from sprout.worker.run import ResourceLedger
+    from sprout.worker.run.runner import Orchestrator
     from sprout.contract.run_spec import RunSpec
 
     session = _FakeSession()
@@ -478,7 +478,7 @@ def test_the_outcome_can_still_name_its_sandbox_after_teardown():
     """Teardown runs before the outcome is assembled, and a destroyed session
     answers "unknown" -- so reading the id lazily left every completed run unable
     to say which sandbox produced it."""
-    from sprout.harness_orchestrator.run import OwnedSandbox
+    from sprout.worker.run.runner import OwnedSandbox
 
     session = _FakeSession()
     owned = OwnedSandbox(session=session, sandbox_id=session.sandbox_id)
@@ -511,7 +511,7 @@ def test_volatile_paths_are_named_and_persistent_ones_are_not():
     rebooted mid-regrade; hours of agent time now exist only as prose. The guard
     is a resolved-prefix check at the ENTRY POINTS only: the library layer stays
     unguarded because tests legitimately journal into pytest's /tmp fixtures."""
-    from sprout.harness_core.journal import volatile_reason
+    from sprout.worker.run.journal import volatile_reason
 
     for doomed in ("/tmp/v32", "/tmp", "/var/tmp/x/deep/run.jsonl",
                    "/dev/shm/j.jsonl", "/tmp/../tmp/sneaky"):
@@ -525,7 +525,7 @@ def test_the_run_entrypoint_refuses_a_volatile_journal():
     import subprocess, sys
 
     proc = subprocess.run(
-        [sys.executable, "-m", "sprout.harness", "run", "--slot", "mini-swe-agent",
+        [sys.executable, "-m", "sprout.worker", "run", "--slot", "mini-swe-agent",
          "--sandbox-image", "img", "--runtime-bin", "runtime/sprout-runtime",
          "--journal", "/tmp/doomed.jsonl", "prompt"],
         capture_output=True, text=True)
@@ -536,10 +536,10 @@ def test_the_run_entrypoint_refuses_a_volatile_journal():
 def test_the_pipeline_is_limits_then_the_tracker_then_declared_rules(tmp_path):
     """The checkpointer must read the tracker the pipeline feeds: a second,
     unfed tracker once recorded every step after the first as clean reuse."""
-    from sprout.harness_core.journal import JournalWriter
-    from sprout.harness_orchestrator.run import OwnedSandbox
+    from sprout.worker.run.journal import JournalWriter
+    from sprout.worker.run.runner import OwnedSandbox
     from sprout.contract.run_spec import RunSpec
-    from sprout.harness_tools.interceptors import MutationTracker, ShellContext
+    from sprout.worker.tools.interceptors import MutationTracker, ShellContext
 
     limits = object()
     spec = RunSpec(prompt="x", interceptors=[{"name": "shell_context", "cwd": "/app", "user": "root"}])
@@ -555,7 +555,7 @@ def test_the_pipeline_is_limits_then_the_tracker_then_declared_rules(tmp_path):
 
 def test_a_failed_final_snapshot_keeps_the_sandbox_on_the_record(tmp_path, fake_sandbox):
     """Until the final snapshot exists the sandbox is the only copy of the result."""
-    from sprout.harness_orchestrator import ResourceLedger
+    from sprout.worker.run import ResourceLedger
 
     class NoSnapshotSession(FakeSession):
         def snapshot(self, name=None, disk_only=True):

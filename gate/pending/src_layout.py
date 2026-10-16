@@ -20,7 +20,7 @@ from pathlib import Path, PurePosixPath
 
 REPO = Path(__file__).resolve().parents[2]
 SRC = "src"
-ALLOWED_NESTED = ("sprout/harness_agents/*", "sprout/harness_tools/interceptors")
+ALLOWED_NESTED = ("sprout/worker/agents/*", "sprout/worker/tools/interceptors")
 MAX_FILES = 10
 MAX_LINES = 500
 

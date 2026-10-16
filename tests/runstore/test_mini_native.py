@@ -3,12 +3,12 @@ from pathlib import Path
 
 import pytest
 
-from sprout.harness_orchestrator.run import Orchestrator
+from sprout.worker.run.runner import Orchestrator
 from sprout.contract.mini_history import read_entries, training_messages
 from tests.harness.test_mini_swe import FilesystemSession, model_server, owned_filesystem, reply, spec, pytestmark
 from sprout.runstore.messages import export_messages
 from sprout.contract.messages import mark_hint
-from sprout.harness_agents.mini_swe.history import index_native
+from sprout.worker.agents.mini_swe.history import index_native
 from sprout.contract.mini_history import materialize, read_prefix
 from tests.runstore.test_store import store  # noqa: F401  (fixture)
 
@@ -95,7 +95,7 @@ def test_modified_or_partial_prefix_cannot_be_restored(tmp_path, monkeypatch):
 
 
 def test_branch_point_inspection_reads_each_session_once_without_stale_results(tmp_path, monkeypatch):
-    from sprout.harness_agents.mini_swe import history
+    from sprout.worker.agents.mini_swe import history
 
     _, parent, points = parent_run(tmp_path, monkeypatch)
     original = history.index_mini
@@ -116,7 +116,7 @@ def test_branch_point_inspection_reads_each_session_once_without_stale_results(t
 
 
 def test_branch_point_inspection_uses_the_latest_session_reference(tmp_path, monkeypatch):
-    from sprout.harness_agents.mini_swe.history import available_branch_points
+    from sprout.worker.agents.mini_swe.history import available_branch_points
 
     _, parent, points = parent_run(tmp_path, monkeypatch)
     old = Path(points[0].native["path"])
@@ -132,7 +132,7 @@ def test_branch_point_inspection_uses_the_latest_session_reference(tmp_path, mon
 
 def test_timeout_between_actions_grades_the_matching_closed_prefix(tmp_path, monkeypatch):
     from dataclasses import asdict
-    from sprout.harness_agents.mini_swe.sandbox import ToolEnvironment
+    from sprout.worker.agents.mini_swe.sandbox import ToolEnvironment
     from sprout.runstore.messages import complete_message_result
     from sprout.contract.messages import is_truncated_result
 

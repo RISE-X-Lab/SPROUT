@@ -249,7 +249,7 @@ python -m examples.qwen.run "${TB[@]}" "${COMMON[@]}" "${VM[@]}" --method sprout
 ```
 
 Cleaning up is the same two commands on either backend: `python -m
-sprout.harness sweep <journal> --yes` deletes the snapshots a journal names, and
-`python -m sprout.harness reap` removes sandboxes a killed run left. Run Store
+sprout.worker sweep <journal> --yes` deletes the snapshots a journal names, and
+`python -m sprout.worker reap` removes sandboxes a killed run left. Run Store
 jobs take their backend from the worker profile, podman unless it names microvm
 (`docs/RUNSTORE.md`).

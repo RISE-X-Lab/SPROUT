@@ -13,8 +13,8 @@ import pytest
 
 from sprout.contract.continuation import render_branch_note, render_reasoning
 from sprout.contract.mini_history import read_entries, read_prefix, training_messages
-from sprout.harness_core.journal import read_journal
-from sprout.harness_orchestrator.run import Orchestrator
+from sprout.worker.run.journal import read_journal
+from sprout.worker.run.runner import Orchestrator
 from sprout.runstore import child
 from sprout.contract.messages import clean_messages, mark_hint
 from sprout.runstore.specs import JobSpec

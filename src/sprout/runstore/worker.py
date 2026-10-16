@@ -14,15 +14,15 @@ from threading import Event, Lock, Thread
 from uuid import uuid4
 
 from sprout.contract.messages import failure_kind
-from sprout.harness_agents.mini_swe.history import index_native
-from sprout.harness_core.journal import journal_events
-from sprout.harness_sandbox.backends import backend_name, default_podman_store, snapshot_store
 from sprout.runstore.config import merge, referenced_env, resolve, snapshot_validator
 from sprout.runstore.files import read_json, write_json
 from sprout.runstore.index import Index
 from sprout.runstore.payload import PayloadUnavailable, encode_payload, send_payload
 from sprout.runstore.specs import defaults_key, digest, validate_continuation
 from sprout.runstore.store import Store
+from sprout.worker.agents.mini_swe.history import index_native
+from sprout.worker.run.journal import journal_events
+from sprout.worker.sandbox.backends import backend_name, default_podman_store, snapshot_store
 from sprout_sandbox.podman_cli import default_podman_bin
 
 #: Where a queued job's sandboxes may live: on this host, owned by the attempt,
@@ -95,7 +95,7 @@ def podman_reclaimed(claims: dict, backend: dict) -> bool:
     store its rootfs was made in; one that does not (the grader's) is looked
     for in the store the job's backend names.
     """
-    from sprout.harness_orchestrator.reap import PodmanClient
+    from sprout.worker.run.reap import PodmanClient
 
     section = backend.get("podman") or {}
     default = snapshot_store(backend) or default_podman_store()
@@ -383,7 +383,7 @@ class Worker:
             effective = apply_branch_budget(effective, request.get("branch_budget"))
             rollout_contract = effective.get("extra", {}).get("rollout_contract")
             if job["kind"] == "rollout" and rollout_contract is not None:
-                from sprout.harness_orchestrator.rollout import remaining_timeout
+                from sprout.worker.run.rollout import remaining_timeout
 
                 # Queue time belongs to the group deadline too. Bound child
                 # startup/provisioning, not only the agent's model requests.

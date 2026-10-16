@@ -11,7 +11,7 @@ from types import SimpleNamespace
 
 import pytest
 
-import sprout.harness.cli as cli
+import sprout.worker.cli as cli
 
 RUN = ["run", "--sandbox-image", "docker.io/library/python:3.11-slim", "--cwd", "/tmp", "fix it"]
 

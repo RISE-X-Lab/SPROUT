@@ -15,7 +15,7 @@ Why this exists: the adapters are built on surfaces upstream does not promise to
 keep (flag names, event fields, SDK kwargs). Without this, a rename shows up as
 subtly wrong trajectories weeks later instead of a red build today.
 
-Exit codes: 0 ok, 1 contract violation, 2 harness/setup error.
+Exit codes: 0 ok, 1 contract violation, 2 worker/setup error.
 """
 
 from __future__ import annotations

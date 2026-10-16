@@ -23,7 +23,7 @@ class RunSpec:
     journal_path: str | Path | None = None
 
     # --- sandbox ---
-    #: Where the sandbox comes from (``harness_sandbox/backends.py``):
+    #: Where the sandbox comes from (``worker/sandbox/backends.py``):
     #: ``{"backend": "microvm", "microvm": {...}}`` for an AgentENV microVM, or
     #: ``{"backend": "podman", "podman": {"store": ..., "runtime_bin": ...}}``
     #: for a rootless container whose rootfs is a subvolume of the store. Empty
@@ -36,7 +36,7 @@ class RunSpec:
     #: fields) and not otherwise consumed: the binary a backend actually uses is
     #: the one in its own section -- ``backend["podman"]["runtime_bin"]`` is
     #: mounted into every container, ``backend["microvm"]["runtime_bin"]`` builds
-    #: the per-image template (``harness_sandbox/templates.py``).
+    #: the per-image template (``worker/sandbox/templates.py``).
     runtime_bin: str | None = None
     #: The image (or snapshot) the sandbox is created from. Required.
     sandbox_image: str | None = None
@@ -47,7 +47,7 @@ class RunSpec:
     #: Keep the sandbox after the run -- grading and extraction need it alive.
     keep_sandbox: bool = False
     #: Rules mounted on the serving pipeline after the mutation tracker, by name
-    #: (``harness_tools.interceptors.INTERCEPTORS``): ``[{"name": ..., **kwargs}]``.
+    #: (``worker.tools.interceptors.INTERCEPTORS``): ``[{"name": ..., **kwargs}]``.
     interceptors: list[dict[str, Any]] = field(default_factory=list)
 
     # --- gateway ---

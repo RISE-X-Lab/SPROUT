@@ -10,8 +10,8 @@ from __future__ import annotations
 
 import json
 
-from sprout.harness_agents.mini_swe.history import index_native
-from sprout.harness_core.journal import JournalWriter, journal_events
+from sprout.worker.agents.mini_swe.history import index_native
+from sprout.worker.run.journal import JournalWriter, journal_events
 
 SESSION = "session"
 OUTPUT = "before\x85between\u2028after"

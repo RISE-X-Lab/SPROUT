@@ -15,9 +15,9 @@ from typing import Any, List
 
 import pytest
 
-from sprout.harness_core.result import ToolResult
-from sprout.harness_sandbox.commands import shell, shell_outcome
-from sprout.harness_sandbox.session import OWNER_AGENT_ID, SandboxSession
+from sprout.worker.tools.result import ToolResult
+from sprout.worker.sandbox.commands import shell, shell_outcome
+from sprout.worker.sandbox.session import OWNER_AGENT_ID, SandboxSession
 
 
 # --- fakes -----------------------------------------------------------------
@@ -309,7 +309,7 @@ def test_swap_tells_listeners_before_the_old_sandbox_is_destroyed():
 
 # --- the checkpoint contract -----------------------------------------------
 def test_the_methods_checkpointing_calls_are_present():
-    """The Checkpointer (sprout.harness_checkpoint.checkpointer) duck-types on these.
+    """The Checkpointer (sprout.worker.checkpoint.checkpointer) duck-types on these.
     A session missing one cannot record the environment half of a branch point."""
     for name in ("snapshot", "squash_snapshot", "swap_sandbox"):
         assert callable(getattr(SandboxSession, name, None)), name
@@ -502,8 +502,8 @@ def pooled(monkeypatch):
     into the session, so what runs is the actual spawn logic -- template
     resolution off, cold start on.
     """
-    import sprout.harness_sandbox.session as module
-    import sprout.harness_sandbox.spawn as spawn
+    import sprout.worker.sandbox.session as module
+    import sprout.worker.sandbox.spawn as spawn
 
     def install(pool: FakePool):
         monkeypatch.setattr(module, "build_pool", lambda backend: pool)
@@ -520,7 +520,7 @@ def test_session_snapshot_workers_do_not_reenter_the_same_loop():
     import warnings
     from concurrent.futures import ThreadPoolExecutor
 
-    from sprout.harness_sandbox.session import SandboxSession
+    from sprout.worker.sandbox.session import SandboxSession
 
     entered, release = threading.Event(), threading.Event()
 

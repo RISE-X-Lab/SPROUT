@@ -16,10 +16,10 @@ import pytest
 
 httpx = pytest.importorskip("httpx")
 
-from sprout.harness_core.events import Usage
-from sprout.harness_core.journal import JournalWriter, read_journal
-from sprout.harness_gateway.routing import ModelRoute, RoutingTable
-from sprout.harness_gateway.server import GATEWAY_EVENT, GatewayServer
+from sprout.worker.run.events import Usage
+from sprout.worker.run.journal import JournalWriter, read_journal
+from sprout.worker.gateway.routing import ModelRoute, RoutingTable
+from sprout.worker.gateway.server import GATEWAY_EVENT, GatewayServer
 
 RESPONSE = {
     "id": "chat-1",
@@ -228,7 +228,7 @@ def test_api_key_env_is_resolved_lazily(monkeypatch):
 
 
 def test_upstream_error_detail_redacts_the_bearer_key():
-    from sprout.harness_gateway.server import _upstream_error
+    from sprout.worker.gateway.server import _upstream_error
 
     request = httpx.Request("POST", "https://example.com",
                             headers={"Authorization": "Bearer provider-secret"})
@@ -249,7 +249,7 @@ def test_provider_error_is_recorded_with_the_failed_gateway_request(gateway, mon
                               json={"error": {"code": "invalid_encrypted_content",
                                               "message": "The reasoning item is invalid"}})
 
-    monkeypatch.setattr("sprout.harness_core.control.post", failed)
+    monkeypatch.setattr("sprout.worker.run.control.post", failed)
     token = table.mint("actor")
     assert post(server, token.token, {"model": "m", "messages": []}).status_code == 400
     for _ in range(100):

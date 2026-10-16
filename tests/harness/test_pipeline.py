@@ -1,4 +1,4 @@
-"""Unit tests for the tool interceptor pipeline (harness_tools.pipeline).
+"""Unit tests for the tool interceptor pipeline (worker.tools.pipeline).
 
 No sandbox, no model calls -- the interceptors are exercised against plain
 functions.
@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import pytest
 
-from sprout.harness_tools.pipeline import (
+from sprout.worker.tools.pipeline import (
     CallContext,
     Continue,
     Reject,
@@ -22,7 +22,7 @@ from sprout.harness_tools.pipeline import (
     ToolInterceptor,
     ToolPipeline,
 )
-from sprout.harness_core.result import ToolResult
+from sprout.worker.tools.result import ToolResult
 
 def _ok(output: str = "ok") -> ToolResult:
     return ToolResult(success=True, output=output)

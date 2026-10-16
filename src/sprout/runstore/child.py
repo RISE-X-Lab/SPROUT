@@ -14,12 +14,12 @@ from pathlib import Path
 from sprout.contract.continuation import Continuation, prepare
 from sprout.contract.mini_history import load_prefix, materialize
 from sprout.contract.run_spec import RunSpec
-from sprout.harness_orchestrator.resources import ResourceLedger
-from sprout.harness_orchestrator.run import Orchestrator
-from sprout.harness_sandbox.session import SandboxSession
 from sprout.runstore.config import referenced_env, resolve
 from sprout.runstore.files import write_json
 from sprout.runstore.payload import receive_payload
+from sprout.worker.run.resources import ResourceLedger
+from sprout.worker.run.runner import Orchestrator
+from sprout.worker.sandbox.session import SandboxSession
 
 
 class TrackingSession(SandboxSession):

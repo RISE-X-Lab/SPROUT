@@ -13,13 +13,13 @@ import tomllib
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from sprout.harness_agents.mini_swe.tools import DEFAULT_COMMAND_TIMEOUT_S
-from sprout.harness_gateway.auth import bearer_key
-from sprout.harness_sandbox.backends import default_podman_store
 from sprout.methods.branching import DEFAULT_PROMPT_CHARS, MAX_ROLLOUTS
 from sprout.methods.leak_judge import KEY_ENV as LEAK_KEY_ENV
 from sprout.methods.leak_judge import THRESHOLD as LEAK_THRESHOLD
 from sprout.methods.prompts import load_prompts
+from sprout.worker.agents.mini_swe.tools import DEFAULT_COMMAND_TIMEOUT_S
+from sprout.worker.gateway.auth import bearer_key
+from sprout.worker.sandbox.backends import default_podman_store
 
 ROOT = Path(__file__).resolve().parents[2]
 METHODS = ("baseline", "sprout", "bpo", "shepherd")
@@ -104,9 +104,9 @@ SNAPSHOT_STORAGE = {
 def retain_parent(output: Path) -> None:
     from dataclasses import asdict
 
-    from sprout.harness_agents.mini_swe.history import available_branch_points, reference_at
-    from sprout.harness_core.journal import read_journal
     from sprout.methods.evaluate import parent_journal
+    from sprout.worker.agents.mini_swe.history import available_branch_points, reference_at
+    from sprout.worker.run.journal import read_journal
 
     journal = parent_journal(output)
     points = available_branch_points(journal)

@@ -15,8 +15,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from sprout.harness_checkpoint.rollback import branch_checkpoints
-from sprout.harness_core.events import (
+from sprout.worker.checkpoint.rollback import branch_checkpoints
+from sprout.worker.run.events import (
     AGENT_MESSAGE,
     AGENT_THINKING,
     CHECKPOINT_CAPTURED,
@@ -31,7 +31,7 @@ from sprout.harness_core.events import (
     TURN_STARTED,
     USAGE_UPDATED,
 )
-from sprout.harness_core.journal import journal_events
+from sprout.worker.run.journal import journal_events
 
 #: Event types the harness emits by literal name (rollback.py names
 #: ``model.turn.completed`` the same way).
