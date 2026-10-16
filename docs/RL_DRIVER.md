@@ -150,7 +150,7 @@ instantly is not promised.
 `POST /rollout-groups` returns a `rollout_job_id`; poll `GET /rollout-groups/{id}` until
 `status` leaves `queued` / `running`; once the result has been persisted or consumed,
 `DELETE /rollout-groups/{id}` (the example request is
-`src/sprout/rl_driver/request.example.json`, and the result the adapter returns for it is
+`examples/rl_driver/request.example.json`, and the result the adapter returns for it is
 `result.example.json` in the same directory; `tests/rl_driver/test_message_rollout.py`
 asserts that the two agree, and Miles's tests use both files as fixtures). The second
 shared fixture is `search_result.example.json` in the same directory: one search whose two
@@ -395,7 +395,7 @@ with an assertion.
 
 `/execution-groups` is a debugging entry point, not the Miles wire API; internally, Miles
 requests are translated into such groups too. Call it directly over HTTP; the template is
-`src/sprout/rl_driver/execution-group.example.json`.
+`examples/rl_driver/execution-group.example.json`.
 
 - Request fields: `rollout_job_id`, `prompt_group_id`, an optional `context`, `samples`
   (1..1000). Each sample has a unique `sample_slot_id` and one of `run`

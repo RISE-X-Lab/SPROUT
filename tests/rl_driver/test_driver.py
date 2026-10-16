@@ -409,7 +409,8 @@ def test_example_is_valid_and_package_has_no_execution_calls():
     from sprout.rl_driver.specs import validate_request
 
     directory = Path(__file__).resolve().parents[2] / "src" / "sprout" / "rl_driver"
-    body = validate_request(json.loads((directory / "execution-group.example.json").read_text()))
+    example = Path(__file__).resolve().parents[2] / "examples" / "rl_driver" / "execution-group.example.json"
+    body = validate_request(json.loads(example.read_text()))
     assert len(body["samples"]) == 2
     # The driver validates requests but never executes: from the harness it may
     # use only the contracts enforced at run time -- the rollout contract

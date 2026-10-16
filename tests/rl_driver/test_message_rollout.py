@@ -16,7 +16,7 @@ from sprout.runstore.messages import clean_messages, mark_hint
 from sprout.runstore.grading import resolved
 
 
-EXAMPLE = Path(__file__).resolve().parents[2] / "src" / "sprout" / "rl_driver" / "request.example.json"
+EXAMPLE = Path(__file__).resolve().parents[2] / "examples" / "rl_driver" / "request.example.json"
 RESULT_EXAMPLE = EXAMPLE.with_name("result.example.json")
 
 
