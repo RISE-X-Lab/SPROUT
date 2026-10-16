@@ -1,6 +1,6 @@
-# Harbor runs TB2.1 / HARD-51 trials; harbor_plugin/ plugs Sprout in through
+# Harbor runs TB2.1 / HARD-51 trials; eval/harbor/ plugs Sprout in through
 # BaseEnvironment and BaseAgent. These are the surfaces those plugins and
-# methods.evaluate call, pinned to the version they were validated against.
+# eval.evaluate call, pinned to the version they were validated against.
 name: harbor
 upstream:
   package: harbor

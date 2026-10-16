@@ -22,13 +22,13 @@ pytest.importorskip("harbor")
 from harbor.models.agent.context import AgentContext
 from harbor.models.task.config import EnvironmentConfig, NetworkMode, NetworkPolicy
 from harbor.models.trial.paths import TrialPaths
-from sprout.harbor_plugin import environment as sandbox_environment
-from sprout.harbor_plugin import podman as podman_environment
-from sprout.harbor_plugin.agentenv_agent import AgentENVOrchestrator
-from sprout.harbor_plugin.agentenv_mini import AgentENVMini
-from sprout.harbor_plugin.branching import PodmanSnapshotEnvironment, read_branch_context
-from sprout.harbor_plugin.environment import SandboxEnvironment
-from sprout.harbor_plugin.podman import PodmanEnvironment
+from sprout.eval.harbor import environment as sandbox_environment
+from sprout.eval.harbor import podman as podman_environment
+from sprout.eval.harbor.agentenv_agent import AgentENVOrchestrator
+from sprout.eval.harbor.agentenv_mini import AgentENVMini
+from sprout.eval.harbor.branching import PodmanSnapshotEnvironment, read_branch_context
+from sprout.eval.harbor.environment import SandboxEnvironment
+from sprout.eval.harbor.podman import PodmanEnvironment
 from sprout.worker.run.journal import JournalWriter
 from sprout.worker.tools.result import ToolResult
 from sprout.worker.run.runner import RunOutcome

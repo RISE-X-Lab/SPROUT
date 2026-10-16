@@ -1,6 +1,6 @@
 """Whether a reviewer-written turn copies hidden-test content, judged by Jev.
 
-``methods.leak`` finds the hidden test *names* a turn gives away. A turn can
+``worker.jobs.review.leak.terms`` finds the hidden test *names* a turn gives away. A turn can
 also copy what the tests check: a fixture string, an input, an expected value,
 an exact assertion message. Those are what the audits of SPROUT's DeepSWE runs
 found in the turns that leaked, and no list of names catches them.
@@ -22,10 +22,10 @@ judges, prosecutors and refuters, the disagreements re-adjudicated by Opus 5.5
 and Sonnet 5.5) of 213 resolved branches of DeepSWE runs; see
 ``docs/LEAK_JUDGE.md``.
 
-    python -m sprout.methods.leak_judge <run root> [<run root> ...] \\
+    python -m sprout.worker.jobs.review.leak.judge <run root> [<run root> ...] \\
         --tasks-dir ~/datasets/deep-swe/tasks -o leak-judgements.jsonl
 
-writes one line per resolved branch of a ``methods.evaluate --method sprout``
+writes one line per resolved branch of a ``eval.evaluate --method sprout``
 run: its score, the candidates that scored, the lexical ``leak_terms``, and
 whether it may enter RL (``eligible``).
 """
@@ -45,7 +45,7 @@ from pathlib import Path
 
 import httpx
 
-from sprout.methods.leak import hidden_terms, leak_terms, visible_text
+from sprout.worker.jobs.review.leak.terms import hidden_terms, leak_terms, visible_text
 
 URL = "https://api.typesafe.ai/v1/systemone"
 #: Pinned, not ``jev-latest``: the threshold is calibrated against this version.
@@ -204,7 +204,7 @@ class JevError(RuntimeError):
 def readable_turn(turn: dict) -> str:
     """A turn as Jev reads it: its content, then each bash command decoded.
 
-    Not :func:`methods.leak.turn_text`, which also keeps the raw JSON
+    Not :func:`worker.jobs.review.leak.terms.turn_text`, which also keeps the raw JSON
     arguments for the lexical check: there a span's first occurrence is
     JSON-escaped, and the context Jev is shown would be too.
     """
@@ -324,7 +324,7 @@ def check_turn(
 ) -> dict:
     """Both leak checks of one turn, as ``branching.review``'s ``turn_check`` reports them.
 
-    ``leak_terms`` is ``methods.leak``'s (None without a vocabulary), ``jev``
+    ``leak_terms`` is ``worker.jobs.review.leak.terms``'s (None without a vocabulary), ``jev``
     this module's judgment (None without a judge or hidden text; an ``error``
     when the call failed). ``leak`` is True when either check flags the turn,
     None when neither does but one could not run, else False: a caller that
@@ -373,7 +373,7 @@ def read_key(key_file: str | None = None) -> str:
     return key
 
 
-# -- a methods.evaluate sprout run, branch by branch -------------------------------------------
+# -- a eval.evaluate sprout run, branch by branch -------------------------------------------
 
 _ROUND = re.compile(r"-r(\d+)b\d+-")
 REVIEWER_CALL = "reviewer-r"
@@ -534,7 +534,7 @@ def main(argv: list[str] | None = None) -> None:
         description="Judge the reviewer-inserted turns of sprout runs for copied "
         "hidden-test content, and mark which branches may enter RL."
     )
-    parser.add_argument("roots", nargs="+", help="methods.evaluate / examples.qwen.run sprout run roots")
+    parser.add_argument("roots", nargs="+", help="eval.evaluate / examples.qwen.run sprout run roots")
     parser.add_argument("--tasks-dir", required=True, help="the dataset's task directories")
     parser.add_argument("-o", "--output", required=True, help="JSONL, one line per branch")
     parser.add_argument("--key-file", help=f"TypeSafe key file (default: ${KEY_ENV})")

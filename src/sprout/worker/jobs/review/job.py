@@ -2,7 +2,7 @@
 
 Given the finished attempts of one task -- their journals, native histories
 and grades, all on this host -- the model that ran them reads the failures
-under SPROUT's analyst and reviewer prompts (``methods.branching``) and chooses
+under SPROUT's analyst and reviewer prompts (``worker.jobs.review.branching``) and chooses
 where a continuation is worth trying. With ``assistant-turn`` guidance it also
 writes, for each chosen point, several independent candidate turns to insert
 there; the prompt holds them to what the retained history shows. Nothing runs
@@ -23,7 +23,7 @@ Two stages share one set of analyses:
 
 Each candidate is ``{assistant_turn, why, multiplicity, leak_terms}``. The
 analyst has read the test log and the reviewer has read the analyst's report;
-the actor has seen neither. ``leak_terms`` (``methods.leak``) lists the
+the actor has seen neither. ``leak_terms`` (``worker.jobs.review.leak.terms``) lists the
 hidden test names the turn mentions that h_s never showed. h_s is the history a continuation from that point keeps, with
 hints removed, as training sees it. The hidden names come from two facts in
 the parent's grade, ``fail_to_pass`` and ``test_patch_paths``, and neither
@@ -78,7 +78,9 @@ from typing import Any
 
 from sprout.contract.messages import clean_messages
 from sprout.contract.mini_history import training_messages
-from sprout.methods.branching import (
+from sprout.runstore.specs import ReviewSpec
+from sprout.worker.agents.mini_swe.history import available_branch_points
+from sprout.worker.jobs.review.branching import (
     Attempt,
     BranchChoice,
     Grade,
@@ -87,11 +89,15 @@ from sprout.methods.branching import (
     review,
     selected_prefix,
 )
-from sprout.methods.leak import hidden_terms_of, leak_terms, visible_text
-from sprout.methods.leak_judge import REVIEW_ATTEMPTS, REVIEW_TIMEOUT_S, HiddenText, JevLeakJudge, check_turn
-from sprout.methods.review_transport import RequestStopped, ReviewTransport
-from sprout.runstore.specs import ReviewSpec
-from sprout.worker.agents.mini_swe.history import available_branch_points
+from sprout.worker.jobs.review.leak.judge import (
+    REVIEW_ATTEMPTS,
+    REVIEW_TIMEOUT_S,
+    HiddenText,
+    JevLeakJudge,
+    check_turn,
+)
+from sprout.worker.jobs.review.leak.terms import hidden_terms_of, leak_terms, visible_text
+from sprout.worker.jobs.review.transport import RequestStopped, ReviewTransport
 
 
 def grade_of(record: dict) -> Grade:
@@ -99,7 +105,7 @@ def grade_of(record: dict) -> Grade:
 
     Only the keys named here are rendered. The grade's hidden-test facts
     (``fail_to_pass``, ``test_patch_paths``, ``touched_test_paths``, and the
-    ``test_patch`` path) are kept for ``methods.leak`` and ``methods.leak_judge``
+    ``test_patch`` path) are kept for ``worker.jobs.review.leak.terms`` and ``worker.jobs.review.leak.judge``
     and never reach the analyst.
     """
     patch_path = record.get("model_patch")
@@ -293,7 +299,7 @@ def _candidate(
     """Stage 2, one sample: an ``assistant-turn`` review confined to the point; None when it chose nothing.
 
     With ``leak_judge`` configured every turn the reviewer writes is checked
-    (``leak_judge.check_turn``: ``methods.leak`` and Jev) before the plan is
+    (``leak_judge.check_turn``: ``worker.jobs.review.leak.terms`` and Jev) before the plan is
     taken, and a flagged one is sent back, ``leak_judge.resamples`` times at
     most; the turn taken keeps its check either way.
     """

@@ -31,13 +31,13 @@ REPO = Path(__file__).resolve().parents[2]
 ALLOWED = {
     # The formats RunStore, the RL driver and the worker agree on; it imports no other layer.
     "contract": set(),
-    "worker": {"contract", "runstore", "methods"},
-    "harbor_plugin": {"contract", "worker"},
-    "methods": {"contract", "worker", "harbor_plugin"},
     "runstore": {"contract"},
-    "inspect": {"contract", "worker", "harbor_plugin", "methods"},
+    "worker": {"contract", "runstore"},
     "rl_driver": {"contract", "runstore"},
-    "examples": {"contract", "worker", "harbor_plugin", "methods"},
+    # The local Harbor evaluation runs trials on this machine with the worker's parts.
+    "eval": {"contract", "runstore", "worker"},
+    "inspect": {"contract", "worker", "eval"},
+    "examples": {"contract", "worker", "eval"},
     # The service manager starts the layers above; it imports none of them
     # (stdlib + PyYAML), so it works before the extras are installed.
     "services": set(),

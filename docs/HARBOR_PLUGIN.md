@@ -13,13 +13,13 @@ Harbor loads each class from a `TrialConfig` `import_path` (`module:Class`):
 
 | Import path | What it is |
 |---|---|
-| `harbor_plugin.environment:SandboxEnvironment` | The base: Harbor's `BaseEnvironment` over one `SandboxSession` -- exec, upload/download, the `tests/Dockerfile` overlay replay, receipts, the retained stop. A backend subclass adds how the image is pinned, the backend section, the shape and how egress is toggled. |
-| `harbor_plugin.agentenv:AgentENVEnvironment` | `SandboxEnvironment` (`type()` = `agentenv`) on an AgentENV microVM. |
-| `harbor_plugin.podman:PodmanEnvironment` | `SandboxEnvironment` (`type()` = `podman`) on a rootless podman container whose rootfs is a btrfs subvolume of a store. |
-| `harbor_plugin.agentenv_mini:AgentENVMini` | Host mini-swe-agent (`name()` = `sprout-agentenv-mini-swe`) driving either sandbox. |
-| `harbor_plugin.branching:SnapshotEnvironment` | `AgentENVEnvironment` that boots from a recorded snapshot. |
-| `harbor_plugin.branching:PodmanSnapshotEnvironment` | `PodmanEnvironment` that boots from a recorded subvolume snapshot. |
-| `harbor_plugin.branching:BranchMini` | `AgentENVMini` that resumes an exact mini history prefix (`sprout-agentenv-mini-branch`). |
+| `eval.harbor.environment:SandboxEnvironment` | The base: Harbor's `BaseEnvironment` over one `SandboxSession` -- exec, upload/download, the `tests/Dockerfile` overlay replay, receipts, the retained stop. A backend subclass adds how the image is pinned, the backend section, the shape and how egress is toggled. |
+| `eval.harbor.agentenv:AgentENVEnvironment` | `SandboxEnvironment` (`type()` = `agentenv`) on an AgentENV microVM. |
+| `eval.harbor.podman:PodmanEnvironment` | `SandboxEnvironment` (`type()` = `podman`) on a rootless podman container whose rootfs is a btrfs subvolume of a store. |
+| `eval.harbor.agentenv_mini:AgentENVMini` | Host mini-swe-agent (`name()` = `sprout-agentenv-mini-swe`) driving either sandbox. |
+| `eval.harbor.branching:SnapshotEnvironment` | `AgentENVEnvironment` that boots from a recorded snapshot. |
+| `eval.harbor.branching:PodmanSnapshotEnvironment` | `PodmanEnvironment` that boots from a recorded subvolume snapshot. |
+| `eval.harbor.branching:BranchMini` | `AgentENVMini` that resumes an exact mini history prefix (`sprout-agentenv-mini-branch`). |
 
 `agentenv_agent.py` holds the base `AgentENVAgent` (subclasses provide `name()`,
 `version()`, `_instruction()`, `_make_spec()`) and `AgentENVOrchestrator`, which
@@ -47,7 +47,7 @@ image); Sprout never builds an image. CPU/memory come from the task. Network is
 public or no-network, switchable per phase. Each sandbox writes a
 `<session_id>.<type>.json` receipt into the trial directory (`backend`,
 `sandbox_id`, the pinned `image` and its `image_config`, `resources`,
-`network`, `checkpoint_mode`, `overlay`), which `methods.evaluate` reads back to
+`network`, `checkpoint_mode`, `overlay`), which `eval.evaluate` reads back to
 tie the graded trial to its sandbox and to give a branch its parent's image
 config.
 
@@ -106,7 +106,7 @@ actor timeout is a gradable rollout; Harbor's verifier still runs.
 `AgentENVMini(final_memory_snapshot=True)` adds a **memory** snapshot after the
 disk one (`final_memory_snapshot_id`, journal event `snapshot.memory`). It is
 for graders that run inside the agent's VM and need the task's processes alive
-on a re-grade; it is never a branch point. `methods.evaluate
+on a re-grade; it is never a branch point. `eval.evaluate
 --final-memory-snapshot on-failure` takes it for every attempt and releases it
 once the attempt grades resolved, appending `snapshot.released` to the journal.
 
@@ -135,7 +135,7 @@ With `[verifier] environment_mode = "separate"`, Harbor creates the verifier
 environment itself from the task's `tests/` context, using the trial's same
 environment `import_path` and kwargs, and hands it only the
 `[[verifier.collect]]` artifacts. The actor sandbox stays alive for collection;
-Harbor tears both down (`delete: true` in `src/sprout/methods/evaluate.py`). In a branch
+Harbor tears both down (`delete: true` in `src/sprout/eval/evaluate.py`). In a branch
 trial that import path is `SnapshotEnvironment` (or `PodmanSnapshotEnvironment`);
 it tells the verifier apart by the directory Harbor hands over (the task's
 `tests/`, not its `environment/`) and boots the pristine task image plus the
@@ -154,7 +154,7 @@ is refused when the session builds its pool).
 
 ## Driver
 
-`python -m sprout.methods.evaluate` runs one Harbor task as a parent trial and then a
+`python -m sprout.eval.evaluate` runs one Harbor task as a parent trial and then a
 method: `sprout` (analyst/reviewer rounds of branch trials; `--rounds`,
 `--branches`, `--branch-guidance`), `bpo` or `shepherd` (point-only branches
 from a recorded `--parent-output`), or `baseline`. Required: `--task-dir
@@ -166,7 +166,7 @@ from a recorded `--parent-output`), or `baseline`. Required: `--task-dir
 method's `--parent-output` must have run on the same
 backend (and store): its snapshots are the branch points. The same runner
 serves DeepSWE, TerminalBench 2.1 and SWE-bench Pro v2 HARD-51;
-`examples/qwen/run.py` shows the invocation. `python -m sprout.methods.gate`
+`examples/qwen/run.py` shows the invocation. `python -m sprout.eval.gate`
 runs Harbor's `oracle` and `nop` agents on this environment to prove the
 transport grades 1 and 0, on either backend. Run Store jobs take their backend
 from the worker profile, podman unless it names microvm (`docs/RUNSTORE.md`).

@@ -23,8 +23,8 @@ does not teach the policy to leave its thinking empty. The RL driver's
 repairs use it. The reviewer always writes the first form; only ``prepare``
 renders it.
 
-A Harbor branch trial (``harbor_plugin.branching.BranchMini``, what
-``methods.evaluate --method sprout`` runs) and a Run Store branch job
+A Harbor branch trial (``eval.harbor.branching.BranchMini``, what
+``eval.evaluate --method sprout`` runs) and a Run Store branch job
 (``POST /v1/jobs/{id}/branch``, which the RL driver's branch samples submit)
 both turn a ``Continuation`` into mini's options with ``prepare``; neither
 keeps its own copy of these rules.

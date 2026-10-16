@@ -22,7 +22,7 @@ from copy import deepcopy
 
 from jsonschema import Draft202012Validator, ValidationError
 
-from sprout.methods.branch_plan import extract_branch_plan
+from sprout.worker.jobs.review.branch_plan import extract_branch_plan
 
 
 def _object(properties):

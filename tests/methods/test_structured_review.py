@@ -4,9 +4,9 @@ import json
 import pytest
 
 from sprout.contract.mini_history import validate_assistant_turn
-from sprout.methods.branch_plan import review_with_feedback
-from sprout.methods.prompts import DEFAULT_PROMPTS
-from sprout.methods.structured_review import extract_assistant_turn_plan, response_text
+from sprout.worker.jobs.review.branch_plan import review_with_feedback
+from sprout.worker.jobs.review.prompts import DEFAULT_PROMPTS
+from sprout.worker.jobs.review.structured_review import extract_assistant_turn_plan, response_text
 
 
 def plan(*commands, content="I will inspect the implementation."):

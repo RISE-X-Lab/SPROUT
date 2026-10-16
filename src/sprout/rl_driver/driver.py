@@ -24,7 +24,7 @@ DONE = {"succeeded", "failed", "cancelled", "skipped", "expired"}
 
 #: What the review is given of each failed root's grade. The analyst reads the
 #: first seven (``runstore.review.grade_of``); the last three, the task's hidden
-#: tests, only the leak checks read -- ``methods.leak`` the names, so that every
+#: tests, only the leak checks read -- ``worker.jobs.review.leak.terms`` the names, so that every
 #: repair turn's ``leak_terms`` is computed rather than None, and the review's
 #: ``leak_judge`` the test patch itself.
 REVIEW_GRADE_KEYS = (
@@ -72,7 +72,7 @@ def _merged_leak_terms(earlier, later):
 
 def _leak_judge(candidate: dict, earlier: list | None = None) -> dict:
     """A repair's ``leak_judge``, when its review ran one: the check of every
-    turn the chain inserted (``methods.leak_judge.check_turn``), in round
+    turn the chain inserted (``worker.jobs.review.leak.judge.check_turn``), in round
     order. A turn is clean only when its ``leak`` is False; without a judge the
     key is absent, as from a review that predates it."""
     if "leak_judge" not in candidate:

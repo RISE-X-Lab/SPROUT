@@ -12,7 +12,7 @@ pytest.importorskip("harbor")
 
 from harbor.models.task.config import EnvironmentConfig
 from harbor.models.trial.paths import TrialPaths
-from sprout.harbor_plugin import branching
+from sprout.eval.harbor import branching
 from sprout.worker.agents.mini_swe.tools import mini_tool_schema
 from tests.harness.test_assistant_turn import assistant_turn
 

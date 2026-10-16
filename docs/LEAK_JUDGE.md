@@ -1,10 +1,10 @@
 # Leak judge: does a reviewer turn copy hidden-test content?
 
-`src/sprout/methods/leak_judge.py` decides, for each reviewer-inserted turn of a
+`src/sprout/worker/jobs/review/leak/judge.py` decides, for each reviewer-inserted turn of a
 SPROUT run, whether it carries content the actor could only have had from the
 hidden tests, and writes which branches may enter RL.
 
-`methods.leak` (`leak_terms`) already catches hidden test **names**. The audits
+`worker.jobs.review.leak.terms` (`leak_terms`) already catches hidden test **names**. The audits
 of the DeepSWE runs showed that the turns that leak mostly copy test **content**
 instead: a fixture string (`![Alt](<my image (1).png>)`), an input
 (`margin: not-a-valid-value`), an expected message
@@ -33,7 +33,7 @@ irrelevant state, numbers and multi-hop questions. So the work is split:
 3. **Branch score** = the highest candidate probability (0 with no candidate);
    `leak` when the score is at least `THRESHOLD` (0.75).
 
-The RL filter (`python -m sprout.methods.leak_judge`) marks a resolved branch
+The RL filter (`python -m sprout.worker.jobs.review.leak.judge`) marks a resolved branch
 `eligible` only when Jev ran and did not flag it and, with `--gate both` (the
 default, the RL driver's rule), `leak_terms` is empty too. A Jev error makes a
 branch ineligible.
@@ -72,7 +72,7 @@ Cost: 0.59 M input tokens for all 213 branches (1111 candidates), $0.025.
 ## Usage
 
 ```bash
-python -m sprout.methods.leak_judge runs/<sprout run> [runs/<another> ...] \
+python -m sprout.worker.jobs.review.leak.judge runs/<sprout run> [runs/<another> ...] \
     --tasks-dir ~/datasets/deep-swe/tasks --key-file ~/.typesafe_key \
     -o leak-judgements.jsonl          # --gate jev to not gate on leak_terms
 ```
@@ -119,7 +119,7 @@ output are what they were (no `leak_judge` key anywhere).
 
 ## In a Harbor sprout evaluation
 
-`methods.evaluate --method sprout --leak-judge` (assistant-turn guidance; the
+`eval.evaluate --method sprout --leak-judge` (assistant-turn guidance; the
 key in `$TYPESAFE_API_KEY`, or `--leak-judge-key-env`) does the same in every
 review round: each turn the reviewer writes is checked before the round's plan
 is taken, a flagged one goes back up to `--leak-judge-resamples` times (default
@@ -130,8 +130,8 @@ file under `tests/` as added lines) and FAIL_TO_PASS from `tests/config.json`,
 with the verifier output of every attempt graded so far -- what the reviewer
 read. `examples.qwen.run --method sprout --leak-judge [--leak-judge-resamples N]
 [--leak-judge-threshold T]` passes it to every sprout stage and records it in the
-manifest (`review.leak_judge`). Both modules live in `methods` (`methods.leak`,
-`methods.leak_judge`), so the Harbor path and the Run Store review share them.
+manifest (`review.leak_judge`). Both modules live in `methods` (`worker.jobs.review.leak.terms`,
+`worker.jobs.review.leak.judge`), so the Harbor path and the Run Store review share them.
 
 ## Limits
 

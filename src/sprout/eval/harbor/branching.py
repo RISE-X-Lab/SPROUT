@@ -9,9 +9,9 @@ from pathlib import Path
 
 from sprout.contract.continuation import Continuation, prepare
 from sprout.contract.mini_history import load_prefix
-from sprout.harbor_plugin.agentenv import AgentENVEnvironment
-from sprout.harbor_plugin.agentenv_mini import AgentENVMini
-from sprout.harbor_plugin.podman import PodmanEnvironment
+from sprout.eval.harbor.agentenv import AgentENVEnvironment
+from sprout.eval.harbor.agentenv_mini import AgentENVMini
+from sprout.eval.harbor.podman import PodmanEnvironment
 from sprout.worker.agents.mini_swe.history import actor_tools_at, available_branch_points, reference_at
 
 #: A snapshot id as a backend names one: AgentENV's UUID, or a podman subvolume

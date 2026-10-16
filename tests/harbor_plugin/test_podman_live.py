@@ -1,6 +1,6 @@
 """A real Harbor trial on the podman backend: the gate on the fixture task.
 
-``methods.gate --backend podman`` runs Harbor's own ``oracle`` and ``nop``
+``eval.gate --backend podman`` runs Harbor's own ``oracle`` and ``nop``
 agents on ``PodmanEnvironment`` -- the image pinned and extracted through
 podman, a shaped offline container, the ``tests/`` upload, the verifier's
 reward read back -- and the oracle must score 1 and doing nothing 0. What is
@@ -34,8 +34,8 @@ pytest.importorskip("harbor")
 
 from harbor.models.task.config import EnvironmentConfig, NetworkMode, NetworkPolicy
 from harbor.models.trial.paths import TrialPaths
-from sprout.harbor_plugin.podman import PodmanEnvironment
-from sprout.methods import gate
+from sprout.eval.harbor.podman import PodmanEnvironment
+from sprout.eval import gate
 from sprout_sandbox.btrfs_store import BtrfsStore, mount_problem
 from sprout_sandbox.podman_images import CONFIG_KEYS, image_info
 

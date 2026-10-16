@@ -1,6 +1,6 @@
-"""The prompts ``sprout.methods`` sends, loaded from one YAML file.
+"""The prompts ``sprout.eval`` sends, loaded from one YAML file.
 
-``resources/methods/prompts.yaml`` is the default copy; ``methods.evaluate
+``resources/review/prompts.yaml`` is the default copy; ``eval.evaluate
 --prompts PATH`` loads another, so a prompt can be edited without touching
 code. Every key is required, every value is a ``str.format`` template (a
 literal brace doubled), and the loader checks that each template names
@@ -22,7 +22,7 @@ import yaml
 
 from sprout.resource import resource
 
-DEFAULT_PROMPTS_PATH = resource("methods/prompts.yaml")
+DEFAULT_PROMPTS_PATH = resource("review/prompts.yaml")
 
 #: Dotted key in the YAML -> the placeholders its template must have, exactly.
 #: None marks a text that is sent verbatim, never through ``str.format``: its

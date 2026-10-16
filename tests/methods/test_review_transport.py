@@ -8,8 +8,8 @@ from types import SimpleNamespace
 import httpx
 import pytest
 
-from sprout.methods import review_transport
-from sprout.methods.review_transport import RequestStopped, ReviewTransport
+from sprout.worker.jobs.review import transport as review_transport
+from sprout.worker.jobs.review.transport import RequestStopped, ReviewTransport
 
 ENDPOINT = "http://127.0.0.1:18252"
 

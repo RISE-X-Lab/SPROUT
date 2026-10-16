@@ -174,7 +174,7 @@ class AgentEnvClient:
     pool, session or event loop exists -- including from a cron job after the
     process that leaked the resources is long gone. ``delete_snapshot`` is here
     for the two explicit callers that delete history (``harness sweep`` and
-    ``methods.evaluate`` releasing a failed attempt's memory snapshot); the
+    ``eval.evaluate`` releasing a failed attempt's memory snapshot); the
     reaper itself never calls it.
     """
 

@@ -1,6 +1,6 @@
 """The sprout loop: analyst -> reviewer -> exact branches, driven with fake trials.
 
-Every trial is faked at ``methods.evaluate.run_trial`` (a journal with N steps,
+Every trial is faked at ``eval.evaluate.run_trial`` (a journal with N steps,
 each with a snapshot) and the reviewer at ``ReviewTransport``; everything
 between them -- eligible steps, plan validation, branch contexts, rounds and the
 summary -- is the real code.
@@ -15,9 +15,9 @@ import yaml
 
 pytest.importorskip("harbor")
 
-from sprout.methods import evaluate
-from sprout.methods.branching import Attempt, Grade, branch_run_name
-from sprout.methods.prompts import DEFAULT_PROMPTS, DEFAULT_PROMPTS_PATH, load_prompts
+from sprout.eval import evaluate
+from sprout.worker.jobs.review.branching import Attempt, Grade, branch_run_name
+from sprout.worker.jobs.review.prompts import DEFAULT_PROMPTS, DEFAULT_PROMPTS_PATH, load_prompts
 
 
 def write_journal(path: Path, steps: int = 3, status: str = "completed", turns=None) -> Path:
@@ -126,7 +126,7 @@ def exercise(tmp_path, monkeypatch, plans, *, limits=None, alter_parent=None, co
 
     # Fake trials consume deterministic context labels; candidate eligibility
     # still uses the real native transcript written beside the journal.
-    monkeypatch.setattr("sprout.methods.branching.conversation_restore", restore)
+    monkeypatch.setattr("sprout.worker.jobs.review.branching.conversation_restore", restore)
     (tmp_path / "task").mkdir(exist_ok=True)
     (tmp_path / "task" / "task.toml").write_text("[task]\nname='org/task'\n")
     task = SimpleNamespace(name="org/task", instruction="Fix the public task.",
@@ -288,8 +288,8 @@ def test_a_resolved_branch_ends_the_rounds(tmp_path, monkeypatch):
 def test_point_only_and_assistant_turn_branches_carry_no_hint(tmp_path, monkeypatch):
     """What the actor receives is decided by the guidance mode alone."""
     plan = {"branches": [{"name": "restart", "base": "parent", "branch_step": 2, "why": "useful"}]}
-    monkeypatch.setattr("sprout.methods.branching.selected_prefix", lambda *a: [])
-    monkeypatch.setattr("sprout.methods.branching.reviewer_context", lambda *a: {"messages": [], "prefix_message_counts": {}})
+    monkeypatch.setattr("sprout.worker.jobs.review.branching.selected_prefix", lambda *a: [])
+    monkeypatch.setattr("sprout.worker.jobs.review.branching.reviewer_context", lambda *a: {"messages": [], "prefix_message_counts": {}})
     _, trials, _, _ = exercise(tmp_path, monkeypatch, [plan], guidance="none", rounds=1)
     context = trials[0]["context"]
     assert context["branch_guidance"] == "none"
@@ -299,8 +299,8 @@ def test_point_only_and_assistant_turn_branches_carry_no_hint(tmp_path, monkeypa
 
 # --- the analyst's report is validated, never repaired ------------------------------
 def _analyst_case(tmp_path, replies):
-    from sprout.methods import branching
-    from sprout.methods.evaluate import outcome_from_journal
+    from sprout.worker.jobs.review import branching
+    from sprout.eval.evaluate import outcome_from_journal
 
     journal = write_journal(tmp_path / "trials" / "parent" / "agent" / "trajectory.jsonl", steps=3)
     attempt = Attempt("parent", outcome_from_journal(journal, run_id="parent"), Grade(patch="x"))
@@ -374,7 +374,7 @@ def test_the_analyst_renders_the_given_template_and_feedback(tmp_path):
 def test_the_shepherd_selector_sends_the_given_system_prompt(tmp_path):
     """select_points sends prompts.shepherd_system as the system message, verbatim (its
     braces are literal), from the Prompts passed in."""
-    from sprout.methods import policies
+    from sprout.eval import policies
 
     def edit(data):
         data["shepherd"]["system"] += "\nEDITED FOR THIS TEST."

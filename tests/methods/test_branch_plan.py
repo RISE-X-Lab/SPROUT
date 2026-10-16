@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from sprout.methods.branch_plan import extract_branch_plan
+from sprout.worker.jobs.review.branch_plan import extract_branch_plan
 
 
 def fenced(body, label="branch-plan"):

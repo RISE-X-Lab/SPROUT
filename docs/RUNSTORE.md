@@ -175,12 +175,12 @@ branch added is already in that history.
 ## Review
 
 `JobSpec(kind="review", spec=ReviewSpec)` is SPROUT's analyst and reviewer
-(`methods.branching`, the same prompts `methods.evaluate --method sprout` uses)
+(`worker.jobs.review.branching`, the same prompts `eval.evaluate --method sprout` uses)
 run by a worker over finished attempts of one task, so that an RL driver can
 branch where hindsight says a continuation is worth trying. The spec names the
 `problem`, the `model` and `model_endpoint` (the policy itself, under the review
 prompts), `api_key_env` (any Chat Completions endpoint and the worker-environment
-variable holding its bearer key, as `methods.evaluate --review-endpoint` and
+variable holding its bearer key, as `eval.evaluate --review-endpoint` and
 `--review-key-env` name them for a Harbor run), and `parents`: the attempts to
 read, each with its
 grade job's result (`resolved`, `progress`, `test_statuses`, `reason`,

@@ -10,10 +10,10 @@ from pathlib import Path
 import httpx
 
 from sprout.contract.sampling import endpoint
-from sprout.methods import structured_review
-from sprout.methods.branch_plan import PromptRejected, ReviewResponseTruncated
-from sprout.methods.prompts import DEFAULT_PROMPTS
 from sprout.worker.gateway.auth import bearer_headers, bearer_key
+from sprout.worker.jobs.review import structured_review
+from sprout.worker.jobs.review.branch_plan import PromptRejected, ReviewResponseTruncated
+from sprout.worker.jobs.review.prompts import DEFAULT_PROMPTS
 
 #: Replies that say nothing about the request: the gateway or the model behind
 #: it was unavailable or rate-limited for the moment. One such reply once cost
@@ -43,7 +43,7 @@ class ReviewTransport:
     Harbor review) nothing changes.
 
     ``supports_json_schema`` is the caller's word that the endpoint honours
-    ``response_format: json_schema`` (``methods.evaluate --structured-review``);
+    ``response_format: json_schema`` (``eval.evaluate --structured-review``);
     the analyst and reviewer then ask through ``json`` for schema-constrained
     output instead of a fenced plain-text plan. Off by default: a plain
     Chat Completions endpoint gets the same requests it always did.

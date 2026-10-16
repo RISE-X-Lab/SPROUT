@@ -4,9 +4,9 @@ from string import Formatter
 
 import pytest
 
-from sprout.methods import branching
-from sprout.methods.branching import _clip, render_transcript
-from sprout.methods.prompts import DEFAULT_PROMPTS
+from sprout.worker.jobs.review import branching
+from sprout.worker.jobs.review.branching import _clip, render_transcript
+from sprout.worker.jobs.review.prompts import DEFAULT_PROMPTS
 
 
 def _journal(tmp_path, records):
@@ -70,7 +70,7 @@ def test_the_token_budget_elides_the_middle_not_the_ends(tmp_path):
 def test_verdict_text_carries_the_patch_and_the_verifiers_words():
     """The verdict is what the analyst sees; the diff and the verifier's output are
     the two facts it needs, and an empty grade must still render."""
-    from sprout.methods.branching import Attempt, Grade
+    from sprout.worker.jobs.review.branching import Attempt, Grade
 
     grade = Grade(resolved=False, reward=0.0, patch="+x\n", detail="FAILED tests/test_a.py::test_a")
     text = Attempt("r1b1", outcome=None, grade=grade, hint="try X").verdict_text()

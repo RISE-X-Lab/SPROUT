@@ -61,9 +61,9 @@ To retry a benchmark task with SPROUT, gate the task set first (its oracle must 
 doing nothing 0), then run the method on one task.
 
 ```bash
-python -m sprout.methods.gate --tasks-dir ~/datasets/deep-swe/tasks \
+python -m sprout.eval.gate --tasks-dir ~/datasets/deep-swe/tasks \
     --output runs/gate --runtime-bin runtime/sprout-runtime --workers 8
-python -m sprout.methods.evaluate --task-dir ~/datasets/deep-swe/tasks/<task> \
+python -m sprout.eval.evaluate --task-dir ~/datasets/deep-swe/tasks/<task> \
     --dataset-digest sha256:... --preparation-manifest runs/prep.json \
     --output runs/<task>-sprout --method sprout \
     --model <model> --model-endpoint <url> --model-key-env OPENAI_API_KEY \
@@ -137,7 +137,7 @@ verify. That turn runs through the normal tool path, so the branch's history and
 agree, and the actor continues from it. Rounds repeat until a branch resolves the task or
 `--rounds` is spent. The analyst and reviewer can run on a stronger model than the actor
 (`--review-model`, `--review-endpoint`), and every analyst, reviewer and Shepherd prompt
-lives in [prompts.yaml](resources/methods/prompts.yaml), whose sha256 each run records.
+lives in [prompts.yaml](resources/review/prompts.yaml), whose sha256 each run records.
 
 The same branch points feed RL. [Run Store](docs/RUNSTORE.md) queues rollout, grade and
 review jobs on PostgreSQL and grades [SWE-rebench V2](https://github.com/SWE-rebench/SWE-rebench-V2)
@@ -186,10 +186,11 @@ any other.
 ├── src/sprout/worker/tools/       # ToolAccess, the runtime's schema, interceptors
 ├── src/sprout/worker/checkpoint/  # a snapshot per turn, and rollback to one
 ├── src/sprout/worker/gateway/     # the model gateway: routing, budget, the wire-level tap
-├── src/sprout/harbor_plugin/      # Sprout as a Harbor environment and agent
-├── src/sprout/methods/            # evaluate (one task, one method), branching, prompts, gate
+├── src/sprout/worker/jobs/        # the jobs a worker runs: rollout, grade, review, training export
+├── src/sprout/eval/               # local evaluation of one task with one method: evaluate, gate, policies
+├── src/sprout/eval/harbor/        # Sprout as a Harbor environment and agent
 ├── src/sprout/inspect/            # read-only CLI over run output
-├── src/sprout/runstore/           # PostgreSQL job queue, worker, SWE-rebench grader, training export
+├── src/sprout/runstore/           # the Run Store: PostgreSQL job records, its HTTP API and client
 ├── src/sprout/rl_driver/          # the RL trainer's (Miles) rollout adapter over the Run Store
 ├── src/sprout/services/           # the host's long-running pieces: db, LiteLLM proxy, Run Store, RL driver
 ├── src/sprout_sandbox/            # the sandbox clients: AgentENV microVMs and rootless podman

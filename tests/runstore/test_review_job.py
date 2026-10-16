@@ -19,8 +19,8 @@ import pytest
 from sprout.worker.agents.mini_swe.history import available_branch_points
 from sprout.contract.mini_history import materialize
 from sprout.worker.run.runner import Orchestrator
-from sprout.methods import review_transport
-from sprout.methods.review_transport import RequestStopped, ReviewTransport
+from sprout.worker.jobs.review import transport as review_transport
+from sprout.worker.jobs.review.transport import RequestStopped, ReviewTransport
 from sprout.worker.jobs.review import job as review_module
 from sprout.contract.messages import mark_hint
 from sprout.runstore.payload import encode_payload, send_payload
@@ -612,7 +612,7 @@ def test_a_transport_shared_between_calls_counts_once(tmp_path, monkeypatch):
         sent.append(prompt)
         return httpx.Response(200, request=request, json={"choices": [{"message": {"content": answer(prompt)}}]})
 
-    monkeypatch.setattr("sprout.methods.review_transport.httpx.post", post)
+    monkeypatch.setattr("sprout.worker.jobs.review.transport.httpx.post", post)
     shared = []
 
     def factory(directory, **settings):
@@ -652,7 +652,7 @@ def test_receipts_are_named_by_call_whatever_order_the_calls_finish_in(tmp_path,
             run["root 2 analysed"].set()
         return reply
 
-    monkeypatch.setattr("sprout.methods.review_transport.httpx.post", post)
+    monkeypatch.setattr("sprout.worker.jobs.review.transport.httpx.post", post)
 
     def receipts(directory):
         return {str(path.relative_to(directory / "reviews")): json.loads(path.read_text())
@@ -833,7 +833,7 @@ def test_a_failure_cuts_short_the_retries_of_a_running_call(tmp_path, monkeypatc
         assert recorded.failed("analyst-1").wait(60)
         return httpx.Response(502, request=request, text="Bad Gateway")
 
-    monkeypatch.setattr("sprout.methods.review_transport.httpx.post", post)
+    monkeypatch.setattr("sprout.worker.jobs.review.transport.httpx.post", post)
     with pytest.raises(httpx.HTTPStatusError) as raised:
         run_review(spec, tmp_path / "review")
     assert raised.value.response.status_code == 401 and raised.value.__notes__ == ["in review call analyst-1"]

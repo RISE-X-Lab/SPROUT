@@ -1,8 +1,8 @@
-"""The exact selectors (methods.policies) refuse invalid input and never invent entropy."""
+"""The exact selectors (eval.policies) refuse invalid input and never invent entropy."""
 
 import pytest
 
-from sprout.methods.policies import bpo_select, shepherd_select, token_entropy
+from sprout.eval.policies import bpo_select, shepherd_select, token_entropy
 
 
 def test_exact_selectors_reject_invalid_and_do_not_invent_entropy():

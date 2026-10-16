@@ -35,9 +35,9 @@ def test_an_unset_model_key_fails_before_any_stage_is_launched(tmp_path, monkeyp
 
 def test_structured_review_reaches_the_evaluator_and_the_manifest(tmp_path):
     """``--structured-review`` is an explicit switch, off by default, passed to every
-    ``methods.evaluate`` and recorded in the manifest; the baseline has no reviewer,
+    ``eval.evaluate`` and recorded in the manifest; the baseline has no reviewer,
     so it is not a setting a shared baseline has to match."""
-    from sprout.methods import evaluate
+    from sprout.eval import evaluate
 
     base = ["--dataset", "deepswe", "--method", "sprout", "--tasks-dir", str(tmp_path),
             "--task", "fixture", "--output", str(tmp_path / "out"), "--runtime-bin", str(tmp_path / "runtime"),
@@ -58,7 +58,7 @@ def test_structured_review_reaches_the_evaluator_and_the_manifest(tmp_path):
 
 @pytest.mark.parametrize("width", [1, 2, 4, 8, 16, 32])
 def test_fixed_single_round_scaling_reaches_the_evaluator(tmp_path, width):
-    from sprout.methods import evaluate
+    from sprout.eval import evaluate
 
     parsed = run.parse_args([
         "--dataset", "deepswe", "--method", "sprout", "--tasks-dir", str(tmp_path),
@@ -78,8 +78,8 @@ def test_fixed_single_round_scaling_reaches_the_evaluator(tmp_path, width):
 def test_the_prompts_file_reaches_the_evaluator_and_its_hash_is_in_the_manifest(tmp_path):
     import hashlib
     import yaml
-    from sprout.methods import evaluate
-    from sprout.methods.prompts import DEFAULT_PROMPTS, DEFAULT_PROMPTS_PATH
+    from sprout.eval import evaluate
+    from sprout.worker.jobs.review.prompts import DEFAULT_PROMPTS, DEFAULT_PROMPTS_PATH
 
     base = ["--dataset", "deepswe", "--method", "sprout", "--tasks-dir", str(tmp_path),
             "--task", "fixture", "--output", str(tmp_path / "out"),
@@ -280,7 +280,7 @@ def test_metrics_include_failed_calls_critic_and_no_inherited_steps(tmp_path):
 
 
 def test_failed_selector_response_usage_survives_retry(tmp_path, monkeypatch):
-    from sprout.methods import policies
+    from sprout.eval import policies
     responses = iter([
         {"choices": [], "usage": {"prompt_tokens": 7, "completion_tokens": 3}},
         {"choices": [{"message": {"content": "ok"}}],
@@ -374,7 +374,7 @@ def test_five_row_metrics_resolve_recovery_and_actual_tokens(tmp_path):
         for method in ("bpo", "shepherd", "sprout"):
             methods[method] = {"status": "skipped_initial_success" if name == "a" else "complete"}
             if name == "b":
-                # Row 0 is the shared parent, as methods.evaluate writes it for every branch method.
+                # Row 0 is the shared parent, as eval.evaluate writes it for every branch method.
                 rows = [{"resolved": False}, {"resolved": method != "bpo"}]
                 run.write(root / method / "summary.json", {"attempts": rows})
         run.write(root / "all.task.json", {"methods": methods})
@@ -389,7 +389,7 @@ def test_five_row_metrics_resolve_recovery_and_actual_tokens(tmp_path):
 
 
 def test_every_branch_method_counts_the_shared_parent_once(tmp_path):
-    """methods.evaluate writes the shared parent as row 0 of every branch method's
+    """eval.evaluate writes the shared parent as row 0 of every branch method's
     summary, BPO's and Shepherd's as much as SPROUT's. It is the initial rollout:
     counted again, it pads the additional phase and moves the first success."""
     from examples.qwen.report import build_report
@@ -459,7 +459,7 @@ def test_a_sprout_round_schedule_reaches_evaluate_and_sets_the_rollout_budget(tm
 
 def test_evaluate_takes_a_scheduled_sprout_budget_but_keeps_bpo_and_shepherd_at_eight(tmp_path):
     import pytest
-    from sprout.methods import evaluate
+    from sprout.eval import evaluate
     runtime = tmp_path / "runtime"
     runtime.touch()
     argv = ["--task-dir", str(tmp_path), "--dataset-digest", "d", "--preparation-manifest", str(tmp_path / "p.json"),
@@ -476,7 +476,7 @@ def test_leak_judge_reaches_evaluate_for_sprout_only(tmp_path, monkeypatch):
     """--leak-judge on the runner becomes evaluate's --leak-judge with its resamples
     and threshold, for sprout's stages only, and evaluate accepts what it is given."""
     import pytest
-    from sprout.methods import evaluate
+    from sprout.eval import evaluate
     argv = ["--dataset", "deepswe", "--method", "sprout", "--tasks-dir", str(tmp_path), "--task", "t",
             "--output", str(tmp_path / "out"), "--runtime-bin", str(tmp_path / "rt"),
             "--model-endpoint", "http://localhost:9000", "--store", str(tmp_path / "store")]

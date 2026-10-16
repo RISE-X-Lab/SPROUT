@@ -18,10 +18,10 @@ import httpx
 
 from sprout.contract.mini_history import load_prefix
 from sprout.contract.sampling import endpoint
-from sprout.methods.branching import extract_json, render_transcript
-from sprout.methods.prompts import DEFAULT_PROMPTS, Prompts
 from sprout.worker.agents.mini_swe.history import actor_tools_at, reference_at
 from sprout.worker.gateway.auth import bearer_headers
+from sprout.worker.jobs.review.branching import extract_json, render_transcript
+from sprout.worker.jobs.review.prompts import DEFAULT_PROMPTS, Prompts
 from sprout.worker.run.journal import read_journal
 
 

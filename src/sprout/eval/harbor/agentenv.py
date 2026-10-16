@@ -7,7 +7,7 @@ import json
 import subprocess
 import urllib.request
 
-from sprout.harbor_plugin.environment import SandboxEnvironment
+from sprout.eval.harbor.environment import SandboxEnvironment
 from sprout.worker.sandbox.backends import default_aenv_server_url, resolve_microvm_endpoint
 from sprout.worker.sandbox.template_recipe import find_regctl
 
@@ -25,7 +25,7 @@ class AgentENVEnvironment(SandboxEnvironment):
         **kwargs,
     ):
         # The same server the cleanup client assumes: a memory snapshot this
-        # trial takes is released through it (methods.evaluate).
+        # trial takes is released through it (eval.evaluate).
         self.server_url = server_url or default_aenv_server_url()
         self.api_key_file = api_key_file
         self.sandbox_ttl = sandbox_ttl

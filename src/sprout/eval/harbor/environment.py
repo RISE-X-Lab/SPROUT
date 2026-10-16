@@ -274,7 +274,7 @@ class SandboxEnvironment(BaseEnvironment):
     def _write_receipt(self, resources: dict) -> None:
         """``<session_id>.<type>.json`` in the trial directory: what this sandbox is.
 
-        ``methods.evaluate`` reads it back to tie a graded trial to its sandbox
+        ``eval.evaluate`` reads it back to tie a graded trial to its sandbox
         and to hand a branch the image and config its parent ran on.
         """
         record = {

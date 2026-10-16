@@ -79,7 +79,7 @@ def test_review_kinds_are_told_apart_by_the_prompts_branching_actually_sends():
     """load_review classifies a transport record by its prompt's first words; the words are
     prompts.yaml's. A reworded prompt would turn every review 'unknown' and the task tree would
     lose its review files and timings, so the prefixes are pinned to the templates here."""
-    from sprout.methods.prompts import DEFAULT_PROMPTS
+    from sprout.worker.jobs.review.prompts import DEFAULT_PROMPTS
     assert DEFAULT_PROMPTS.analyst_case.lstrip().startswith(layout.ANALYST_PROMPT)
     for template in (DEFAULT_PROMPTS.reviewer_assistant_turn, DEFAULT_PROMPTS.reviewer_point,
                      DEFAULT_PROMPTS.reviewer_user_hint):

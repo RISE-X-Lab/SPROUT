@@ -427,7 +427,7 @@ def grade_swerebench(spec: GradeSpec, row: dict, backend: dict, directory: Path,
     if patch is None:
         patch_file.write_bytes(b"")  # the path every result names; nothing was graded
     # test_patch is the hidden tests as applied, a path like model_patch: for the
-    # review's leak judge (methods.leak_judge) only, never shown to the analyst.
+    # review's leak judge (worker.jobs.review.leak.judge) only, never shown to the analyst.
     common = {
         "model_patch": str(patch_file),
         "test_patch": str(test_file),

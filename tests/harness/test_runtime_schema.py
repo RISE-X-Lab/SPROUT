@@ -101,7 +101,7 @@ def test_the_runtime_serves_its_five_tools():
 @pytest.mark.parametrize("parameters", [
     # mini's ToolEnvironment (agents/mini_swe/runtime.py) refuses a `shell` without these.
     pytest.param({"command", "working_dir", "timeout"}, id="minis-executor"),
-    # SandboxEnvironment.exec (harbor_plugin/environment.py, inherited by the podman
+    # SandboxEnvironment.exec (eval/harbor/environment.py, inherited by the podman
     # and AgentENV environments) sends this on every verifier and setup command.
     pytest.param({"max_output_bytes"}, id="harbors-exec-path"),
 ])

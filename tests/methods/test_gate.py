@@ -5,7 +5,7 @@ import shutil
 from pathlib import Path
 from types import SimpleNamespace
 
-from sprout.methods import gate
+from sprout.eval import gate
 
 FIXTURE = Path(__file__).resolve().parents[1] / "harbor_plugin" / "agentenv_fixtures" / "shell-task"
 

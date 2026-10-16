@@ -3,7 +3,7 @@ import json
 import pytest
 
 from sprout.contract.mini_history import validate_assistant_turn
-from sprout.methods.branch_plan import ReviewerPlanError, ReviewResponseTruncated, review_with_feedback
+from sprout.worker.jobs.review.branch_plan import ReviewerPlanError, ReviewResponseTruncated, review_with_feedback
 from tests.methods.test_branch_selection import direction, exercise
 
 

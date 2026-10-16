@@ -80,7 +80,7 @@ def test_a_receipt_without_a_log_is_unlaunched_not_running_and_a_task_error_is_g
 
 
 def test_an_exit_2_stage_log_names_the_stop_reason_not_the_closing_brace(tmp_path):
-    """methods.evaluate prints its state as indented JSON last and exits 2 when incomplete."""
+    """eval.evaluate prints its state as indented JSON last and exits 2 when incomplete."""
     receipt = tmp_path / "sprout.stage.json"
     write_json(receipt, {"task": "alpha", "method": "sprout", "started_at": 1.0, "complete": False, "exit_code": 2,
                          "error": "Stage exited 2; see sprout.log", "finished_at": 9.0, "seconds": 8.0})

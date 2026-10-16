@@ -8,10 +8,10 @@ sandbox and reading the reward. Each check is a real Harbor trial on the same
 environment class the evaluations use, with Harbor's own ``oracle`` agent (runs
 ``solution/solve.sh``) or ``nop`` agent (touches nothing).
 
-    python -m sprout.methods.gate --tasks-dir ~/datasets/deep-swe/tasks --output runs/gate \\
+    python -m sprout.eval.gate --tasks-dir ~/datasets/deep-swe/tasks --output runs/gate \\
         --runtime-bin runtime/sprout-runtime --workers 8                  # every task, resumable
-    python -m sprout.methods.gate ... --task abs-module-cache-flags --mode oracle
-    python -m sprout.methods.gate ... --backend microvm      # on the microVM service instead
+    python -m sprout.eval.gate ... --task abs-module-cache-flags --mode oracle
+    python -m sprout.eval.gate ... --backend microvm      # on the microVM service instead
 
 Both outcomes are required. A grader that passes the oracle but also passes
 nothing is measuring nothing; one that fails the oracle is broken plumbing.
@@ -31,7 +31,7 @@ from harbor.models.task.task import Task
 from harbor.trial.trial import Trial
 
 from sprout.contract.backend import default_podman_store
-from sprout.methods.evaluate import ENVIRONMENTS, trial_config
+from sprout.eval.evaluate import ENVIRONMENTS, trial_config
 
 MODES = ("oracle", "nop")
 

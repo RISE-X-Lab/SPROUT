@@ -2,9 +2,9 @@
 
 Writers: ``examples/qwen/run.py`` (stage receipts, ``<method>.task.json``,
 manifests, ``retained-checkpoints.json``), ``examples/qwen/report.py``
-(``metrics-<method>.json``), ``sprout.methods.evaluate`` (``summary.json``,
-contexts, plan files), ``sprout.methods.branching`` (``plan-round<N>.json``),
-``sprout.harbor_plugin`` (receipts, ``restored-state.json``, ``execution.json``,
+(``metrics-<method>.json``), ``sprout.eval.evaluate`` (``summary.json``,
+contexts, plan files), ``sprout.worker.jobs.review.branching`` (``plan-round<N>.json``),
+``sprout.eval.harbor`` (receipts, ``restored-state.json``, ``execution.json``,
 ``snapshot.json``). Nothing here is written; ``config.json`` and ``lock.json``
 are never read (they carry an endpoint and a key variable name).
 """
@@ -41,7 +41,7 @@ RECEIPT_KEYS = frozenset(
         "seconds",
     }
 )
-#: How the analyst's and the reviewers' prompts begin (sprout.methods.branching; a test
+#: How the analyst's and the reviewers' prompts begin (sprout.worker.jobs.review.branching; a test
 #: holds the two in step), which is how a review transport record is told apart.
 ANALYST_PROMPT = "You are analysing ONE failed"
 REVIEWER_PROMPT = "You are the REVIEWER"
@@ -172,7 +172,7 @@ class Plan:
 
 @dataclass(frozen=True)
 class Evaluation:
-    """One ``methods.evaluate`` output directory."""
+    """One ``eval.evaluate`` output directory."""
 
     path: Path
     summary: dict
@@ -280,7 +280,7 @@ def stage_state(receipt: dict | None, launched: bool, lock_alive: bool | None) -
 def log_cause(log: Path) -> str | None:
     """Why a stage ended, read from the tail of its log.
 
-    ``methods.evaluate`` prints its state as indented JSON last and exits 0, also when
+    ``eval.evaluate`` prints its state as indented JSON last and exits 0, also when
     the branch schedule stopped short (the reviewer selected no branches, say), which
     the runner's ``attempts()`` then refuses as an incomplete evaluation: the dump's
     ``stop_reason`` or ``error`` is the cause. Otherwise the last exception line

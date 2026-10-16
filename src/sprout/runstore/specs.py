@@ -110,7 +110,7 @@ def defaults_key(kind: str) -> str:
 
 REVIEW_GUIDANCE = ("assistant-turn", "none")
 REVIEW_PARENT_FIELDS = frozenset({"name", "job_id", "attempt_id", "grade", "hint"})
-#: A review's ``leak_judge``: the Jev threshold and model (``methods.leak_judge``
+#: A review's ``leak_judge``: the Jev threshold and model (``worker.jobs.review.leak.judge``
 #: defaults when absent), how often a flagged turn goes back to the reviewer,
 #: and the worker-side variable holding the TypeSafe key.
 LEAK_JUDGE_FIELDS = frozenset({"threshold", "model", "resamples", "api_key_env"})

@@ -22,7 +22,7 @@ from sprout.rl_driver.backend import RunStoreClient
 from sprout.rl_driver.driver import REVIEW_GRADE_KEYS
 from sprout.rl_driver.messages import SearchSpec
 from sprout.worker.jobs.grade import GRADE_FACT_KEYS, patch_facts
-from sprout.methods.leak import hidden_terms_of
+from sprout.worker.jobs.review.leak.terms import hidden_terms_of
 from sprout.contract.messages import branch_origin
 from tests.rl_driver.test_driver import QueueHTTP
 from tests.rl_driver.test_message_rollout import RESULT_EXAMPLE, exported, request

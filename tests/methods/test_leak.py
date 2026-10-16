@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from sprout.methods.leak import hidden_terms, hidden_terms_of, leak_terms, turn_text, visible_text
+from sprout.worker.jobs.review.leak.terms import hidden_terms, hidden_terms_of, leak_terms, turn_text, visible_text
 
 TARGET = "tests/test_hidden.py::test_secret_behaviour"
 TEST_FILE = "tests/test_hidden.py"

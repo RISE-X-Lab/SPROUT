@@ -561,7 +561,7 @@ def test_nothing_in_the_run_lifecycle_calls_snapshot_deletion():
     """The design boundary in one test: deletion is never wired into teardown.
     The orchestrator, the checkpointing path and the session may CREATE
     snapshots; the only callers of deletion are the two explicit surfaces
-    (harness sweep, and methods.evaluate releasing a failed attempt's memory
+    (harness sweep, and eval.evaluate releasing a failed attempt's memory
     snapshot) -- and the reaper is not one of them."""
     from pathlib import Path
 

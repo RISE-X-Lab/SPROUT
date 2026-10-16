@@ -5,8 +5,8 @@ import json
 import httpx
 import pytest
 
-from sprout.methods import leak_judge
-from sprout.methods.leak_judge import (BATCH, HiddenText, JevError, JevLeakJudge, added_lines, candidate_spans,
+from sprout.worker.jobs.review.leak import judge as leak_judge
+from sprout.worker.jobs.review.leak.judge import (BATCH, HiddenText, JevError, JevLeakJudge, added_lines, candidate_spans,
                                         check_turn, main, sprout_branches)
 
 REAL_CLIENT = httpx.Client
@@ -231,8 +231,8 @@ def test_check_turn_flags_on_either_check_and_is_unknown_when_one_could_not_run(
 
 
 def test_a_task_without_a_test_patch_gives_its_tests_files_and_harness_names_are_no_terms(tmp_path):
-    from sprout.methods.leak import hidden_terms
-    from sprout.methods.leak_judge import patch_files, task_hidden_tests
+    from sprout.worker.jobs.review.leak.terms import hidden_terms
+    from sprout.worker.jobs.review.leak.judge import patch_files, task_hidden_tests
     tests = tmp_path / "tests"
     tests.mkdir()
     (tests / "test.sh").write_text("pytest /tests/test_outputs.py\n")
@@ -252,6 +252,6 @@ def test_a_task_without_a_test_patch_gives_its_tests_files_and_harness_names_are
 
 
 def test_patch_files_names_both_sides_of_a_rename():
-    from sprout.methods.leak_judge import patch_files
+    from sprout.worker.jobs.review.leak.judge import patch_files
     patch = "diff --git a/tests/old_test.py b/tests/test_hidden_new.py\nrename from tests/old_test.py\n"
     assert patch_files(patch) == ["tests/old_test.py", "tests/test_hidden_new.py"]

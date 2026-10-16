@@ -15,10 +15,10 @@ from pathlib import Path
 import httpx
 import pytest
 
-from sprout.methods import branching
-from sprout.methods.branch_plan import PromptRejected
-from sprout.methods.prompts import DEFAULT_PROMPTS
-from sprout.methods.branching import (
+from sprout.worker.jobs.review import branching
+from sprout.worker.jobs.review.branch_plan import PromptRejected
+from sprout.worker.jobs.review.prompts import DEFAULT_PROMPTS
+from sprout.worker.jobs.review.branching import (
     DEFAULT_PROMPT_CHARS, FLOOR, STAGES, Attempt, Grade,
     Window, analyse, branch_count_rule, fit_review_prompt, reduce_row, review, window_messages,
 )
@@ -182,7 +182,7 @@ def test_the_marker_names_the_omitted_positions_and_the_prefix_counts_stay_exact
 def test_clipped_messages_keep_their_newlines():
     """The reviewer reads tool results, reasoning and arguments as the actor saw
     them; clipping takes the middle, not the line structure."""
-    from sprout.methods.branching import clip_messages
+    from sprout.worker.jobs.review.branching import clip_messages
 
     result = json.dumps({"returncode": 0, "output": "\n".join("line %d" % i for i in range(400))}, indent=2)
     messages = [{"role": "assistant", "content": "x", "reasoning_content": "first\n" * 500,
@@ -325,7 +325,7 @@ def test_review_sends_the_given_prompts_and_records_which_file_they_came_from(tm
     the packaged file by default, an edited copy under --prompts -- and the plan names
     the file and its sha256, so a run says which prompts produced it."""
     import yaml
-    from sprout.methods.prompts import DEFAULT_PROMPTS, DEFAULT_PROMPTS_PATH, load_prompts
+    from sprout.worker.jobs.review.prompts import DEFAULT_PROMPTS, DEFAULT_PROMPTS_PATH, load_prompts
 
     attempts, cases = _review_setup(tmp_path, monkeypatch)
     monkeypatch.setattr(branching, "actor_tools_at", lambda *args: TOOLS)
@@ -558,7 +558,7 @@ def test_a_huge_verdict_is_clipped_so_the_transcript_keeps_a_quarter_of_the_budg
 
 @pytest.mark.parametrize("recovers", [True, False])
 def test_truncated_analyst_replies_use_the_existing_correction_budget(tmp_path, recovers):
-    from sprout.methods.branch_plan import ReviewResponseTruncated
+    from sprout.worker.jobs.review.branch_plan import ReviewResponseTruncated
 
     journal = _long_journal(tmp_path, steps=3)
     attempt = Attempt("parent", branching.outcome_from_journal(journal), Grade(patch="x"))
@@ -611,19 +611,19 @@ def test_a_refused_analyst_request_is_retried_smaller_then_given_up(tmp_path):
 # --- the transport and the wiring -----------------------------------------------------
 
 def test_review_transport_turns_a_400_into_prompt_rejected_and_records_it(tmp_path, monkeypatch):
-    from sprout.methods.review_transport import ReviewTransport
+    from sprout.worker.jobs.review.transport import ReviewTransport
 
     transport = ReviewTransport(tmp_path, model="fixture", model_endpoint="http://127.0.0.1:18252",
                                 api_key_env="TEST_KEY", max_output_tokens=1000)
     monkeypatch.setenv("TEST_KEY", "local-test")
     statuses = iter([400] + [500] * 4)
-    monkeypatch.setattr("sprout.methods.review_transport.time.sleep", lambda s: None)
+    monkeypatch.setattr("sprout.worker.jobs.review.transport.time.sleep", lambda s: None)
 
     def post(url, **kwargs):
         return httpx.Response(next(statuses), text="context length exceeded",
                               request=httpx.Request("POST", url))
 
-    monkeypatch.setattr("sprout.methods.review_transport.httpx.post", post)
+    monkeypatch.setattr("sprout.worker.jobs.review.transport.httpx.post", post)
     with pytest.raises(PromptRejected, match="HTTP 400.*context length exceeded"):
         transport("fixture", "prompt")
     receipt = json.loads((tmp_path / "review-001.json").read_text())
@@ -647,7 +647,7 @@ def test_evaluate_passes_the_budget_to_the_analyst_and_the_reviewer(tmp_path, mo
 
 def test_evaluate_option_has_the_documented_default_and_a_floor(tmp_path):
     pytest.importorskip("harbor")
-    from sprout.methods import evaluate
+    from sprout.eval import evaluate
 
     runtime = tmp_path / "runtime"
     runtime.touch()

@@ -76,7 +76,7 @@ the rest (`status`, `logs proxy -f`, `restart proxy` after an alias edit).
 
 **What the smoke verified (2026-10-09, litellm 1.103.0).** Through
 `http://127.0.0.1:4000/v1`, each of `luna` (effort high), `sonnet5` (high) and
-`kimi-k3` (max) ran `methods.evaluate --method sprout --max-turns 3 --rounds 1
+`kimi-k3` (max) ran `eval.evaluate --method sprout --max-turns 3 --rounds 1
 --branches 2 --branch-count-mode fixed` on one DeepSWE task: a 3-turn root, the
 analyst, the reviewer and two 3-turn branches, all exiting 0 with
 `branch_schedule_complete: true`. Tool calls, `reasoning_effort`, reasoning fed
@@ -90,13 +90,13 @@ is reasoned from Sprout's timeouts, not measured.
 ## `--structured-review`
 
 Off, the analyst and reviewer answer in a labelled fenced block, parsed by the
-controller (the behaviour every non-proxy run has had). On, `methods.evaluate`
+controller (the behaviour every non-proxy run has had). On, `eval.evaluate`
 builds its `ReviewTransport` with `supports_json_schema` and both are asked for
 schema-constrained JSON (`response_format: json_schema`, `strict: true`, the
-schemas in `methods/structured_review.py`); the schema's size is reserved from
+schemas in `worker/jobs/review/structured_review.py`); the schema's size is reserved from
 `--prompt-budget-chars` and recorded with the plan. It is an explicit switch
 because only the caller knows whether the endpoint honours `json_schema`;
 behind the proxy it is recommended, as it removes the fence-parsing failures.
 `summary.json` records `structured_review`, each `plan-roundN.json` records
 whether that review was schema-constrained, and `examples/qwen/run.py` passes
-the flag to every `methods.evaluate` and records it in the manifest.
+the flag to every `eval.evaluate` and records it in the manifest.

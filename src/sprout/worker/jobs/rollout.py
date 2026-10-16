@@ -78,7 +78,7 @@ def execute(request: dict, directory: Path) -> dict:
         if native["slot"] != slot:
             raise ValueError("Native prefix slot differs from requested slot")
         extra.update(materialize(native, cwd, directory / "restoration", native_home))
-        # The same rules a Harbor branch trial follows (harbor_plugin.branching).
+        # The same rules a Harbor branch trial follows (eval.harbor.branching).
         continuation = Continuation.from_dict(request.get("continuation"))
         prompt, options = prepare(continuation, load_prefix(extra["native_prefix"]))
         extra.update(options)

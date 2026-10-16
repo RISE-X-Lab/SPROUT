@@ -7,7 +7,7 @@ import time
 
 from sprout.contract.run_spec import RunSpec
 from sprout.contract.sampling import endpoint
-from sprout.harbor_plugin.agentenv_agent import AgentENVAgent
+from sprout.eval.harbor.agentenv_agent import AgentENVAgent
 from sprout.worker.agents.mini_swe.slot import MiniSweSlot
 from sprout.worker.agents.mini_swe.tools import DEFAULT_COMMAND_TIMEOUT_S, mini_tool_primer
 from sprout.worker.gateway.auth import bearer_key

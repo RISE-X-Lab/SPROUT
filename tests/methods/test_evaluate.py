@@ -10,10 +10,10 @@ import pytest
 pytest.importorskip("harbor")
 
 from harbor.models.task.task import Task
-from sprout.methods import structured_review
-from sprout.methods.prompts import DEFAULT_PROMPTS
-from sprout.methods.review_transport import ReviewTransport
-from sprout.methods import evaluate
+from sprout.worker.jobs.review import structured_review
+from sprout.worker.jobs.review.prompts import DEFAULT_PROMPTS
+from sprout.worker.jobs.review.transport import ReviewTransport
+from sprout.eval import evaluate
 
 
 def _result(directory: Path, reward, *, error=None):
@@ -83,10 +83,10 @@ def test_root_and_branch_trials_use_the_same_official_task(tmp_path):
     # Harbor records the dataset the task came from by its name prefix.
     pro = evaluate.trial_config(args, SimpleNamespace(name="swebench-pro/example", config=task.config), name="parent")
     assert pro.task.source == "scaleapi/SWE-bench_Pro-os/v2@sha256:pinned"
-    assert root.agent.import_path == "sprout.harbor_plugin.agentenv_mini:AgentENVMini"
-    assert branch.agent.import_path == "sprout.harbor_plugin.branching:BranchMini"
-    assert root.environment.import_path == "sprout.harbor_plugin.agentenv:AgentENVEnvironment"
-    assert branch.environment.import_path == "sprout.harbor_plugin.branching:SnapshotEnvironment"
+    assert root.agent.import_path == "sprout.eval.harbor.agentenv_mini:AgentENVMini"
+    assert branch.agent.import_path == "sprout.eval.harbor.branching:BranchMini"
+    assert root.environment.import_path == "sprout.eval.harbor.agentenv:AgentENVEnvironment"
+    assert branch.environment.import_path == "sprout.eval.harbor.branching:SnapshotEnvironment"
     assert branch.agent.kwargs["branch_context"] == branch.environment.kwargs["branch_context"] == str(context)
     assert root.environment.kwargs["server_url"] == "http://127.0.0.1:18000" and "store" not in root.environment.kwargs
 
@@ -106,16 +106,16 @@ def test_podman_trials_run_the_same_agents_in_the_podman_environment_on_the_stor
     )
     root = evaluate.trial_config(args, task, name="parent")
     branch = evaluate.trial_config(args, task, name="r1b1", agent="branch", branch_context=tmp_path / "ctx.json")
-    assert root.environment.import_path == "sprout.harbor_plugin.podman:PodmanEnvironment"
-    assert branch.environment.import_path == "sprout.harbor_plugin.branching:PodmanSnapshotEnvironment"
+    assert root.environment.import_path == "sprout.eval.harbor.podman:PodmanEnvironment"
+    assert branch.environment.import_path == "sprout.eval.harbor.branching:PodmanSnapshotEnvironment"
     assert root.environment.kwargs == {"runtime_bin": str(runtime.resolve()), "checkpoint_mode": "disk_only",
                                        "store": str((tmp_path / "store").resolve())}
     assert branch.environment.kwargs["store"] == root.environment.kwargs["store"]
-    assert root.agent.import_path == "sprout.harbor_plugin.agentenv_mini:AgentENVMini"
-    assert branch.agent.import_path == "sprout.harbor_plugin.branching:BranchMini"
+    assert root.agent.import_path == "sprout.eval.harbor.agentenv_mini:AgentENVMini"
+    assert branch.agent.import_path == "sprout.eval.harbor.branching:BranchMini"
     for agent in ("oracle", "nop"):
         gate = evaluate.trial_config(args, task, name=agent, agent=agent)
-        assert gate.environment.import_path == "sprout.harbor_plugin.podman:PodmanEnvironment"
+        assert gate.environment.import_path == "sprout.eval.harbor.podman:PodmanEnvironment"
         assert gate.agent.name == agent
 
 
@@ -231,7 +231,7 @@ def test_leak_judge_checks_each_reviewer_turn_against_the_tasks_hidden_tests(tmp
     """--leak-judge reaches the round: review() gets a turn_check, which judges a
     turn against the task's test patch, the verifier output the reviewer read
     and h_s at the turn's point, and is closed after the round."""
-    from sprout.methods.leak_judge import LeakJudgement
+    from sprout.worker.jobs.review.leak.judge import LeakJudgement
     runtime = tmp_path / "runtime"
     runtime.touch()
     (tmp_path / "tests").mkdir()
@@ -334,7 +334,7 @@ def test_prompts_option_loads_the_file_once_and_the_summary_records_its_hash(tmp
     parse_args loads it (a bad file fails before any sandbox starts) and the summary
     state records its path and sha256 -- the packaged file's by default."""
     import yaml
-    from sprout.methods.prompts import DEFAULT_PROMPTS, DEFAULT_PROMPTS_PATH
+    from sprout.worker.jobs.review.prompts import DEFAULT_PROMPTS, DEFAULT_PROMPTS_PATH
 
     runtime = tmp_path / "runtime"
     runtime.touch()
@@ -444,7 +444,7 @@ def test_review_transport_keeps_keys_out_of_receipts_and_rejects_model_switch(tm
         requests.append((url, kwargs))
         return Response()
 
-    monkeypatch.setattr("sprout.methods.review_transport.httpx.post", post)
+    monkeypatch.setattr("sprout.worker.jobs.review.transport.httpx.post", post)
     assert transport("fixture", "prompt") == "valid"
     assert requests[0][0].endswith("/v1/chat/completions")
     assert requests[0][1]["headers"]["Authorization"] == "Bearer super-secret"
@@ -473,7 +473,7 @@ def test_review_transport_retries_a_timeout_once_with_half_the_output_budget(tmp
             raise httpx.ReadTimeout("timed out")
         return Response()
 
-    monkeypatch.setattr("sprout.methods.review_transport.httpx.post", post)
+    monkeypatch.setattr("sprout.worker.jobs.review.transport.httpx.post", post)
     assert transport("fixture", "prompt") == "plan"
     assert budgets == [64000, 32000]
     first = json.loads((tmp_path / "review-001.json").read_text())
@@ -484,7 +484,7 @@ def test_review_transport_retries_a_timeout_once_with_half_the_output_budget(tmp
     def always_slow(url, **kwargs):
         raise httpx.ReadTimeout("timed out")
 
-    monkeypatch.setattr("sprout.methods.review_transport.httpx.post", always_slow)
+    monkeypatch.setattr("sprout.worker.jobs.review.transport.httpx.post", always_slow)
     with pytest.raises(httpx.ReadTimeout):
         transport("fixture", "prompt")
     assert sorted(p.name for p in tmp_path.glob("review-*.json")) == [f"review-00{i}.json" for i in range(1, 5)], \
@@ -509,7 +509,7 @@ def test_review_transport_appends_and_counts_the_directive_it_was_given(tmp_path
         sent.append(kwargs["json"])
         return Response()
 
-    monkeypatch.setattr("sprout.methods.review_transport.httpx.post", post)
+    monkeypatch.setattr("sprout.worker.jobs.review.transport.httpx.post", post)
     monkeypatch.setenv("TEST_KEY", "k")
     common = dict(model="fixture", model_endpoint="http://127.0.0.1:18252", api_key_env="TEST_KEY",
                   max_output_tokens=1000)
@@ -535,8 +535,8 @@ def test_review_transport_retries_transient_gateway_replies_with_the_same_budget
     again after a pause, each try its own receipt naming the one it repeats and
     why; a 400 is the request's fault and is not retried here."""
     import httpx
-    from sprout.methods import review_transport
-    from sprout.methods.branch_plan import PromptRejected
+    from sprout.worker.jobs.review import transport as review_transport
+    from sprout.worker.jobs.review.branch_plan import PromptRejected
     transport = ReviewTransport(tmp_path, model="fixture", model_endpoint="http://127.0.0.1:18252",
                                 api_key_env="TEST_KEY", max_output_tokens=4000)
     monkeypatch.setenv("TEST_KEY", "k")
@@ -559,7 +559,7 @@ def test_review_transport_retries_transient_gateway_replies_with_the_same_budget
             raise outcome
         return outcome
 
-    monkeypatch.setattr("sprout.methods.review_transport.httpx.post", post)
+    monkeypatch.setattr("sprout.worker.jobs.review.transport.httpx.post", post)
     assert transport("fixture", "prompt") == "plan"
     assert budgets == [4000] * 4, "the output budget is only halved for a timeout, never for an outage"
     assert naps == list(review_transport.TRANSIENT_DELAYS_S)
@@ -568,12 +568,12 @@ def test_review_transport_retries_transient_gateway_replies_with_the_same_budget
     assert [r.get("retry_reason") for r in receipts] == [None, "http 502", "RemoteProtocolError", "http 503"]
     assert receipts[0]["error"].startswith("HTTPStatusError") and receipts[3]["text"] == "plan"
 
-    monkeypatch.setattr("sprout.methods.review_transport.httpx.post", lambda url, **kw: status(502))
+    monkeypatch.setattr("sprout.worker.jobs.review.transport.httpx.post", lambda url, **kw: status(502))
     with pytest.raises(httpx.HTTPStatusError):
         transport("fixture", "prompt")
     assert len(list(tmp_path.glob("review-*.json"))) == 8, "three retries, then the error propagates"
 
-    monkeypatch.setattr("sprout.methods.review_transport.httpx.post", lambda url, **kw: status(400))
+    monkeypatch.setattr("sprout.worker.jobs.review.transport.httpx.post", lambda url, **kw: status(400))
     naps.clear()
     with pytest.raises(PromptRejected):
         transport("fixture", "prompt")
@@ -592,7 +592,7 @@ def test_gate_agents_are_harbors_own_on_our_environment(tmp_path):
     for agent in ("oracle", "nop"):
         config = evaluate.trial_config(args, task, name=agent, agent=agent)
         assert config.agent.name == agent and config.agent.import_path is None
-        assert config.environment.import_path == "sprout.harbor_plugin.agentenv:AgentENVEnvironment"
+        assert config.environment.import_path == "sprout.eval.harbor.agentenv:AgentENVEnvironment"
         assert config.environment.kwargs["checkpoint_mode"] == "none"
     with pytest.raises(ValueError, match="branch"):
         evaluate.trial_config(args, task, name="x", agent="branch")

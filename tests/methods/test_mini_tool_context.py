@@ -15,7 +15,7 @@ from tests.harness.test_assistant_turn import assistant_turn
 from tests.harness.test_mini_swe import FilesystemSession, model_server, owned_filesystem, pytestmark, reply, spec
 from tests.runstore.test_mini_native import parent_run
 from sprout.worker.agents.mini_swe.history import available_branch_points
-from sprout.methods.branching import actor_tools_at, reviewer_context
+from sprout.worker.jobs.review.branching import actor_tools_at, reviewer_context
 
 
 def fenced_json(text):

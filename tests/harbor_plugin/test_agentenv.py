@@ -18,12 +18,12 @@ from sprout.worker.tools.result import CommandOutcome, ToolResult
 from sprout.worker.run.runner import OwnedSandbox, RunOutcome
 from sprout.contract.run_spec import RunSpec
 from sprout.worker.tools.interceptors import shell_command
-from sprout.harbor_plugin import environment as sandbox_environment
-from sprout.harbor_plugin.agentenv import AgentENVEnvironment
-from sprout.harbor_plugin.agentenv_agent import AgentENVOrchestrator
-from sprout.harbor_plugin.agentenv_mini import AgentENVMini
+from sprout.eval.harbor import environment as sandbox_environment
+from sprout.eval.harbor.agentenv import AgentENVEnvironment
+from sprout.eval.harbor.agentenv_agent import AgentENVOrchestrator
+from sprout.eval.harbor.agentenv_mini import AgentENVMini
 from sprout.worker.agents.mini_swe.tools import DEFAULT_COMMAND_TIMEOUT_S
-from sprout.harbor_plugin.environment import overlay_for
+from sprout.eval.harbor.environment import overlay_for
 
 
 def environment(tmp_path: Path, **changes) -> AgentENVEnvironment:
@@ -55,7 +55,7 @@ def test_unsupported_requirements_fail_before_start(tmp_path, change, files, err
 
 
 def test_the_server_is_the_one_the_memory_snapshot_release_assumes(tmp_path, monkeypatch):
-    """methods.evaluate releases a trial's memory snapshot through
+    """eval.evaluate releases a trial's memory snapshot through
     AgentEnvClient; named nowhere, the two once defaulted to different ports."""
     from sprout.worker.run.reap import AgentEnvClient
 
@@ -477,7 +477,7 @@ def test_start_replays_the_overlay_into_the_fresh_vm(tmp_path, monkeypatch):
 def test_a_verifier_config_without_an_image_boots_the_overlays_from_image(tmp_path, monkeypatch):
     """Harbor's separate verifier for DeepSWE is `[verifier.environment]` with only
     resources; tests/Dockerfile says which image it is built on."""
-    from sprout.harbor_plugin import agentenv
+    from sprout.eval.harbor import agentenv
 
     tests = write_overlay(tmp_path / "tests")
     (tmp_path / "runtime").touch()

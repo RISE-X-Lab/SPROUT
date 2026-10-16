@@ -14,12 +14,12 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from sprout.contract.backend import default_podman_store
-from sprout.methods.branching import DEFAULT_PROMPT_CHARS, MAX_ROLLOUTS
-from sprout.methods.leak_judge import KEY_ENV as LEAK_KEY_ENV
-from sprout.methods.leak_judge import THRESHOLD as LEAK_THRESHOLD
-from sprout.methods.prompts import load_prompts
 from sprout.worker.agents.mini_swe.tools import DEFAULT_COMMAND_TIMEOUT_S
 from sprout.worker.gateway.auth import bearer_key
+from sprout.worker.jobs.review.branching import DEFAULT_PROMPT_CHARS, MAX_ROLLOUTS
+from sprout.worker.jobs.review.leak.judge import KEY_ENV as LEAK_KEY_ENV
+from sprout.worker.jobs.review.leak.judge import THRESHOLD as LEAK_THRESHOLD
+from sprout.worker.jobs.review.prompts import load_prompts
 
 ROOT = Path(__file__).resolve().parents[2]
 METHODS = ("baseline", "sprout", "bpo", "shepherd")
@@ -28,7 +28,7 @@ METHODS = ("baseline", "sprout", "bpo", "shepherd")
 REASONING_EFFORT = "high"
 #: The protocol allows 8 rollouts per method, which its default 4-then-3 schedule is
 #: derived from; a --sprout-rounds sweep may go up to this many, and a wider schedule
-#: is spelled out with --branches (up to methods.branching's MAX_ROLLOUTS).
+#: is spelled out with --branches (up to worker.jobs.review.branching's MAX_ROLLOUTS).
 MAX_SCHEDULED_ROLLOUTS = 17
 
 
@@ -104,7 +104,7 @@ SNAPSHOT_STORAGE = {
 def retain_parent(output: Path) -> None:
     from dataclasses import asdict
 
-    from sprout.methods.evaluate import parent_journal
+    from sprout.eval.evaluate import parent_journal
     from sprout.worker.agents.mini_swe.history import available_branch_points, reference_at
     from sprout.worker.run.journal import read_journal
 
@@ -174,7 +174,7 @@ def branch_widths(args) -> list[int]:
     return widths
 
 
-#: The analyst and reviewer's own settings, each an option of methods.evaluate with
+#: The analyst and reviewer's own settings, each an option of eval.evaluate with
 #: the same name; absent, the evaluator uses the actor's model, endpoint, key and effort.
 REVIEW_OPTIONS = ("review_model", "review_endpoint", "review_key_env", "review_effort")
 
@@ -182,13 +182,13 @@ REVIEW_OPTIONS = ("review_model", "review_endpoint", "review_key_env", "review_e
 def command(
     args, task: str, output: Path, method: str, parent: Path | None = None, checkpoint: bool = True
 ) -> list[str]:
-    """One ``methods.evaluate`` invocation: the same runner for every dataset and method."""
+    """One ``eval.evaluate`` invocation: the same runner for every dataset and method."""
     widths = branch_widths(args)
     cmd = [
         sys.executable,
         "-u",
         "-m",
-        "sprout.methods.evaluate",
+        "sprout.eval.evaluate",
         "--task-dir",
         str(args.tasks_dir / task),
         "--dataset-digest",
@@ -525,14 +525,14 @@ def parse_args(argv=None):
     p.add_argument(
         "--prompts",
         type=Path,
-        help="YAML with every analyst/reviewer/shepherd prompt, passed to every methods.evaluate "
-        "(default: resources/methods/prompts.yaml); its sha256 is recorded in "
+        help="YAML with every analyst/reviewer/shepherd prompt, passed to every eval.evaluate "
+        "(default: resources/review/prompts.yaml); its sha256 is recorded in "
         "the manifest as prompts_sha256",
     )
     p.add_argument(
         "--structured-review",
         action="store_true",
-        help="passed to every methods.evaluate: the analyst and reviewer answer in schema-constrained "
+        help="passed to every eval.evaluate: the analyst and reviewer answer in schema-constrained "
         "JSON (response_format json_schema) instead of fenced plain-text plans; needs an "
         "endpoint that supports json_schema, e.g. a LiteLLM proxy; recorded in the manifest",
     )
@@ -541,7 +541,7 @@ def parse_args(argv=None):
         type=int,
         default=DEFAULT_PROMPT_CHARS,
         help="size of every analyst and reviewer request, in characters (about chars/4 tokens); "
-        "passed to methods.evaluate, which reduces a reviewer request over it",
+        "passed to eval.evaluate, which reduces a reviewer request over it",
     )
     p.add_argument(
         "--final-memory-snapshot",

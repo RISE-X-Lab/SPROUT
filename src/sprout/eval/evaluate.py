@@ -1,6 +1,6 @@
 """Evaluate one Harbor task with mini-swe-agent: a parent rollout, then a method.
 
-    python -m sprout.methods.evaluate --task-dir <task> --dataset-digest sha256:... \\
+    python -m sprout.eval.evaluate --task-dir <task> --dataset-digest sha256:... \\
         --preparation-manifest prep.json --output runs/<task> --method sprout \\
         --model <model> --model-endpoint <url> --model-key-env KEY \\
         --runtime-bin runtime/sprout-runtime [--parent-output <baseline dir>]
@@ -47,11 +47,14 @@ from harbor.trial.trial import Trial
 from sprout.contract.backend import default_podman_store
 from sprout.contract.mini_history import training_messages
 from sprout.contract.storage import volatile_reason
-from sprout.harbor_plugin.agentenv import AgentENVEnvironment
-from sprout.harbor_plugin.branching import PodmanSnapshotEnvironment, SnapshotEnvironment
-from sprout.harbor_plugin.podman import PodmanEnvironment
-from sprout.methods import leak_judge, policies
-from sprout.methods.branching import (
+from sprout.eval import policies
+from sprout.eval.harbor.agentenv import AgentENVEnvironment
+from sprout.eval.harbor.branching import PodmanSnapshotEnvironment, SnapshotEnvironment
+from sprout.eval.harbor.podman import PodmanEnvironment
+from sprout.worker.agents.mini_swe.history import available_branch_points, conversation_restore
+from sprout.worker.agents.mini_swe.tools import DEFAULT_COMMAND_TIMEOUT_S
+from sprout.worker.gateway.auth import bearer_key
+from sprout.worker.jobs.review.branching import (
     BRANCH_COUNT_MODES,
     BRANCH_GUIDANCE_MODES,
     DEFAULT_GUIDANCE,
@@ -66,12 +69,10 @@ from sprout.methods.branching import (
     review,
     selected_prefix,
 )
-from sprout.methods.leak import hidden_terms, visible_text
-from sprout.methods.prompts import DEFAULT_PROMPTS_PATH, load_prompts
-from sprout.methods.review_transport import ReviewTransport
-from sprout.worker.agents.mini_swe.history import available_branch_points, conversation_restore
-from sprout.worker.agents.mini_swe.tools import DEFAULT_COMMAND_TIMEOUT_S
-from sprout.worker.gateway.auth import bearer_key
+from sprout.worker.jobs.review.leak import judge as leak_judge
+from sprout.worker.jobs.review.leak.terms import hidden_terms, visible_text
+from sprout.worker.jobs.review.prompts import DEFAULT_PROMPTS_PATH, load_prompts
+from sprout.worker.jobs.review.transport import ReviewTransport
 from sprout.worker.run.journal import read_journal
 from sprout.worker.run.reap import AgentEnvClient
 from sprout.worker.sandbox.template_recipe import find_regctl
@@ -79,8 +80,8 @@ from sprout.worker.sandbox.template_recipe import find_regctl
 METHODS = ("baseline", "sprout", "bpo", "shepherd")
 MEMORY_SNAPSHOT_POLICIES = ("never", "always", "on-failure")
 AGENTS = {
-    "mini": "sprout.harbor_plugin.agentenv_mini:AgentENVMini",
-    "branch": "sprout.harbor_plugin.branching:BranchMini",
+    "mini": "sprout.eval.harbor.agentenv_mini:AgentENVMini",
+    "branch": "sprout.eval.harbor.branching:BranchMini",
 }
 #: The Harbor environment class per backend: for a fresh trial, and for a branch
 #: (the same class with a snapshot for an image). The agents are the same on either.
@@ -845,7 +846,7 @@ def parse_args(argv=None):
         "--leak-judge",
         action="store_true",
         help="sprout, assistant-turn: check every turn the reviewer writes for hidden-test content "
-        "(the task's tests, the verifier output) with methods.leak's leak_terms and Jev before it "
+        "(the task's tests, the verifier output) with worker.jobs.review.leak.terms's leak_terms and Jev before it "
         "is taken; a flagged turn goes back to the reviewer (docs/LEAK_JUDGE.md)",
     )
     parser.add_argument(

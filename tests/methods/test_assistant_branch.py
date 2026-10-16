@@ -11,9 +11,9 @@ from sprout.worker.agents.mini_swe.history import available_branch_points
 from tests.harness.test_assistant_turn import assistant_turn
 from tests.harness.test_mini_swe import pytestmark as mini_only
 from tests.runstore.test_mini_native import parent_run
-from sprout.methods import branching
-from sprout.methods.branching import reviewer_context
-from sprout.methods.prompts import DEFAULT_PROMPTS, DEFAULT_PROMPTS_PATH, load_prompts
+from sprout.worker.jobs.review import branching
+from sprout.worker.jobs.review.branching import reviewer_context
+from sprout.worker.jobs.review.prompts import DEFAULT_PROMPTS, DEFAULT_PROMPTS_PATH, load_prompts
 
 HEADING = "## Probe first, then fix, then verify"
 FENCE_RULE = "Return exactly one fenced"

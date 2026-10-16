@@ -12,7 +12,7 @@ from harbor.agents.base import BaseAgent
 from harbor.models.agent.context import AgentContext
 
 from sprout.contract.run_spec import RunSpec
-from sprout.harbor_plugin.environment import SandboxEnvironment
+from sprout.eval.harbor.environment import SandboxEnvironment
 from sprout.worker.checkpoint.rollback import uncaptured_turns
 from sprout.worker.run.atif import export_file
 from sprout.worker.run.runner import Orchestrator, OwnedSandbox

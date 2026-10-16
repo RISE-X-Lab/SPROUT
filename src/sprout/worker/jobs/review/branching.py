@@ -1,9 +1,9 @@
 """Branching: what an analyst sees, what a reviewer may choose, and how a choice
 becomes an exact branch.
 
-Everything here is independent of how attempts run (``methods.evaluate`` runs
+Everything here is independent of how attempts run (``eval.evaluate`` runs
 them as Harbor trials): the prompts (``prompts.yaml``, through
-``methods.prompts``), the transcript renderer, the ``Grade`` and ``Attempt``
+``worker.jobs.review.prompts``), the transcript renderer, the ``Grade`` and ``Attempt``
 records the loop passes around, and ``prepare_branches``, which
 turns a reviewer's plan into ``(snapshot, native cut, guidance)`` triples after
 checking each one against the parent's recorded history.
@@ -19,8 +19,10 @@ from functools import partial
 from pathlib import Path
 
 from sprout.contract.mini_history import load_prefix, training_messages, validate_assistant_turn
-from sprout.methods import structured_review
-from sprout.methods.branch_plan import (
+from sprout.worker.agents.mini_swe.history import actor_tools_at, conversation_restore, reference_at
+from sprout.worker.checkpoint.rollback import Checkpoint, load_checkpoints
+from sprout.worker.jobs.review import structured_review
+from sprout.worker.jobs.review.branch_plan import (
     PromptRejected,
     ReviewerPlanError,
     ReviewResponseTruncated,
@@ -28,9 +30,7 @@ from sprout.methods.branch_plan import (
     extract_branch_plan,
     review_with_feedback,
 )
-from sprout.methods.prompts import DEFAULT_PROMPTS, Prompts
-from sprout.worker.agents.mini_swe.history import actor_tools_at, conversation_restore, reference_at
-from sprout.worker.checkpoint.rollback import Checkpoint, load_checkpoints
+from sprout.worker.jobs.review.prompts import DEFAULT_PROMPTS, Prompts
 from sprout.worker.run.journal import read_journal
 from sprout.worker.run.runner import RunOutcome
 
@@ -671,7 +671,7 @@ def analyse(
     ``prompt_chars``; one the endpoint refuses (HTTP 400) is retried with the
     budget halved, ``PROMPT_HALVINGS`` times at most. The sizing that produced
     the accepted report is returned as its ``prompt_budget``. ``prompts`` holds
-    the analyst's template and feedback (``methods.prompts``).
+    the analyst's template and feedback (``worker.jobs.review.prompts``).
     """
     from jsonschema import Draft202012Validator, ValidationError
 

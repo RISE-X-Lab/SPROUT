@@ -17,7 +17,7 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
-from sprout.harbor_plugin.environment import SandboxEnvironment
+from sprout.eval.harbor.environment import SandboxEnvironment
 from sprout_sandbox.podman_cli import default_podman_bin
 from sprout_sandbox.podman_images import CONFIG_KEYS, digest_reference, image_info
 
