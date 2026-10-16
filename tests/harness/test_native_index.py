@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 
-from sprout.harness.agents.mini_swe.history import index_native
+from sprout.harness_agents.mini_swe.history import index_native
 from sprout.harness_core.journal import JournalWriter, journal_events
 
 SESSION = "session"

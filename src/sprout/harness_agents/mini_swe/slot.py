@@ -43,7 +43,7 @@ class MiniSweSlot(AgentSlot):
             previous = {key: os.environ.get(key) for key in settings}
             try:
                 os.environ.update(settings)
-                from sprout.harness.agents.mini_swe.runtime import run
+                from sprout.harness_agents.mini_swe.runtime import run
             finally:
                 for key, value in previous.items():
                     if value is None:

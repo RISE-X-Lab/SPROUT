@@ -11,8 +11,8 @@ import sys
 import time
 import traceback
 
-from sprout.harness.agents.mini_swe.continuation import Continuation, prepare
-from sprout.harness.agents.mini_swe.history import load_prefix, materialize
+from sprout.harness_agents.mini_swe.continuation import Continuation, prepare
+from sprout.harness_agents.mini_swe.history import load_prefix, materialize
 from sprout.harness_orchestrator.resources import ResourceLedger
 from sprout.harness_orchestrator.run import Orchestrator, RunSpec
 from sprout.harness_sandbox.session import SandboxSession

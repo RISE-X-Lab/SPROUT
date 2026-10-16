@@ -8,7 +8,7 @@ import json
 import math
 from typing import Any
 
-from sprout.harness.agents.mini_swe.continuation import Continuation
+from sprout.harness_agents.mini_swe.continuation import Continuation
 from sprout.harness_orchestrator.run import RunSpec
 
 #: What a branch may change about the run it continues. What the actor is given

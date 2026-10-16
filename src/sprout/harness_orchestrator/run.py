@@ -36,7 +36,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Union
 
-from sprout.harness.agents.mini_swe.slot import MiniSweSlot
+from sprout.harness_agents.mini_swe.slot import MiniSweSlot
 from sprout.harness_core.events import SANDBOX_CREATED
 from sprout.harness_core.journal import JournalWriter, new_run_id, read_journal
 from sprout.harness_core.slot import SlotResult, TaskSpec
@@ -226,7 +226,7 @@ class Orchestrator:
                 journal.emit(SANDBOX_CREATED, sandbox_id=provisioned.sandbox_id,
                              backend=backend_name(spec.backend), image=spec.sandbox_image,
                              **({"store": store} if store else {}))
-                from sprout.harness.agents.mini_swe.sandbox import resolve_workspace
+                from sprout.harness_agents.mini_swe.sandbox import resolve_workspace
 
                 extra = resolve_workspace(provisioned.session, extra, journal)
                 tools = self._tool_access(spec, journal, provisioned, control, rollout_controls)

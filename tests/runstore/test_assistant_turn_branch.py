@@ -5,11 +5,11 @@ import pytest
 
 from sprout.harness_core.journal import read_journal
 from sprout.harness_orchestrator.run import Orchestrator
-from sprout.harness.agents.mini_swe.history import read_entries, training_messages
+from sprout.harness_agents.mini_swe.history import read_entries, training_messages
 from tests.harness.test_assistant_turn import assistant_turn
 from tests.harness.test_mini_swe import FilesystemSession, model_server, owned_filesystem, pytestmark, reply, spec
 from sprout.runstore.messages import export_messages
-from sprout.harness.agents.mini_swe.history import index_native, materialize, read_prefix
+from sprout.harness_agents.mini_swe.history import index_native, materialize, read_prefix
 from tests.runstore.test_mini_native import parent_run
 
 
@@ -107,7 +107,7 @@ def test_injection_requires_history_and_cannot_reuse_parent_call_id(tmp_path, mo
 @pytest.mark.parametrize("interrupt", [False, True])
 def test_multiple_reviewer_calls_keep_real_errors_and_only_close_complete_turns(tmp_path, monkeypatch, interrupt):
     from sprout.harness_checkpoint.rollback import branch_checkpoints
-    from sprout.harness.agents.mini_swe.runtime import ToolEnvironment
+    from sprout.harness_agents.mini_swe.runtime import ToolEnvironment
 
     memory, _, points = parent_run(tmp_path / "parent", monkeypatch)
     child_dir = tmp_path / "child"

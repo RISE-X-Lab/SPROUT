@@ -2,7 +2,7 @@
 
 from copy import deepcopy
 
-from sprout.harness.agents.mini_swe.history import load_prefix
+from sprout.harness_agents.mini_swe.history import load_prefix
 
 
 def _stdout(result, purpose):

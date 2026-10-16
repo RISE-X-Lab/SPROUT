@@ -36,7 +36,7 @@ from collections.abc import Sequence
 from copy import deepcopy
 from dataclasses import dataclass
 
-from sprout.harness.agents.mini_swe.history import validate_assistant_turn
+from sprout.harness_agents.mini_swe.history import validate_assistant_turn
 
 GUIDANCE = ("assistant-turn", "user-hint", "none")
 #: How an assistant-turn branch writes its turn: as given, or ``render_reasoning``.

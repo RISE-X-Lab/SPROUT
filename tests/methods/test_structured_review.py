@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from sprout.harness.agents.mini_swe.history import validate_assistant_turn
+from sprout.harness_agents.mini_swe.history import validate_assistant_turn
 from sprout.methods.branch_plan import review_with_feedback
 from sprout.methods.prompts import DEFAULT_PROMPTS
 from sprout.methods.structured_review import extract_assistant_turn_plan, response_text

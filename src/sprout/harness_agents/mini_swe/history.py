@@ -13,7 +13,7 @@ import json
 import os
 from pathlib import Path
 
-from sprout.harness.agents.mini_swe.tools import validate_mini_tools
+from sprout.harness_agents.mini_swe.tools import validate_mini_tools
 from sprout.harness_checkpoint.rollback import branch_checkpoints, closed_turns
 from sprout.harness_core.journal import journal_events, read_journal
 

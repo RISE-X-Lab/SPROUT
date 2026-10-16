@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import pytest
 import yaml
 
-from sprout.harness.agents.mini_swe.history import available_branch_points
+from sprout.harness_agents.mini_swe.history import available_branch_points
 from tests.harness.test_assistant_turn import assistant_turn
 from tests.harness.test_mini_swe import pytestmark as mini_only
 from tests.runstore.test_mini_native import parent_run

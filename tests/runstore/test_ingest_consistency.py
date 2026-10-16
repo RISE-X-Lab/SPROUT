@@ -7,7 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from sprout.harness.agents.mini_swe.history import index_native
+from sprout.harness_agents.mini_swe.history import index_native
 from sprout.runstore.worker import Worker
 
 SESSION = "session"

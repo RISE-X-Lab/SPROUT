@@ -68,7 +68,7 @@ def export_messages(directory, session_id, slot, *, allow_incomplete_tail=False)
             raise ValueError("Native history has an incomplete final record")
         data = data[:data.rfind(b"\n") + 1]
     entries = [json.loads(line) for line in data.splitlines() if line.strip()]
-    from sprout.harness.agents.mini_swe.history import training_messages
+    from sprout.harness_agents.mini_swe.history import training_messages
 
     # mini writes its actual formatted observation before closing the turn.
     # Do not substitute the runtime's different presentation from tool.finished.
@@ -121,7 +121,7 @@ def provenance(directory, session_id: str, messages: list[dict], branch_point: d
     continues. Its tool results are real, but training on it as the policy's
     output would teach what the policy never produced.
     """
-    from sprout.harness.agents.mini_swe.history import read_entries, read_prefix, training_messages
+    from sprout.harness_agents.mini_swe.history import read_entries, read_prefix, training_messages
 
     files = list((directory / "native-home").glob(f"**/*{session_id}.jsonl"))
     if len(files) != 1:
@@ -151,7 +151,7 @@ def salvage_interrupted(result: dict, directory, point: dict, branch_point=None)
     "interrupted"`` and graded like a timeout; what went wrong moves under
     ``interrupted``. None when the pair cannot be rebuilt.
     """
-    from sprout.harness.agents.mini_swe.history import read_entries, read_prefix, training_messages
+    from sprout.harness_agents.mini_swe.history import read_entries, read_prefix, training_messages
 
     try:
         events = journal_events(directory / "trajectory.jsonl")
@@ -212,7 +212,7 @@ def complete_message_result(result: dict, directory, slot: str, recovery=None, b
         if slot == "mini-swe-agent" and is_truncated_result(result) and not unsafe:
             # A timeout between two actions in one response cannot train the
             # half response against the later disk. Keep a proven earlier pair.
-            from sprout.harness.agents.mini_swe.history import index_mini, read_entries, read_prefix, training_messages
+            from sprout.harness_agents.mini_swe.history import index_mini, read_entries, read_prefix, training_messages
 
             files = list((directory / "native-home").glob(f"**/*{session_id}.jsonl"))
             try:

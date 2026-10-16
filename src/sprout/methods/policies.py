@@ -15,7 +15,7 @@ import time
 
 import httpx
 
-from sprout.harness.agents.mini_swe.history import actor_tools_at, load_prefix, reference_at
+from sprout.harness_agents.mini_swe.history import actor_tools_at, load_prefix, reference_at
 from sprout.harness_core.journal import read_journal
 from sprout.harness_gateway.auth import bearer_headers
 from sprout.harness_orchestrator.rollout import endpoint

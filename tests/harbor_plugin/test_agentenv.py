@@ -21,7 +21,7 @@ from sprout.harbor_plugin import environment as sandbox_environment
 from sprout.harbor_plugin.agentenv import AgentENVEnvironment
 from sprout.harbor_plugin.agentenv_agent import AgentENVOrchestrator
 from sprout.harbor_plugin.agentenv_mini import AgentENVMini
-from sprout.harness.agents.mini_swe.tools import DEFAULT_COMMAND_TIMEOUT_S
+from sprout.harness_agents.mini_swe.tools import DEFAULT_COMMAND_TIMEOUT_S
 from sprout.harbor_plugin.environment import overlay_for
 
 
@@ -293,7 +293,7 @@ def test_harbor_deadline_finalizes_snapshot_and_usage_before_verification(tmp_pa
 
 
 def test_mini_prompt_is_task_plus_the_pinned_mini_tool_primer(tmp_path, monkeypatch):
-    from sprout.harness.agents.mini_swe.tools import mini_tool_primer
+    from sprout.harness_agents.mini_swe.tools import mini_tool_primer
 
     env = environment(tmp_path, task_env_config=EnvironmentConfig(docker_image="image", workdir="/app"))
     env.session = harbor_session()

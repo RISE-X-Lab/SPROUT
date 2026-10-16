@@ -18,7 +18,7 @@ from pathlib import Path
 import re
 from typing import Callable, List, Optional, Tuple
 
-from sprout.harness.agents.mini_swe.history import (
+from sprout.harness_agents.mini_swe.history import (
     actor_tools_at, conversation_restore, load_prefix, reference_at, training_messages,
     validate_assistant_turn,
 )
@@ -658,7 +658,7 @@ def review(transport, model: str, problem: str, attempts: List[Attempt], cases: 
     Either way every branch keeps its result in ``BranchChoice.turn_check``,
     and every refusal is in the plan.
     """
-    from sprout.harness.agents.mini_swe.history import available_branch_points
+    from sprout.harness_agents.mini_swe.history import available_branch_points
 
     points = {a.name: available_branch_points(a.outcome.journal_path) for a in attempts}
     points = {name: {step: pair for step, pair in pairs.items()

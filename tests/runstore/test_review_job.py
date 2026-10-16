@@ -16,7 +16,7 @@ from types import SimpleNamespace
 import httpx
 import pytest
 
-from sprout.harness.agents.mini_swe.history import available_branch_points, materialize
+from sprout.harness_agents.mini_swe.history import available_branch_points, materialize
 from sprout.harness_orchestrator.run import Orchestrator
 from sprout.methods import review_transport
 from sprout.methods.review_transport import RequestStopped, ReviewTransport

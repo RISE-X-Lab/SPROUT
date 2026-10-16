@@ -2,7 +2,7 @@
 
 A *slot* runs one agent against one task and streams normalized events into a
 journal. Slots are black boxes to the orchestrator: the contract below is the
-whole interface. The driver lives in harness/agents/.
+whole interface. The driver lives in harness_agents/.
 
 Design constraints:
 - ``run()`` is synchronous from the caller's perspective; async drivers own

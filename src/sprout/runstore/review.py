@@ -75,7 +75,7 @@ import queue
 import threading
 from typing import Any, Callable
 
-from sprout.harness.agents.mini_swe.history import available_branch_points, training_messages
+from sprout.harness_agents.mini_swe.history import available_branch_points, training_messages
 from sprout.methods.branching import (
     Attempt, BranchChoice, Grade, analyse, outcome_from_journal, review, selected_prefix,
 )

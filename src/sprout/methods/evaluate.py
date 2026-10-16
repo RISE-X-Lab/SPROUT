@@ -47,10 +47,10 @@ from harbor.trial.trial import Trial
 from sprout.harbor_plugin.agentenv import AgentENVEnvironment
 from sprout.harbor_plugin.branching import PodmanSnapshotEnvironment, SnapshotEnvironment
 from sprout.harbor_plugin.podman import PodmanEnvironment
-from sprout.harness.agents.mini_swe.history import (
+from sprout.harness_agents.mini_swe.history import (
     available_branch_points, conversation_restore, training_messages,
 )
-from sprout.harness.agents.mini_swe.tools import DEFAULT_COMMAND_TIMEOUT_S
+from sprout.harness_agents.mini_swe.tools import DEFAULT_COMMAND_TIMEOUT_S
 from sprout.harness_core.journal import read_journal, volatile_reason
 from sprout.harness_gateway.auth import bearer_key
 from sprout.harness_orchestrator.reap import AgentEnvClient

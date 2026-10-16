@@ -7,10 +7,10 @@ import json
 from pathlib import Path
 import re
 
-from sprout.harness.agents.mini_swe.continuation import Continuation, prepare
-from sprout.harness.agents.mini_swe.history import load_prefix
-from sprout.harness.agents.mini_swe.history import reference_at
-from sprout.harness.agents.mini_swe.history import actor_tools_at, available_branch_points
+from sprout.harness_agents.mini_swe.continuation import Continuation, prepare
+from sprout.harness_agents.mini_swe.history import load_prefix
+from sprout.harness_agents.mini_swe.history import reference_at
+from sprout.harness_agents.mini_swe.history import actor_tools_at, available_branch_points
 from sprout.harbor_plugin.agentenv import AgentENVEnvironment
 from sprout.harbor_plugin.agentenv_mini import AgentENVMini
 from sprout.harbor_plugin.podman import PodmanEnvironment

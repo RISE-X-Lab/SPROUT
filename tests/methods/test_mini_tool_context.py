@@ -7,14 +7,14 @@ import sys
 
 import pytest
 
-from sprout.harness.agents.mini_swe.history import validate_assistant_turn
+from sprout.harness_agents.mini_swe.history import validate_assistant_turn
 from sprout.harness_core.journal import read_journal
-from sprout.harness.agents.mini_swe.tools import mini_tool_primer, mini_tool_schema
+from sprout.harness_agents.mini_swe.tools import mini_tool_primer, mini_tool_schema
 from sprout.harness_orchestrator.run import Orchestrator
 from tests.harness.test_assistant_turn import assistant_turn
 from tests.harness.test_mini_swe import FilesystemSession, model_server, owned_filesystem, pytestmark, reply, spec
 from tests.runstore.test_mini_native import parent_run
-from sprout.harness.agents.mini_swe.history import available_branch_points
+from sprout.harness_agents.mini_swe.history import available_branch_points
 from sprout.methods.branching import actor_tools_at, reviewer_context
 
 
@@ -89,7 +89,7 @@ def test_rendering_actor_primer_does_not_import_mini_or_load_host_config(tmp_pat
     config = tmp_path / "not-created"
     code = (
         "import sys,os\n"
-        "from sprout.harness.agents.mini_swe.tools import mini_tool_primer\n"
+        "from sprout.harness_agents.mini_swe.tools import mini_tool_primer\n"
         "before=dict(os.environ)\n"
         "assert 'bash' in mini_tool_primer('/app')\n"
         "assert 'minisweagent' not in sys.modules\n"

@@ -27,9 +27,9 @@ from minisweagent.models.litellm_model import LitellmModel
 from minisweagent.models.utils.actions_toolcall import BASH_TOOL
 import yaml
 
-from sprout.harness.agents.mini_swe.history import validate_assistant_turn
-from sprout.harness.agents.mini_swe.history import History, load_prefix
-from sprout.harness.agents.mini_swe.tools import DEFAULT_COMMAND_TIMEOUT_S, mini_tool_schema
+from sprout.harness_agents.mini_swe.history import validate_assistant_turn
+from sprout.harness_agents.mini_swe.history import History, load_prefix
+from sprout.harness_agents.mini_swe.tools import DEFAULT_COMMAND_TIMEOUT_S, mini_tool_schema
 from sprout.harness_core.control import GRADABLE_STOP_REASONS, RunAborted, RunControl
 from sprout.harness_core.events import RUN_RESULT, TURN_STARTED, USAGE_UPDATED, Usage
 from sprout.harness_core.control import post

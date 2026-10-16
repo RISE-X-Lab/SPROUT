@@ -6,7 +6,7 @@ An agent's state has two halves and neither alone is enough to branch a run:
   taken by ``harness.tools.access.ToolAccess``; the last turn's is the rollout's
   final disk snapshot.
 - **conversation**: mini-swe-agent's native history, addressed by its session
-  id and cut at the same closed turn (``harness/agents/mini_swe/history.py``).
+  id and cut at the same closed turn (``harness_agents/mini_swe/history.py``).
 
 A **branch point** is a closed turn -- the model's whole response and every one
 of its tool results -- whose ``checkpoint.captured`` record names a snapshot and

@@ -12,7 +12,7 @@ import sys
 import time
 import tomllib
 
-from sprout.harness.agents.mini_swe.tools import DEFAULT_COMMAND_TIMEOUT_S
+from sprout.harness_agents.mini_swe.tools import DEFAULT_COMMAND_TIMEOUT_S
 from sprout.harness_gateway.auth import bearer_key
 from sprout.harness_sandbox.backends import default_podman_store
 from sprout.methods.branching import DEFAULT_PROMPT_CHARS, MAX_ROLLOUTS
@@ -97,7 +97,7 @@ SNAPSHOT_STORAGE = {
 
 def retain_parent(output: Path) -> None:
     from dataclasses import asdict
-    from sprout.harness.agents.mini_swe.history import available_branch_points, reference_at
+    from sprout.harness_agents.mini_swe.history import available_branch_points, reference_at
     from sprout.harness_core.journal import read_journal
     from sprout.methods.evaluate import parent_journal
 

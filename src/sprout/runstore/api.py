@@ -5,8 +5,8 @@ from __future__ import annotations
 from dataclasses import replace
 import secrets
 
-from sprout.harness.agents.mini_swe.continuation import Continuation, prepare
-from sprout.harness.agents.mini_swe.history import load_prefix
+from sprout.harness_agents.mini_swe.continuation import Continuation, prepare
+from sprout.harness_agents.mini_swe.history import load_prefix
 from sprout.runstore.index import Index
 from sprout.runstore.config import merge
 from sprout.runstore.specs import (BRANCH_OVERRIDES, JobSpec, defaults_key, digest, validate_branch_budget,

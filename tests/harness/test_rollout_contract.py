@@ -32,7 +32,7 @@ def test_orchestrator_mounts_real_endpoint_sampling_and_turn_limit(tmp_path, ups
                             destroy=lambda: destroyed.append(True))
     monkeypatch.setattr(Orchestrator, "_wire_sandbox", lambda *args: owned)
     # The stand-in sandbox has no shell for mini's workspace probe.
-    monkeypatch.setattr("sprout.harness.agents.mini_swe.sandbox.resolve_workspace",
+    monkeypatch.setattr("sprout.harness_agents.mini_swe.sandbox.resolve_workspace",
                         lambda session, extra, journal: extra)
 
     class Slot:

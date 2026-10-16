@@ -115,7 +115,7 @@ def fake_workspace(monkeypatch):
         probed.append(session)
         return {**extra, "mini_workspace": dict(WORKSPACE)}
 
-    monkeypatch.setattr("sprout.harness.agents.mini_swe.sandbox.resolve_workspace", resolve)
+    monkeypatch.setattr("sprout.harness_agents.mini_swe.sandbox.resolve_workspace", resolve)
     return probed
 
 
