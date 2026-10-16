@@ -23,7 +23,7 @@ harbor = ["harbor==0.22.0"]
 runstore = ["psycopg2-binary>=2.9,<3", "fastapi>=0.110,<1", "uvicorn>=0.29,<1"]
 rl = ["fastapi>=0.110,<1", "uvicorn>=0.29,<1"]
 dev = ["pytest>=8", "pyflakes"]
-# Regenerating the logo and architecture figures (docs/gen_*.py).
+# Regenerating the logo and architecture figures (ops/figures/gen_logo.py).
 docs = ["fonttools>=4", "uharfbuzz>=0.39"]
 
 [project.urls]

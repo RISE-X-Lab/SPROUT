@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.svg">
-    <img src="docs/assets/logo.svg" width="420" alt="sprout: branch an agent rollout from any step"/>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/figures/logo-dark.svg">
+    <img src="docs/figures/logo.svg" width="420" alt="sprout: branch an agent rollout from any step"/>
   </picture>
 </p>
 
@@ -11,9 +11,9 @@
 </p>
 
 <p align="center">
-  <a href="https://arxiv.org/abs/2610.14405"><img src="docs/assets/btn-paper.svg" height="40" alt="Paper on arXiv"></a>&nbsp;
-  <a href="https://rise-x-lab.github.io/SPROUT/"><img src="docs/assets/btn-project.svg" height="40" alt="Project page"></a>&nbsp;
-  <a href="#citation"><img src="docs/assets/btn-citation.svg" height="40" alt="Citation"></a>
+  <a href="https://arxiv.org/abs/2610.14405"><img src="docs/figures/btn-paper.svg" height="40" alt="Paper on arXiv"></a>&nbsp;
+  <a href="https://rise-x-lab.github.io/SPROUT/"><img src="docs/figures/btn-project.svg" height="40" alt="Project page"></a>&nbsp;
+  <a href="#citation"><img src="docs/figures/btn-citation.svg" height="40" alt="Citation"></a>
 </p>
 
 <p align="center">
@@ -25,7 +25,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/architecture.svg" width="1000" alt="Sprout architecture. A task and its verifier go to a strategy (SPROUT's analyst and reviewer), which queues rollout jobs in the Run Store; a worker claims a job and checkpoints every turn; a verifier grades the finished rollout, and its feedback informs the next attempt. Inside each worker, mini-swe-agent reaches the model through a gateway and the sandbox through ToolAccess and the Sprout runtime, on podman + btrfs or Firecracker / AgentENV. Below, branches grow from saved checkpoints C2 and C4 and pass where the original continuation failed; each checkpoint pairs the agent's context with an environment snapshot."/>
+  <img src="docs/figures/architecture.svg" width="1000" alt="Sprout architecture. A task and its verifier go to a strategy (SPROUT's analyst and reviewer), which queues rollout jobs in the Run Store; a worker claims a job and checkpoints every turn; a verifier grades the finished rollout, and its feedback informs the next attempt. Inside each worker, mini-swe-agent reaches the model through a gateway and the sandbox through ToolAccess and the Sprout runtime, on podman + btrfs or Firecracker / AgentENV. Below, branches grow from saved checkpoints C2 and C4 and pass where the original continuation failed; each checkpoint pairs the agent's context with an environment snapshot."/>
 </p>
 <p align="center">
   <sub>A checkpoint pairs the agent's context with a snapshot of its sandbox. When a rollout fails,
