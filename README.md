@@ -175,16 +175,22 @@ cd runtime && go generate ./... && go build -o sprout-runtime .
 
 ```
 .
-├── src/sprout/harness/        # the agent runtime: one run, end to end
-├── src/sprout/harness_*/      # its parts: agents, checkpoint, core, gateway, orchestrator, sandbox, tools
-├── src/sprout/harbor_plugin/  # Sprout as a Harbor environment and agent
-├── src/sprout/methods/        # evaluate (one task, one method), branching, prompts, gate
-├── src/sprout/inspect/        # read-only CLI over run output
-├── src/sprout/runstore/       # PostgreSQL job queue, worker, SWE-rebench grader, training export
-├── src/sprout/rl_driver/      # the RL trainer's (Miles) rollout adapter over the Run Store
-├── src/sprout/services/       # the host's long-running pieces: db, LiteLLM proxy, Run Store, RL driver
-├── src/sprout_sandbox/        # the sandbox clients: AgentENV microVMs and rootless podman
-├── runtime/                   # the Go binary inside every sandbox: shell, text_editor, grep, web, over JSON-RPC
+├── src/sprout/harness/               # the agent runtime: one run, end to end
+├── src/sprout/harness_agents/        # mini-swe-agent, the one agent
+├── src/sprout/harness_checkpoint/    # a snapshot per turn, and rollback to one
+├── src/sprout/harness_core/          # the journal, its events, run control, the slot contract
+├── src/sprout/harness_gateway/       # the model gateway: routing, budget, the wire-level tap
+├── src/sprout/harness_orchestrator/  # one run start to finish, what it holds, reaping
+├── src/sprout/harness_sandbox/       # sandbox sessions, backends, image templates
+├── src/sprout/harness_tools/         # ToolAccess, the runtime's schema, interceptors
+├── src/sprout/harbor_plugin/         # Sprout as a Harbor environment and agent
+├── src/sprout/methods/               # evaluate (one task, one method), branching, prompts, gate
+├── src/sprout/inspect/               # read-only CLI over run output
+├── src/sprout/runstore/              # PostgreSQL job queue, worker, SWE-rebench grader, training export
+├── src/sprout/rl_driver/             # the RL trainer's (Miles) rollout adapter over the Run Store
+├── src/sprout/services/              # the host's long-running pieces: db, LiteLLM proxy, Run Store, RL driver
+├── src/sprout_sandbox/               # the sandbox clients: AgentENV microVMs and rootless podman
+├── runtime/                          # the Go binary inside every sandbox: shell, text_editor, grep, web, over JSON-RPC
 └── tests/  docs/  examples/  ops/
 ```
 
