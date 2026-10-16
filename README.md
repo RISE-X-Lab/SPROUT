@@ -176,6 +176,7 @@ cd runtime && go generate ./... && go build -o sprout-runtime .
 ```
 .
 ├── src/sprout/harness/        # the agent runtime: one run, end to end
+├── src/sprout/harness_*/      # its parts: agents, checkpoint, core, gateway, orchestrator, sandbox, tools
 ├── src/sprout/harbor_plugin/  # Sprout as a Harbor environment and agent
 ├── src/sprout/methods/        # evaluate (one task, one method), branching, prompts, gate
 ├── src/sprout/inspect/        # read-only CLI over run output

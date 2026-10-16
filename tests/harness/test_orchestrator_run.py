@@ -412,8 +412,8 @@ def test_one_run_start_to_finish_on_the_sandbox_it_owns(tmp_path, monkeypatch):
     import sprout.harness_sandbox.session as session_module
 
     from sprout.harness_orchestrator import ResourceLedger
-    from sprout.harness.tools.access import ToolAccess
-    from sprout.harness.tools.schema import runtime_tools
+    from sprout.harness_tools.access import ToolAccess
+    from sprout.harness_tools.schema import runtime_tools
 
     session = _FakeSession()
     monkeypatch.setattr(session_module, "SandboxSession", lambda **kw: session)
@@ -536,7 +536,7 @@ def test_the_pipeline_is_limits_then_the_tracker_then_declared_rules(tmp_path):
     unfed tracker once recorded every step after the first as clean reuse."""
     from sprout.harness_core.journal import JournalWriter
     from sprout.harness_orchestrator.run import OwnedSandbox, RunSpec
-    from sprout.harness.tools.interceptors import MutationTracker, ShellContext
+    from sprout.harness_tools.interceptors import MutationTracker, ShellContext
 
     limits = object()
     spec = RunSpec(prompt="x", interceptors=[{"name": "shell_context", "cwd": "/app", "user": "root"}])

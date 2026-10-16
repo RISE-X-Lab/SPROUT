@@ -17,9 +17,9 @@ from sprout.harness_checkpoint.rollback import branch_checkpoints, uncaptured_tu
 from sprout.harness_core.control import RunAborted, RunControl
 from sprout.harness_core.journal import JournalWriter, read_journal
 from sprout.harness_core.result import CommandOutcome, ToolResult
-from sprout.harness.tools.access import ToolAccess, ToolInfraError
-from sprout.harness.tools.interceptors import MutationTracker
-from sprout.harness.tools.pipeline import Reject, ToolInterceptor, ToolPipeline
+from sprout.harness_tools.access import ToolAccess, ToolInfraError
+from sprout.harness_tools.interceptors import MutationTracker
+from sprout.harness_tools.pipeline import Reject, ToolInterceptor, ToolPipeline
 
 
 class Session:

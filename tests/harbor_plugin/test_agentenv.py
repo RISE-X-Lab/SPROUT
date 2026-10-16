@@ -16,7 +16,7 @@ from harbor.models.agent.context import AgentContext
 from sprout.harness_core.journal import JournalWriter, read_journal
 from sprout.harness_core.result import CommandOutcome, ToolResult
 from sprout.harness_orchestrator.run import OwnedSandbox, RunOutcome, RunSpec
-from sprout.harness.tools.interceptors import shell_command
+from sprout.harness_tools.interceptors import shell_command
 from sprout.harbor_plugin import environment as sandbox_environment
 from sprout.harbor_plugin.agentenv import AgentENVEnvironment
 from sprout.harbor_plugin.agentenv_agent import AgentENVOrchestrator

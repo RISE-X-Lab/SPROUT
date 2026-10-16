@@ -34,7 +34,7 @@ from harbor.models.task.config import NetworkMode
 
 from sprout.harness_sandbox.backends import backend_name
 from sprout.harness_sandbox.session import SandboxSession
-from sprout.harness.tools.interceptors import shell_command
+from sprout.harness_tools.interceptors import shell_command
 
 CHECKPOINT_MODES = ("disk_only", "none")
 

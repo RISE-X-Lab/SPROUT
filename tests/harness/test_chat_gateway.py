@@ -41,7 +41,7 @@ def test_stop_cancels_silent_http_transport(monkeypatch):
 
 def test_plain_success_metadata_is_specific_to_shell():
     from sprout.harness_core.result import ToolResult
-    from sprout.harness.tools.access import _settled
+    from sprout.harness_tools.access import _settled
 
     def plain():
         return ToolResult(True, "stdout\n")

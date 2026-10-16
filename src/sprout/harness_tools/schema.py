@@ -21,8 +21,8 @@ import json
 from pathlib import Path
 
 #: The checked-in declaration, when this module runs from a source checkout
-#: (src/sprout/harness/tools -> repository root).
-SOURCE_SCHEMA = Path(__file__).resolve().parents[4] / "runtime" / "schema" / "tools.json"
+#: (src/sprout/harness_tools -> repository root).
+SOURCE_SCHEMA = Path(__file__).resolve().parents[3] / "runtime" / "schema" / "tools.json"
 #: Its name as package data of this package, where a wheel carries it.
 PACKAGED_SCHEMA = "tools.json"
 

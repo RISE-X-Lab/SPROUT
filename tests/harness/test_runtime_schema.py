@@ -20,8 +20,8 @@ from pathlib import Path
 
 import pytest
 
-from sprout.harness.tools import schema
-from sprout.harness.tools.schema import PACKAGED_SCHEMA, RUNTIME_SCHEMA, runtime_tools
+from sprout.harness_tools import schema
+from sprout.harness_tools.schema import PACKAGED_SCHEMA, RUNTIME_SCHEMA, runtime_tools
 
 REPO = Path(__file__).resolve().parents[2]
 
@@ -59,7 +59,7 @@ def test_the_wheel_carries_the_declaration_where_an_install_reads_it():
     checked-in file in beside schema.py, under the name it reads."""
     config = tomllib.loads((REPO / "pyproject.toml").read_text(encoding="utf-8"))
     included = config["tool"]["hatch"]["build"]["targets"]["wheel"]["force-include"]
-    assert included["runtime/schema/tools.json"] == "sprout/harness/tools/" + PACKAGED_SCHEMA
+    assert included["runtime/schema/tools.json"] == "sprout/harness_tools/" + PACKAGED_SCHEMA
 
 
 @pytest.mark.parametrize("layout", ["directory", "zip"])
@@ -67,9 +67,9 @@ def test_an_install_without_a_source_tree_reads_the_packaged_copy(tmp_path, layo
     """The wheel's layout -- schema.py with the declaration beside it and no
     runtime/ above -- installed as files or imported from the archive."""
     site = tmp_path / "site"
-    package = site / "sprout" / "harness" / "tools"
+    package = site / "sprout" / "harness_tools"
     package.mkdir(parents=True)
-    for directory in (site / "sprout", site / "sprout" / "harness", package):
+    for directory in (site / "sprout", package):
         (directory / "__init__.py").write_text("")
     shutil.copy(Path(schema.__file__), package / "schema.py")
     shutil.copy(REPO / "runtime" / "schema" / "tools.json", package / PACKAGED_SCHEMA)
@@ -80,14 +80,14 @@ def test_an_install_without_a_source_tree_reads_the_packaged_copy(tmp_path, layo
             for path in sorted(site.rglob("*")):
                 archive.write(path, path.relative_to(site).as_posix())
     probe = ("import json, sys; sys.path.insert(0, sys.argv[1]); "
-             "from sprout.harness.tools import schema; "
+             "from sprout.harness_tools import schema; "
              "print(json.dumps([schema.SOURCE_SCHEMA.is_file(), str(schema.RUNTIME_SCHEMA), "
              "schema.runtime_tools()]))")
     # -I -S: no PYTHONPATH, no site-packages, so nothing reaches this checkout.
     found, loaded, tools = json.loads(subprocess.run(
         [sys.executable, "-I", "-S", "-c", probe, str(root)],
         capture_output=True, text=True, check=True, timeout=60).stdout)
-    assert not found and loaded == str(root / "sprout" / "harness" / "tools" / PACKAGED_SCHEMA)
+    assert not found and loaded == str(root / "sprout" / "harness_tools" / PACKAGED_SCHEMA)
     assert tools == runtime_tools()
 
 

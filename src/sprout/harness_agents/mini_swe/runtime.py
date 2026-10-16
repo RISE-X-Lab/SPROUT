@@ -35,7 +35,7 @@ from sprout.harness_core.events import RUN_RESULT, TURN_STARTED, USAGE_UPDATED, 
 from sprout.harness_core.control import post
 from sprout.harness_core.journal import JournalWriter
 from sprout.harness_core.slot import SlotResult, TaskSpec
-from sprout.harness.tools.access import ToolAccess
+from sprout.harness_tools.access import ToolAccess
 from sprout.harness_gateway.server import _absorb_usage
 from sprout.harness_gateway.auth import bearer_headers
 

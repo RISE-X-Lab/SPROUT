@@ -30,8 +30,8 @@ from typing import Any, Optional
 
 from sprout.harness_core.events import CHECKPOINT_CAPTURED, SESSION_REF, SNAPSHOT_MEMORY
 from sprout.harness_core.result import CommandOutcome, ToolResult
-from sprout.harness.tools.pipeline import CallContext, ToolPipeline
-from sprout.harness.tools.schema import runtime_tools
+from sprout.harness_tools.pipeline import CallContext, ToolPipeline
+from sprout.harness_tools.schema import runtime_tools
 
 #: Seconds allowed beyond a command's own timeout for the round trip.
 TRANSPORT_MARGIN_S = 60.0

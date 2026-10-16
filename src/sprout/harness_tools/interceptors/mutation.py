@@ -10,7 +10,7 @@ mounted outermost, so a call an inner interceptor rejects still counts.
 
 from __future__ import annotations
 
-from sprout.harness.tools.pipeline import CallContext, Continue, ToolInterceptor, Verdict
+from sprout.harness_tools.pipeline import CallContext, Continue, ToolInterceptor, Verdict
 
 __all__ = ["MutationTracker", "call_mutates", "READ_ONLY_TOOLS"]
 

@@ -52,7 +52,7 @@ import logging
 from dataclasses import dataclass
 from typing import Optional
 
-from sprout.harness.tools.interceptors.mutation import MutationTracker
+from sprout.harness_tools.interceptors.mutation import MutationTracker
 
 #: Re-boarding resets the *suffix* of the layer chain but ratchets the inherited
 #: prefix up by one layer per cycle -- captures can never compact layers the

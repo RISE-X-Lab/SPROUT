@@ -34,9 +34,9 @@ packages = ["src/sprout", "src/sprout_sandbox"]
 
 # The runtime's tool declaration, checked in beside the runtime that dumps it,
 # goes into the wheel as package data: an installed harness has no runtime/
-# directory to read it from (src/sprout/harness/tools/schema.py).
+# directory to read it from (src/sprout/harness_tools/schema.py).
 [tool.hatch.build.targets.wheel.force-include]
-"runtime/schema/tools.json" = "sprout/harness/tools/tools.json"
+"runtime/schema/tools.json" = "sprout/harness_tools/tools.json"
 
 [tool.pytest.ini_options]
 pythonpath = ["src", "."]

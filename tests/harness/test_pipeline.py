@@ -1,4 +1,4 @@
-"""Unit tests for the tool interceptor pipeline (harness.tools.pipeline).
+"""Unit tests for the tool interceptor pipeline (harness_tools.pipeline).
 
 No sandbox, no model calls -- the interceptors are exercised against plain
 functions.
@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import pytest
 
-from sprout.harness.tools.pipeline import (
+from sprout.harness_tools.pipeline import (
     CallContext,
     Continue,
     Reject,

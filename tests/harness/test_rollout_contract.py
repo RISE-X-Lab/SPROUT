@@ -8,7 +8,7 @@ from sprout.harness_core.control import RunControl
 from sprout.harness_core.journal import read_journal
 from sprout.harness_core.result import ToolResult
 from sprout.harness_core.slot import SlotResult
-from sprout.harness.tools.pipeline import CallContext
+from sprout.harness_tools.pipeline import CallContext
 from sprout.harness_orchestrator.run import Orchestrator, RunSpec
 from sprout.harness_orchestrator.rollout import RolloutControls
 from sprout.runstore.messages import export_tools

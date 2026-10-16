@@ -566,7 +566,7 @@ def test_nothing_in_the_run_lifecycle_calls_snapshot_deletion():
     from pathlib import Path
 
     root = Path(__file__).resolve().parents[2]
-    for module in ("src/sprout/harness_orchestrator/run.py", "src/sprout/harness/tools/access.py",
+    for module in ("src/sprout/harness_orchestrator/run.py", "src/sprout/harness_tools/access.py",
                    "src/sprout/harness_checkpoint/checkpointer.py", "src/sprout/harness_sandbox/session.py"):
         text = (root / module).read_text()
         assert "delete_snapshot" not in text, \

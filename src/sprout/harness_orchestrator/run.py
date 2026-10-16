@@ -84,7 +84,7 @@ class RunSpec:
     #: Keep the sandbox after the run -- grading and extraction need it alive.
     keep_sandbox: bool = False
     #: Rules mounted on the serving pipeline after the mutation tracker, by name
-    #: (``harness.tools.interceptors.INTERCEPTORS``): ``[{"name": ..., **kwargs}]``.
+    #: (``harness_tools.interceptors.INTERCEPTORS``): ``[{"name": ..., **kwargs}]``.
     interceptors: List[Dict[str, Any]] = field(default_factory=list)
 
     # --- gateway ---
@@ -349,9 +349,9 @@ class Orchestrator:
         tracker the checkpointer reads, then the rules the run declares.
         """
         from sprout.harness_checkpoint.checkpointer import Checkpointer
-        from sprout.harness.tools.access import ToolAccess
-        from sprout.harness.tools.interceptors import MutationTracker, build_interceptors
-        from sprout.harness.tools.pipeline import ToolPipeline
+        from sprout.harness_tools.access import ToolAccess
+        from sprout.harness_tools.interceptors import MutationTracker, build_interceptors
+        from sprout.harness_tools.pipeline import ToolPipeline
 
         tracker = MutationTracker()
         interceptors = [*([rollout_controls] if rollout_controls is not None else []),

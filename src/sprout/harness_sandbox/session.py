@@ -8,7 +8,7 @@ by the same owner, and this is that owner:
   extraction happen after the agent stops, and its teardown must be guaranteed
   rather than left to whatever the agent did;
 - **the snapshot handle** -- ``snapshot`` / ``squash_snapshot`` / ``swap_sandbox``
-  is the contract ``harness.tools.access`` and the checkpointer use, so whoever
+  is the contract ``harness_tools.access`` and the checkpointer use, so whoever
   cannot call these cannot record the environment half of a rollback pair;
 - **the executor seam** -- ``(tool_name, args) -> ToolResult``, which is the only
   channel anything has into the environment.

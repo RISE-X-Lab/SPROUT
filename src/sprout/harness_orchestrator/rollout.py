@@ -12,7 +12,7 @@ import threading
 import time
 from urllib.parse import urlsplit
 
-from sprout.harness.tools.pipeline import Continue, Reject, ToolInterceptor
+from sprout.harness_tools.pipeline import Continue, Reject, ToolInterceptor
 
 
 def endpoint(value: str) -> str:

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import shlex
 
-from sprout.harness.tools.pipeline import Rewrite, ToolInterceptor
+from sprout.harness_tools.pipeline import Rewrite, ToolInterceptor
 
 
 def shell_command(command: str, cwd: str, env: dict[str, str], user: str | int | None) -> str:

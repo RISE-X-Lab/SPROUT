@@ -39,7 +39,7 @@ TOOL_FINISHED = "tool.finished"      # {call_id, name?, status: ok|error, output
 
 # --- turn / usage ----------------------------------------------------------
 # One disk snapshot per model turn, taken once the turn has closed
-# (harness/tools/access.py); a closed turn with its snapshot is a branch point
+# (harness_tools/access.py); a closed turn with its snapshot is a branch point
 # (harness_checkpoint/rollback.py): between turn.completed and the next
 # turn.started there is no in-flight call.
 TURN_STARTED = "turn.started"        # {turn?}

@@ -10,7 +10,7 @@ Design constraints:
 - Everything a slot learns goes into the journal *as it happens* -- a killed
   run must still leave a usable trajectory (the rule checkpoints follow too:
   ``ToolAccess`` journals each one as it is taken).
-- Tools are reached through the run's :class:`~sprout.harness.tools.access.ToolAccess`
+- Tools are reached through the run's :class:`~sprout.harness_tools.access.ToolAccess`
   -- the functions an agent may call on its sandbox; the slot decides how to
   offer them to its model and never reaches the sandbox any other way.
 """

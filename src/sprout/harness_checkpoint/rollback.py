@@ -3,7 +3,7 @@
 An agent's state has two halves and neither alone is enough to branch a run:
 
 - **environment**: files, installed packages. One snapshot per model turn,
-  taken by ``harness.tools.access.ToolAccess``; the last turn's is the rollout's
+  taken by ``harness_tools.access.ToolAccess``; the last turn's is the rollout's
   final disk snapshot.
 - **conversation**: mini-swe-agent's native history, addressed by its session
   id and cut at the same closed turn (``harness_agents/mini_swe/history.py``).
