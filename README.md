@@ -146,6 +146,31 @@ with a port of its official harness. The [RL driver](docs/RL_DRIVER.md) serves
 rollout at the reviewer's points. Training export marks every message no policy sampled:
 the restored prefix and every inserted turn.
 
+## Runtime toolset support
+
+`runtime/` is the Go binary inside every sandbox. It serves these tools over JSON-RPC
+(`tools/list`, `tools/call`). `runtime/schema/tools.json` is their checked-in declaration, and
+`ToolAccess` refuses any tool or argument it does not list. mini-swe-agent's model sees one
+`bash` tool, which runs as `shell`.
+
+| Tool | Arguments (first ones required) | Does | Counts as a change |
+| --- | --- | --- | --- |
+| `shell` | `command`; `working_dir`, `timeout`, `max_output_bytes` | runs `sh -c`, returns exit code, stdout, stderr | always |
+| `text_editor` | `command` (`view`, `str_replace`, `insert`, `write`), `path`; `view_range`, `old_str`, `new_str`, `insert_line`, `insert_text`, `file_text`, `max_output_bytes` | views or edits one file | except `view` |
+| `grep_files` | `pattern`; `path`, `include`, `limit`, `max_output_bytes` | searches files with the ripgrep embedded in the runtime | no |
+| `web_fetch` | `url`; `format` (`markdown`, `text`, `html`), `headers`, `timeout`, `max_output_bytes` | fetches a page | no |
+| `web_search` | `query`; `backend`, `max_results` | searches several engines through ddgs | no |
+
+"Counts as a change" decides whether the turn gets a snapshot of its own (see above). Output
+over `max_output_bytes` keeps its first 40% and last 60% and says so. `text_editor` and
+`grep_files` work as the runtime's process, so relative paths do not follow a task's working
+directory. The ripgrep release is pinned in `runtime/tools/ripgrep/SHA256SUMS` but not kept
+in git; `go generate` downloads it before a build:
+
+```bash
+cd runtime && go generate ./... && go build -o sprout-runtime .
+```
+
 ## Layout
 
 ```
@@ -158,7 +183,7 @@ the restored prefix and every inserted turn.
 ├── src/sprout/rl_driver/      # the RL trainer's (Miles) rollout adapter over the Run Store
 ├── src/sprout/services/       # the host's long-running pieces: db, LiteLLM proxy, Run Store, RL driver
 ├── src/sprout_sandbox/        # the sandbox clients: AgentENV microVMs and rootless podman
-├── runtime/                   # the Go binary inside every sandbox: one tool, shell, over JSON-RPC
+├── runtime/                   # the Go binary inside every sandbox: shell, text_editor, grep, web, over JSON-RPC
 └── tests/  docs/  examples/  ops/
 ```
 

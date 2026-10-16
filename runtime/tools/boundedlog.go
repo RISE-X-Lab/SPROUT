@@ -61,6 +61,25 @@ func outputBytesArg(args map[string]any) int {
 	return normalizeMaxOutputBytes(max)
 }
 
+// outputBytesSchema is max_output_bytes for a tool returning one block of text
+// (text_editor view, grep_files, web_fetch), so the bound reads alike on each.
+func outputBytesSchema() map[string]any {
+	return map[string]any{
+		"type":        "integer",
+		"default":     defaultMaxOutputBytes,
+		"description": "Total bytes of output to return. Larger output is truncated to the first 40% and last 60% of the budget, and the output says so.",
+	}
+}
+
+// boundText bounds text a tool has already assembled in memory with the same
+// head/tail logic as streamed command output, so every tool truncates alike.
+func boundText(text string, max int) string {
+	log := NewBoundedLog(max)
+	log.Write([]byte(text))
+	out, _ := log.Render()
+	return out
+}
+
 func (b *BoundedLog) Write(p []byte) (int, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()

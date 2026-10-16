@@ -20,6 +20,8 @@ Thumbs.db
 # Generated man pages (runtime)
 /man/
 runtime/sprout-runtime
+# The ripgrep release grep_files embeds; `go generate ./...` downloads it
+runtime/tools/ripgrep/*.tar.gz*
 k8s-scaffold/gateway/k8s-gateway
 __pycache__/
 results/*

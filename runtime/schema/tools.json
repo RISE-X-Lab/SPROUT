@@ -29,7 +29,177 @@
         "type": "object"
       },
       "name": "shell"
+    },
+    {
+      "description": "View or edit files. command=view reads a file or range; command=str_replace requires old_str and new_str; command=insert requires insert_line and insert_text; command=write requires file_text and creates or overwrites the full file.",
+      "inputSchema": {
+        "properties": {
+          "command": {
+            "description": "Command to execute: view, str_replace, insert, or write",
+            "enum": [
+              "view",
+              "str_replace",
+              "insert",
+              "write"
+            ],
+            "type": "string"
+          },
+          "file_text": {
+            "description": "Required for write. Full file content; creates or overwrites the file.",
+            "type": "string"
+          },
+          "insert_line": {
+            "description": "Required for insert. Line number to insert after; use 0 to insert at the start.",
+            "type": "integer"
+          },
+          "insert_text": {
+            "description": "Required for insert. Text to insert.",
+            "type": "string"
+          },
+          "max_output_bytes": {
+            "default": 15728640,
+            "description": "Total bytes of output to return. Larger output is truncated to the first 40% and last 60% of the budget, and the output says so.",
+            "type": "integer"
+          },
+          "new_str": {
+            "description": "Required for str_replace. Replacement text.",
+            "type": "string"
+          },
+          "old_str": {
+            "description": "Required for str_replace. Text to find; must match exactly once.",
+            "type": "string"
+          },
+          "path": {
+            "description": "File path",
+            "type": "string"
+          },
+          "view_range": {
+            "description": "For view only: [start, end] inclusive line range.",
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "command",
+          "path"
+        ],
+        "type": "object"
+      },
+      "name": "text_editor"
+    },
+    {
+      "description": "Search files using ripgrep with a regex pattern",
+      "inputSchema": {
+        "properties": {
+          "include": {
+            "description": "File glob (e.g. *.py)",
+            "type": "string"
+          },
+          "limit": {
+            "default": 100,
+            "description": "Maximum number of matching lines to return globally",
+            "type": "integer"
+          },
+          "max_output_bytes": {
+            "default": 15728640,
+            "description": "Total bytes of output to return. Larger output is truncated to the first 40% and last 60% of the budget, and the output says so.",
+            "type": "integer"
+          },
+          "path": {
+            "default": ".",
+            "description": "Search path",
+            "type": "string"
+          },
+          "pattern": {
+            "description": "Regex pattern",
+            "type": "string"
+          }
+        },
+        "required": [
+          "pattern"
+        ],
+        "type": "object"
+      },
+      "name": "grep_files"
+    },
+    {
+      "description": "Fetch a URL and return its content in the specified format",
+      "inputSchema": {
+        "properties": {
+          "format": {
+            "default": "markdown",
+            "enum": [
+              "html",
+              "text",
+              "markdown"
+            ],
+            "type": "string"
+          },
+          "headers": {
+            "description": "Additional HTTP headers",
+            "type": "object"
+          },
+          "max_output_bytes": {
+            "default": 15728640,
+            "description": "Total bytes of output to return. Larger output is truncated to the first 40% and last 60% of the budget, and the output says so.",
+            "type": "integer"
+          },
+          "timeout": {
+            "default": 15,
+            "description": "Request timeout in seconds. Values are clamped to the runtime maximum.",
+            "type": "integer"
+          },
+          "url": {
+            "description": "URL to fetch",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "type": "object"
+      },
+      "name": "web_fetch"
+    },
+    {
+      "description": "Search the web and return results from multiple engines",
+      "inputSchema": {
+        "properties": {
+          "backend": {
+            "default": "auto",
+            "enum": [
+              "auto",
+              "brave",
+              "duckduckgo",
+              "google",
+              "grokipedia",
+              "mojeek",
+              "startpage",
+              "wikipedia",
+              "yahoo",
+              "yandex"
+            ],
+            "type": "string"
+          },
+          "max_results": {
+            "default": 5,
+            "description": "Maximum results. Values are clamped to the runtime maximum.",
+            "type": "integer"
+          },
+          "query": {
+            "description": "Search query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "type": "object"
+      },
+      "name": "web_search"
     }
   ],
-  "version": "0.2.0"
+  "version": "0.3.0"
 }

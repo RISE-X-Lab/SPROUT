@@ -70,11 +70,14 @@ def env(tmp_path):
 
 
 def turn(env, turn_id, *commands, close=True):
-    """One model response: its calls, then the agent closes the turn."""
+    """One model response: its calls, then the agent closes the turn. A call is a
+    shell command line, or a ``(tool, args)`` pair for another runtime tool."""
     results = []
     for index, command in enumerate(commands):
-        results.append(env.access.call("shell", {"command": command, "working_dir": "/", "timeout": 5},
-                                       call_id="%s-%d" % (turn_id, index), turn_id=turn_id))
+        name, args = command if isinstance(command, tuple) else (
+            "shell", {"command": command, "working_dir": "/", "timeout": 5})
+        results.append(env.access.call(name, args, call_id="%s-%d" % (turn_id, index),
+                                       turn_id=turn_id))
     if close:
         calls = ["%s-%d" % (turn_id, i) for i in range(len(commands))]
         env.journal.emit("model.turn.completed", turn_id=turn_id, call_ids=calls,
@@ -115,6 +118,23 @@ def test_a_failed_capture_is_recorded_and_is_never_a_branch_point(env):
     by_turn = {r["turn_id"]: r for r in captures(env)}
     assert by_turn["t1"]["reason"] == "failed"
     assert set(branch_checkpoints(env.path)) == {2, 3}
+
+
+def test_a_turn_that_only_read_reuses_the_previous_snapshot_and_stays_a_branch_point(env):
+    """A search, a fetch or a ``text_editor view`` says by name that it changed
+    nothing; an edit does not, and neither can any shell command."""
+    turn(env, "t1", "write a")
+    turn(env, "t2", ("grep_files", {"pattern": "a"}), ("text_editor", {"command": "view", "path": "/a"}),
+         ("web_fetch", {"url": "http://example.com"}), ("web_search", {"query": "a"}))
+    turn(env, "t3", ("text_editor", {"command": "write", "path": "/b", "file_text": "b"}))
+    turn(env, "t4", "ls")
+    by_turn = {r["turn_id"]: r for r in captures(env)}
+    assert by_turn["t2"]["reason"] == "clean" and by_turn["t2"]["captured"] is False
+    assert by_turn["t2"]["snapshot_id"] == by_turn["t1"]["snapshot_id"]
+    assert by_turn["t3"]["reason"] == "captured"
+    assert by_turn["t3"]["snapshot_id"] != by_turn["t1"]["snapshot_id"]
+    points = branch_checkpoints(env.path)
+    assert set(points) == {1, 5, 6} and points[5].snapshot_id == by_turn["t1"]["snapshot_id"]
 
 
 def test_an_unclosed_last_turn_is_graded_but_not_branched_from(env):

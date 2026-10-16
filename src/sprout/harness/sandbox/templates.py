@@ -46,17 +46,13 @@ from sprout_sandbox import MicroVMPool
 RUNTIME_PATH = "/usr/local/bin/sprout-runtime"
 DEFAULT_RUNTIME_PORT = 3000
 
-#: ripgrep is baked in alongside the runtime, so `rg` is on the PATH of every
-#: sandbox's shell. Nothing provisions it inside a sandbox: an agent that wanted
-#: it would apt-get ripgrep itself (package indexes alone are ~76 MiB of disk
-#: writes, landing in the episode's first checkpoint -- measured +89 MiB), and
-#: an agent that reached for `rg` in one run must find it in the next or the
-#: two are not comparable.
 #: How many suffixed template names to try before giving up. Each one costs a
 #: lookup; needing more than a couple means something is failing repeatably
 #: and a louder error is better than a longer search.
 MAX_TEMPLATE_ATTEMPTS = 6
 
+#: ripgrep baked in beside the runtime, so `rg` is on every sandbox shell's PATH
+#: (grep_files runs the copy embedded in the runtime, not this one).
 RIPGREP_PATH = "/usr/local/bin/rg"
 RIPGREP_VERSION = "14.1.1"
 RIPGREP_URL = ("https://github.com/BurntSushi/ripgrep/releases/download/"
@@ -216,8 +212,8 @@ class TemplateBuilder:
     server_url: str
     api_key: str
     runtime_bin: Path
-    #: Optional ripgrep binary to bake in next to the runtime. None falls
-    #: back to the runtime provisioning rg on first use inside each sandbox.
+    #: Optional ripgrep binary to bake in next to the runtime. None leaves the
+    #: sandbox shell without `rg`; grep_files does not need it.
     ripgrep_bin: Optional[Path] = None
     runtime_port: int = DEFAULT_RUNTIME_PORT
     request_timeout: float = 120.0
@@ -246,7 +242,7 @@ class TemplateBuilder:
         if not self.runtime_bin.is_file():
             raise TemplateError(
                 f"runtime binary not found at {self.runtime_bin}; "
-                "build it (cd runtime && go build -o sprout-runtime .) or point "
+                "build it (cd runtime && go generate ./... && go build -o sprout-runtime .) or point "
                 "microvm.runtime_bin at one")
         self._fingerprint = runtime_fingerprint(self.runtime_bin)
         if self.ripgrep_bin is not None:

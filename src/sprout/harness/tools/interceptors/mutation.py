@@ -1,25 +1,35 @@
 """Which tool calls could have changed the environment.
 
-The interceptor half of checkpointing: it answers "did anything since the last
-snapshot possibly mutate", which the :class:`Checkpointer` reads to decide
-whether a turn needs a capture of its own. *When* to snapshot is a separate
-decision and lives in ``harness/checkpoint/checkpointer.py``.
-
-The runtime serves one tool, ``shell``, and a command's effect cannot be read
-off its text (``ls`` reads, ``ls > out`` writes), so every executed call counts
-as a mutation. A wrong "clean" verdict would silently lose a step's state; a
-wrong "dirty" one costs a cheap disk capture.
-
-Mounted outermost, so it also sees calls the inner interceptors reject: a
-rejected call changes nothing, but over-counting is cheaper than reasoning about
-which rejections are total.
+The interceptor half of checkpointing: a step whose calls could not have mutated
+reuses the previous snapshot (*when* to snapshot is ``checkpoint/checkpointer.py``).
+``shell`` always counts, since a command's effect is not in its text (``ls`` reads,
+``ls > out`` writes); a search, a fetch or a ``text_editor view`` does not. A wrong
+"clean" silently loses a step's state, a wrong "dirty" costs a cheap capture. It is
+mounted outermost, so a call an inner interceptor rejects still counts.
 """
 
 from __future__ import annotations
 
 from sprout.harness.tools.pipeline import CallContext, Continue, ToolInterceptor, Verdict
 
-__all__ = ["MutationTracker"]
+__all__ = ["MutationTracker", "call_mutates", "READ_ONLY_TOOLS"]
+
+
+#: Tools that cannot change the environment: they read, search, or fetch.
+#: Anything not listed is assumed to mutate.
+READ_ONLY_TOOLS = frozenset({"grep_files", "web_fetch", "web_search"})
+
+#: ``text_editor`` sub-commands that only read.
+READ_ONLY_EDITOR_COMMANDS = frozenset({"view"})
+
+
+def call_mutates(tool_name: str, args: dict) -> bool:
+    """Whether a tool call could have changed the environment."""
+    if tool_name in READ_ONLY_TOOLS:
+        return False
+    if tool_name == "text_editor":
+        return str(args.get("command", "")) not in READ_ONLY_EDITOR_COMMANDS
+    return True
 
 
 class MutationTracker(ToolInterceptor):
@@ -38,5 +48,6 @@ class MutationTracker(ToolInterceptor):
         self._dirty = False
 
     def before(self, ctx: CallContext) -> Verdict:
-        self._dirty = True
+        if call_mutates(ctx.tool_name, ctx.args):
+            self._dirty = True
         return Continue()

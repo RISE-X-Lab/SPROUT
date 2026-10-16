@@ -1,8 +1,6 @@
 package tools
 
-// Tool is the interface a sandbox tool implements. The runtime serves one, and
-// the interface stays because the HTTP handler and --dump-schema are written
-// against a list of declarations rather than against ShellTool itself.
+// Tool is the interface all sandbox tools implement.
 type Tool interface {
 	Name() string
 	Description() string
@@ -26,16 +24,20 @@ func Ok(output string) Result {
 	return Result{Success: true, Output: output}
 }
 
-// Err reports that the tool could not run the request at all: a missing or
-// invalid argument, an unknown action. There is no output in this case, only a
-// reason.
+// Err reports that the tool could not run the request at all (a bad argument,
+// an unknown action, an unreachable URL): no output, only a reason.
 func Err(msg string) Result {
 	return Result{Success: false, Error: msg}
 }
 
-// All returns the tools the runtime serves: shell alone. Every action an agent
-// takes in the sandbox is a command; editing, searching and fetching are
-// programs it runs, not tools the runtime knows about.
+// All returns the tools the runtime serves, in the order tools/list reports
+// them.
 func All() []Tool {
-	return []Tool{&ShellTool{}}
+	return []Tool{
+		&ShellTool{},
+		&EditTool{},
+		&GrepTool{},
+		&WebFetchTool{},
+		&WebSearchTool{},
+	}
 }

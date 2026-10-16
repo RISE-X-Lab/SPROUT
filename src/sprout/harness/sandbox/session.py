@@ -249,8 +249,8 @@ class SandboxSession:
     def upload_file(self, source, destination: str) -> bool:
         """Copy a host file into the sandbox. False when unavailable/failed.
 
-        Bypasses the runtime, whose one tool takes a command rather than bytes:
-        this is for binary and bulk files (grading fixtures, datasets).
+        Bypasses the runtime, whose tools take commands and text rather than
+        bytes: this is for binary and bulk files (grading fixtures, datasets).
         """
         self.transfer_error = ""
         if not self._sandbox or not self.supports_upload():

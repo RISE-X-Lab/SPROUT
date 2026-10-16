@@ -17,6 +17,10 @@ import (
 	"syscall"
 	"time"
 
+	// Embedded CA roots, used only when the image has none, so web_fetch and
+	// web_search reach HTTPS from images without ca-certificates.
+	_ "golang.org/x/crypto/x509roots/fallback"
+
 	"github.com/dreamyang-liu/sprout/runtime/tools"
 )
 
@@ -39,11 +43,9 @@ type RPCError struct {
 	Message string `json:"message"`
 }
 
-// runtimeVersion is reported by --dump-schema and the HTTP banner. 0.2.0 is the
-// runtime that serves `shell` alone: the seven other tools, the event queue and
-// the `notifications` field on every response are gone, which breaks any client
-// written against the eight-tool runtime.
-const runtimeVersion = "0.2.0"
+// runtimeVersion is reported by --dump-schema and the HTTP banner. The tool set
+// is the protocol: 0.2.0 served shell alone, 0.3.0 adds the four others back.
+const runtimeVersion = "0.3.0"
 
 // toolDescriptors is the runtime's declaration of what it serves: every tool's
 // name, description and input schema. One function because there are two

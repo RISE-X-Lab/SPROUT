@@ -45,7 +45,8 @@ def _server() -> "str | None":
 
 pytestmark = [
     pytest.mark.skipif(not RUNTIME_BIN.exists(),
-                       reason="needs runtime/sprout-runtime (cd runtime && go build -o sprout-runtime .)"),
+                       reason="needs runtime/sprout-runtime "
+                              "(cd runtime && go generate ./... && go build -o sprout-runtime .)"),
     pytest.mark.skipif(_server() is None,
                        reason="needs a reachable AENV_SERVER_URL (+ AENV_API_KEY)"),
     pytest.mark.slow,

@@ -3,7 +3,7 @@
 ``runtime/schema/tools.json`` is `sprout-runtime --dump-schema`, checked in so
 the harness needs no sandbox to know the tool surface. A runtime change that is
 not regenerated here fails a test (tests/harness/test_runtime_schema.py) rather
-than reaching a model. The Go tool reads its arguments by name and ignores the
+than reaching a model. The Go tools read their arguments by name and ignore the
 rest, so ``ToolAccess`` checks every call against this declaration: an argument
 the runtime does not take is refused instead of silently dropped, which once let
 a model believe it had set an output bound it did not have.

@@ -354,8 +354,8 @@ class PodmanPool:
                 read-only into every container and started as its entrypoint,
                 so an image needs no rebuild -- but the binary has to run
                 inside it: a plain ``go build`` links the host's glibc, so a
-                musl image (alpine) needs the static
-                ``CGO_ENABLED=0 go build -o sprout-runtime .``.
+                musl image (alpine) needs the static ``CGO_ENABLED=0 go build``
+                (after ``go generate ./...``, which fetches the ripgrep it embeds).
             podman_bin: The ``podman`` executable (a path, or a name on PATH);
                 default ``$SPROUT_PODMAN_BIN``, else ``podman`` (:func:`default_podman_bin`).
             allow_internet: ``None`` and ``True`` start sandboxes connected;
@@ -371,8 +371,8 @@ class PodmanPool:
         # rather than a host file.
         self.runtime_bin = Path(runtime_bin).resolve()
         if not self.runtime_bin.is_file():
-            raise ValueError("runtime_bin does not exist: %s (cd runtime && go build "
-                             "-o sprout-runtime .)" % self.runtime_bin)
+            raise ValueError("runtime_bin does not exist: %s (cd runtime && go generate ./... "
+                             "&& go build -o sprout-runtime .)" % self.runtime_bin)
         self.timeout = float(timeout)
         self.store = BtrfsStore(store, timeout=self.timeout)
         self.podman_bin = podman_bin or default_podman_bin()

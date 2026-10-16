@@ -395,11 +395,11 @@ if [[ -x $RUNTIME && $RUNTIME -nt $ROOT/runtime/main.go ]] && \
    ! find "$ROOT/runtime" -name '*.go' -newer "$RUNTIME" | grep -q .; then
     ok "$RUNTIME is newer than every Go source"
 elif [[ $CHECK -eq 1 ]]; then
-    gap "runtime: (cd runtime && go build -o sprout-runtime .)"
+    gap "runtime: (cd runtime && go generate ./... && go build -o sprout-runtime .)"
 else
-    # go.mod's toolchain line is newer than the distribution's Go; Go 1.21+
-    # downloads the toolchain it names (GOTOOLCHAIN=auto, the default).
-    (cd "$ROOT/runtime" && go build -o sprout-runtime .)
+    # Go 1.21+ downloads the newer toolchain go.mod names (GOTOOLCHAIN=auto), and
+    # go generate the ripgrep release the binary embeds.
+    (cd "$ROOT/runtime" && go generate ./... && go build -o sprout-runtime .)
     ok "built $RUNTIME"
 fi
 

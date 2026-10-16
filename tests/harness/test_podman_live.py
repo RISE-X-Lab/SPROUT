@@ -51,7 +51,8 @@ pytestmark = [
                        reason="needs podman on PATH or in $SPROUT_PODMAN_BIN"),
     pytest.mark.skipif(shutil.which("btrfs") is None, reason="needs btrfs-progs on PATH"),
     pytest.mark.skipif(not RUNTIME_BIN.exists(),
-                       reason="needs runtime/sprout-runtime (cd runtime && go build -o sprout-runtime .)"),
+                       reason="needs runtime/sprout-runtime "
+                              "(cd runtime && go generate ./... && go build -o sprout-runtime .)"),
     pytest.mark.skipif(STORE.is_dir() and podman_store_in_use(STORE) is not None,
                        reason="the store is in use by a run (%s); the fixtures here remove every container "
                               "and snapshot that appears during a test" % podman_store_in_use(STORE)),

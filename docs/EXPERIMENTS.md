@@ -15,7 +15,7 @@ python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[mini,harbor]"
 export LITELLM_LOCAL_MODEL_COST_MAP=True
-(cd runtime && go build -o sprout-runtime .)
+(cd runtime && go generate ./... && go build -o sprout-runtime .)   # generate fetches the ripgrep it embeds
 ```
 
 Configure your model endpoint and credentials. Replace the placeholders below with your own settings. Keep credentials outside Git.

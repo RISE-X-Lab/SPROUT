@@ -38,7 +38,8 @@ def _runtime_binary() -> "str | None":
 def test_the_checked_in_declaration_matches_the_runtime():
     binary = _runtime_binary()
     if binary is None:
-        pytest.skip("no sprout-runtime binary; run `cd runtime && go build -o sprout-runtime .`")
+        pytest.skip("no sprout-runtime binary; run "
+                    "`cd runtime && go generate ./... && go build -o sprout-runtime .`")
     fresh = json.loads(subprocess.run([binary, "--dump-schema"], capture_output=True,
                                       text=True, timeout=60).stdout)
     stored = json.loads(RUNTIME_SCHEMA.read_text())
@@ -90,10 +91,11 @@ def test_an_install_without_a_source_tree_reads_the_packaged_copy(tmp_path, layo
     assert tools == runtime_tools()
 
 
-def test_the_runtime_serves_shell_alone():
+def test_the_runtime_serves_its_five_tools():
     """The tool set is the protocol: adding or removing a tool is a breaking
     change, and this is where it shows up first."""
-    assert [t["name"] for t in runtime_tools()] == ["shell"]
+    assert [t["name"] for t in runtime_tools()] == [
+        "shell", "text_editor", "grep_files", "web_fetch", "web_search"]
 
 
 @pytest.mark.parametrize("parameters", [

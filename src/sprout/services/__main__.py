@@ -252,7 +252,8 @@ class Manager:
         fine = True
         host = [
             ("uv", health.program("uv")),
-            ("runtime", health.file_present(self.paths.runtime_binary(), "cd runtime && go build -o sprout-runtime .")),
+            ("runtime", health.file_present(self.paths.runtime_binary(),
+                                             "cd runtime && go generate ./... && go build -o sprout-runtime .")),
             ("keyring", health.keyring_quota()),
         ]
         if not any(s.kind == "check" and s.check == "podman" for s in self.spec.services):

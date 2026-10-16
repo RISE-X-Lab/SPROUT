@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -82,6 +83,16 @@ func toolNames(t *testing.T, client *http.Client) []string {
 	return names
 }
 
+// servedNames is what tools/list must answer: every tool the runtime serves, in
+// its order.
+func servedNames() []string {
+	var names []string
+	for _, tool := range tools.All() {
+		names = append(names, tool.Name())
+	}
+	return names
+}
+
 func shellText(t *testing.T, client *http.Client, command string) string {
 	t.Helper()
 	var result struct {
@@ -137,8 +148,8 @@ func TestTheUnixSocketServesTheProtocol(t *testing.T) {
 	}
 
 	client := serve(t, ln)
-	if names := toolNames(t, client); len(names) != 1 || names[0] != "shell" {
-		t.Fatalf("tools/list over the socket = %v, want [shell]", names)
+	if names, want := toolNames(t, client), servedNames(); !slices.Equal(names, want) {
+		t.Fatalf("tools/list over the socket = %v, want %v", names, want)
 	}
 	if got := strings.TrimSpace(shellText(t, client, "echo over-unix")); got != "over-unix" {
 		t.Fatalf("shell over the socket returned %q", got)
@@ -179,8 +190,8 @@ func TestAStaleSocketFileIsReplaced(t *testing.T) {
 	}
 	defer ln.Close()
 	client := serve(t, ln)
-	if names := toolNames(t, client); len(names) != 1 || names[0] != "shell" {
-		t.Fatalf("tools/list after replacing the stale socket = %v", names)
+	if names, want := toolNames(t, client), servedNames(); !slices.Equal(names, want) {
+		t.Fatalf("tools/list after replacing the stale socket = %v, want %v", names, want)
 	}
 }
 

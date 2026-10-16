@@ -7,12 +7,13 @@ cheap enough to do on every turn:
 **Only mutations matter.** The runtime's shell is stateless (every call is a
 fresh ``sh -c`` with an explicit working directory), so nothing carries across
 steps except the filesystem. :class:`MutationTracker` records whether any call
-reached it since the last capture -- and with ``shell`` the only tool, every
-call counts, because a command's effect is not in its text. A call that one of
-the run's declared rules then refused counts too: the tracker is mounted ahead
-of them, and over-counting costs one cheap capture. Only a step in which no
-call reached the tracker is recorded as ``clean`` and reuses the last snapshot
-id; the map from step to snapshot stays complete either way.
+since the last capture could have changed it: every ``shell`` call does,
+because a command's effect is not in its text, while a search, a fetch or a
+``text_editor view`` does not. A call that one of the run's declared rules then
+refused counts too: the tracker is mounted ahead of them, and over-counting
+costs one cheap capture. A step whose calls could not have changed anything is
+recorded as ``clean`` and reuses the last snapshot id; the map from step to
+snapshot stays complete either way.
 
 **A checkpoint need not include memory.** Replay restores the disk and
 re-feeds the transcript, so the VM's memory image is dead weight -- hence

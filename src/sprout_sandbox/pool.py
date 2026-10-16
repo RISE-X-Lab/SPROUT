@@ -134,9 +134,9 @@ class MicroVMPool:
                           timeout: float | None = None) -> None:
         """Copy a host file into the sandbox, bypassing the runtime.
 
-        The tool surface cannot carry this: `shell` takes a command, not bytes,
-        and fixtures are routinely binary and multi-megabyte. The backend's file
-        service takes the bytes directly.
+        The tool surface cannot carry this: `shell` takes a command and
+        `text_editor` writes text, and fixtures are routinely binary and
+        multi-megabyte. The backend's file service takes the bytes directly.
         """
         from pathlib import Path
         source = Path(source)
