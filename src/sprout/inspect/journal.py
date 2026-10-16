@@ -16,12 +16,12 @@ from pathlib import Path
 import re
 
 from sprout.harness_checkpoint.rollback import branch_checkpoints
-from sprout.harness.core.events import (
+from sprout.harness_core.events import (
     AGENT_MESSAGE, AGENT_THINKING, CHECKPOINT_CAPTURED, RUN_FINISHED, RUN_RESULT, RUN_STARTED,
     SANDBOX_CREATED, SNAPSHOT_MEMORY, TOOL_FINISHED, TOOL_STARTED, TURN_COMPLETED,
     TURN_STARTED, USAGE_UPDATED,
 )
-from sprout.harness.core.journal import journal_events
+from sprout.harness_core.journal import journal_events
 
 #: Event types the harness emits by literal name (rollback.py names
 #: ``model.turn.completed`` the same way).

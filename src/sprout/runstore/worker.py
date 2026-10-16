@@ -14,7 +14,7 @@ from typing import Callable
 from uuid import uuid4
 
 from sprout.harness.agents.mini_swe.history import index_native
-from sprout.harness.core.journal import journal_events
+from sprout.harness_core.journal import journal_events
 from sprout.harness_sandbox.backends import backend_name, default_podman_store, snapshot_store
 from sprout_sandbox.podman import default_podman_bin
 from sprout.runstore.config import merge, referenced_env, resolve, snapshot_validator

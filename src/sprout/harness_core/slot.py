@@ -21,8 +21,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
 
-from sprout.harness.core.journal import JournalWriter
-from sprout.harness.core.control import RunControl
+from sprout.harness_core.journal import JournalWriter
+from sprout.harness_core.control import RunControl
 
 
 @dataclass

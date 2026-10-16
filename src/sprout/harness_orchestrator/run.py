@@ -37,9 +37,9 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Union
 
 from sprout.harness.agents.mini_swe.slot import MiniSweSlot
-from sprout.harness.core.events import SANDBOX_CREATED
-from sprout.harness.core.journal import JournalWriter, new_run_id, read_journal
-from sprout.harness.core.slot import SlotResult, TaskSpec
+from sprout.harness_core.events import SANDBOX_CREATED
+from sprout.harness_core.journal import JournalWriter, new_run_id, read_journal
+from sprout.harness_core.slot import SlotResult, TaskSpec
 from sprout.harness_orchestrator.resources import ResourceLedger
 from sprout.harness_sandbox.backends import backend_name, snapshot_store
 
@@ -209,7 +209,7 @@ class Orchestrator:
             try:
                 if spec.slot != "mini-swe-agent":
                     raise ValueError("unknown slot %r; the only slot is mini-swe-agent" % spec.slot)
-                from sprout.harness.core.control import GRADABLE_STOP_REASONS, RunControl
+                from sprout.harness_core.control import GRADABLE_STOP_REASONS, RunControl
                 control = RunControl()
                 if extra.get("rollout_contract") is not None:
                     from sprout.harness_orchestrator.rollout import RolloutControls

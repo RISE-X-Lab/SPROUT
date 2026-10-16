@@ -15,7 +15,7 @@ from typing import Any, List
 
 import pytest
 
-from sprout.harness.core.result import ToolResult
+from sprout.harness_core.result import ToolResult
 from sprout.harness_sandbox.session import OWNER_AGENT_ID, SandboxSession, shell, shell_outcome
 
 

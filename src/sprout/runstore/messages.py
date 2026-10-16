@@ -4,7 +4,7 @@ from copy import deepcopy
 import json
 import re
 
-from sprout.harness.core.journal import journal_events
+from sprout.harness_core.journal import journal_events
 from sprout.runstore.files import failure_kind
 
 HINT_START = "<sprout_training_hint>"

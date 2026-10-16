@@ -4,8 +4,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from sprout.harness.core.control import RunControl
-from sprout.harness.core.slot import SlotResult
+from sprout.harness_core.control import RunControl
+from sprout.harness_core.slot import SlotResult
 from sprout.harness_orchestrator.run import Orchestrator, RunOutcome
 from sprout.runstore.child import execute
 from sprout.runstore.messages import complete_message_result, is_truncated_result

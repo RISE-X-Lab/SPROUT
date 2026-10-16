@@ -19,8 +19,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
-from sprout.harness.core.events import CHECKPOINT_CAPTURED
-from sprout.harness.core.journal import read_journal
+from sprout.harness_core.events import CHECKPOINT_CAPTURED
+from sprout.harness_core.journal import read_journal
 
 
 @dataclass(frozen=True)

@@ -6,8 +6,8 @@ from pathlib import Path
 import threading
 from uuid import uuid4
 
-from sprout.harness.core.journal import JournalWriter
-from sprout.harness.core.slot import AgentSlot, SlotResult, TaskSpec
+from sprout.harness_core.journal import JournalWriter
+from sprout.harness_core.slot import AgentSlot, SlotResult, TaskSpec
 
 MINI_VERSION = "2.4.6"
 _IMPORT_LOCK = threading.Lock()

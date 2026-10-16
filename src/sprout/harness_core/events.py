@@ -4,7 +4,7 @@ One append-only stream holds a run's whole trajectory: what the agent said, its
 tool calls, turns and session, and the checkpoints that pair them. Version 1
 had the tool events alone.
 
-Envelope (added by JournalWriter, see harness/core/journal.py)::
+Envelope (added by JournalWriter, see harness_core/journal.py)::
 
     {"v": 2, "type": "<event type>", "ts": "...Z", "seq": N,
      "run_id": ..., "agent_id": ..., "sandbox_id": ..., **payload}

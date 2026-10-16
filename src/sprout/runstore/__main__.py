@@ -6,7 +6,7 @@ from pathlib import Path
 import signal
 from threading import Event
 
-from sprout.harness.core.journal import volatile_reason
+from sprout.harness_core.journal import volatile_reason
 from sprout.runstore.config import read_config, snapshot_validator
 from sprout.runstore.index import Index
 from sprout.runstore.store import Store

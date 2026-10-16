@@ -14,9 +14,9 @@ import pytest
 from sprout_sandbox.pool import Snapshot
 from sprout.harness_checkpoint.checkpointer import Checkpointer
 from sprout.harness_checkpoint.rollback import branch_checkpoints, uncaptured_turns
-from sprout.harness.core.control import RunAborted, RunControl
-from sprout.harness.core.journal import JournalWriter, read_journal
-from sprout.harness.core.result import CommandOutcome, ToolResult
+from sprout.harness_core.control import RunAborted, RunControl
+from sprout.harness_core.journal import JournalWriter, read_journal
+from sprout.harness_core.result import CommandOutcome, ToolResult
 from sprout.harness.tools.access import ToolAccess, ToolInfraError
 from sprout.harness.tools.interceptors import MutationTracker
 from sprout.harness.tools.pipeline import Reject, ToolInterceptor, ToolPipeline

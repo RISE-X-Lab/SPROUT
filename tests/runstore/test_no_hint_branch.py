@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from sprout.harness.core.journal import read_journal
+from sprout.harness_core.journal import read_journal
 from sprout.harness_orchestrator.run import Orchestrator
 from sprout.harness.agents.mini_swe.history import read_entries
 from tests.harness.test_assistant_turn import assistant_turn

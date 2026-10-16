@@ -25,8 +25,8 @@ from __future__ import annotations
 import os
 from typing import Dict, List, Optional, Union
 
-from sprout.harness.core import events as E
-from sprout.harness.core.journal import read_journal
+from sprout.harness_core import events as E
+from sprout.harness_core.journal import read_journal
 
 ATIF_VERSION = "ATIF-v1.8"
 

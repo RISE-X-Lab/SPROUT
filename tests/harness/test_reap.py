@@ -436,7 +436,7 @@ def test_sweep_reads_a_killed_runs_torn_journal(tmp_path, store, monkeypatch, ca
     that every reader parses (glued to the fragment, the marker would have made
     one corrupt line)."""
     import sprout.harness.cli as cli
-    from sprout.harness.core.journal import journal_events
+    from sprout.harness_core.journal import journal_events
 
     monkeypatch.setattr(cli, "AgentEnvClient", NoAgentEnv)
     ids = ["sprout-000000000009-0001", "sprout-000000000009-0002"]

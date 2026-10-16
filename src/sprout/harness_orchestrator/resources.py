@@ -36,7 +36,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterator, List, Optional, Set, Union
 
-from sprout.harness.core.journal import utc_now
+from sprout.harness_core.journal import utc_now
 
 DEFAULT_LEDGER = "runs/resources.jsonl"
 

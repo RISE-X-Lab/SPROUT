@@ -98,7 +98,7 @@ SNAPSHOT_STORAGE = {
 def retain_parent(output: Path) -> None:
     from dataclasses import asdict
     from sprout.harness.agents.mini_swe.history import available_branch_points, reference_at
-    from sprout.harness.core.journal import read_journal
+    from sprout.harness_core.journal import read_journal
     from sprout.methods.evaluate import parent_journal
 
     journal = parent_journal(output)

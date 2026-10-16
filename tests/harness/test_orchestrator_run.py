@@ -18,9 +18,9 @@ from typing import Any, List, Optional
 
 import pytest
 
-from sprout.harness.core import events as E
-from sprout.harness.core.journal import read_journal
-from sprout.harness.core.slot import AgentSlot, SlotResult
+from sprout.harness_core import events as E
+from sprout.harness_core.journal import read_journal
+from sprout.harness_core.slot import AgentSlot, SlotResult
 from sprout.harness_orchestrator import Orchestrator, RunSpec
 
 #: The real sandbox wiring, for the tests that exercise it directly; every other
@@ -147,7 +147,7 @@ class FakeSession:
         return True
 
     def call(self, name, args, timeout=300):
-        from sprout.harness.core.result import CommandOutcome, ToolResult
+        from sprout.harness_core.result import CommandOutcome, ToolResult
 
         return ToolResult(True, "", outcome=CommandOutcome(exit_code=0))
 
@@ -509,7 +509,7 @@ def test_volatile_paths_are_named_and_persistent_ones_are_not():
     rebooted mid-regrade; hours of agent time now exist only as prose. The guard
     is a resolved-prefix check at the ENTRY POINTS only: the library layer stays
     unguarded because tests legitimately journal into pytest's /tmp fixtures."""
-    from sprout.harness.core.journal import volatile_reason
+    from sprout.harness_core.journal import volatile_reason
 
     for doomed in ("/tmp/v32", "/tmp", "/var/tmp/x/deep/run.jsonl",
                    "/dev/shm/j.jsonl", "/tmp/../tmp/sneaky"):
@@ -534,7 +534,7 @@ def test_the_run_entrypoint_refuses_a_volatile_journal():
 def test_the_pipeline_is_limits_then_the_tracker_then_declared_rules(tmp_path):
     """The checkpointer must read the tracker the pipeline feeds: a second,
     unfed tracker once recorded every step after the first as clean reuse."""
-    from sprout.harness.core.journal import JournalWriter
+    from sprout.harness_core.journal import JournalWriter
     from sprout.harness_orchestrator.run import OwnedSandbox, RunSpec
     from sprout.harness.tools.interceptors import MutationTracker, ShellContext
 

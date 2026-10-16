@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from sprout.harness.core.journal import read_journal
+from sprout.harness_core.journal import read_journal
 from sprout.harness_orchestrator.run import Orchestrator
 from sprout.harness_checkpoint.rollback import branch_checkpoints
 from sprout.harness.agents.mini_swe.history import read_entries

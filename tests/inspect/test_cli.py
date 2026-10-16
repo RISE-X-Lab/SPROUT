@@ -17,7 +17,7 @@ from tests.inspect.conftest import FIXTURES, make_experiment
 
 REPO = Path(__file__).resolve().parents[2]
 PACKAGE = REPO / "src" / "sprout" / "inspect"
-ALLOWED_SPROUT = {"sprout.harness.core.journal", "sprout.harness.core.events", "sprout.harness_checkpoint.rollback"}
+ALLOWED_SPROUT = {"sprout.harness_core.journal", "sprout.harness_core.events", "sprout.harness_checkpoint.rollback"}
 
 
 def test_every_subcommand_is_dispatched(experiment, tmp_path, capsys):

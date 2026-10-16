@@ -13,8 +13,8 @@ from sprout_sandbox.pool import Snapshot
 from harbor.models.task.config import EnvironmentConfig, NetworkMode, NetworkPolicy
 from harbor.models.trial.paths import TrialPaths
 from harbor.models.agent.context import AgentContext
-from sprout.harness.core.journal import JournalWriter, read_journal
-from sprout.harness.core.result import CommandOutcome, ToolResult
+from sprout.harness_core.journal import JournalWriter, read_journal
+from sprout.harness_core.result import CommandOutcome, ToolResult
 from sprout.harness_orchestrator.run import OwnedSandbox, RunOutcome, RunSpec
 from sprout.harness.tools.interceptors import shell_command
 from sprout.harbor_plugin import environment as sandbox_environment
@@ -259,7 +259,7 @@ def test_the_command_timeout_reaches_every_command_and_is_validated(tmp_path, mo
 
 def test_harbor_deadline_finalizes_snapshot_and_usage_before_verification(tmp_path, monkeypatch):
     import time
-    from sprout.harness.core.control import RunControl
+    from sprout.harness_core.control import RunControl
 
     env = environment(tmp_path)
     env.session = harbor_session()

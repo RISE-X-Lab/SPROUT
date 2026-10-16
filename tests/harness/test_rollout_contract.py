@@ -4,10 +4,10 @@ from types import SimpleNamespace
 import httpx
 import pytest
 
-from sprout.harness.core.control import RunControl
-from sprout.harness.core.journal import read_journal
-from sprout.harness.core.result import ToolResult
-from sprout.harness.core.slot import SlotResult
+from sprout.harness_core.control import RunControl
+from sprout.harness_core.journal import read_journal
+from sprout.harness_core.result import ToolResult
+from sprout.harness_core.slot import SlotResult
 from sprout.harness.tools.pipeline import CallContext
 from sprout.harness_orchestrator.run import Orchestrator, RunSpec
 from sprout.harness_orchestrator.rollout import RolloutControls

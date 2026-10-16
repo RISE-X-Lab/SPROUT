@@ -16,8 +16,8 @@ import pytest
 
 httpx = pytest.importorskip("httpx")
 
-from sprout.harness.core.events import Usage
-from sprout.harness.core.journal import JournalWriter, read_journal
+from sprout.harness_core.events import Usage
+from sprout.harness_core.journal import JournalWriter, read_journal
 from sprout.harness_gateway.routing import ModelRoute, RoutingTable
 from sprout.harness_gateway.server import GATEWAY_EVENT, GatewayServer
 
@@ -249,7 +249,7 @@ def test_provider_error_is_recorded_with_the_failed_gateway_request(gateway, mon
                               json={"error": {"code": "invalid_encrypted_content",
                                               "message": "The reasoning item is invalid"}})
 
-    monkeypatch.setattr("sprout.harness.core.control.post", failed)
+    monkeypatch.setattr("sprout.harness_core.control.post", failed)
     token = table.mint("actor")
     assert post(server, token.token, {"model": "m", "messages": []}).status_code == 400
     for _ in range(100):

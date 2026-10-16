@@ -22,7 +22,7 @@ from sprout.harness.tools.pipeline import (
     ToolInterceptor,
     ToolPipeline,
 )
-from sprout.harness.core.result import ToolResult
+from sprout.harness_core.result import ToolResult
 
 def _ok(output: str = "ok") -> ToolResult:
     return ToolResult(success=True, output=output)

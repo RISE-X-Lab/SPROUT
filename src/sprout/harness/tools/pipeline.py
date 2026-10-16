@@ -35,7 +35,7 @@ import logging
 from dataclasses import dataclass, replace
 from typing import Callable, Literal, Union
 
-from sprout.harness.core.result import ToolResult
+from sprout.harness_core.result import ToolResult
 
 logger = logging.getLogger("sprout.pipeline")  # unconfigured -> WARNING+ to stderr
 

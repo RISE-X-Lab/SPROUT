@@ -51,7 +51,7 @@ from sprout.harness.agents.mini_swe.history import (
     available_branch_points, conversation_restore, training_messages,
 )
 from sprout.harness.agents.mini_swe.tools import DEFAULT_COMMAND_TIMEOUT_S
-from sprout.harness.core.journal import read_journal, volatile_reason
+from sprout.harness_core.journal import read_journal, volatile_reason
 from sprout.harness_gateway.auth import bearer_key
 from sprout.harness_orchestrator.reap import AgentEnvClient
 from sprout.harness_sandbox.backends import default_podman_store

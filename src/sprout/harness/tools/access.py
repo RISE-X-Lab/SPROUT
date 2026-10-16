@@ -28,8 +28,8 @@ from dataclasses import asdict, dataclass, field
 import threading
 from typing import Any, Optional
 
-from sprout.harness.core.events import CHECKPOINT_CAPTURED, SESSION_REF, SNAPSHOT_MEMORY
-from sprout.harness.core.result import CommandOutcome, ToolResult
+from sprout.harness_core.events import CHECKPOINT_CAPTURED, SESSION_REF, SNAPSHOT_MEMORY
+from sprout.harness_core.result import CommandOutcome, ToolResult
 from sprout.harness.tools.pipeline import CallContext, ToolPipeline
 from sprout.harness.tools.schema import runtime_tools
 

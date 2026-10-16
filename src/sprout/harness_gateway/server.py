@@ -23,7 +23,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Optional, Tuple
 
-from sprout.harness.core.events import Usage
+from sprout.harness_core.events import Usage
 from sprout.harness_gateway.routing import RoutingTable
 
 CHAT_PATH = "/v1/chat/completions"
@@ -226,7 +226,7 @@ def _make_handler(gateway: GatewayServer):
         def _forward(self, route, body: bytes, token, requested_model) -> None:
             # mini's request must release inference on rollout stop, even when
             # the provider sends no bytes.
-            from sprout.harness.core.control import post
+            from sprout.harness_core.control import post
 
             url = route.base_url.rstrip("/") + CHAT_PATH
             upstream = post(url, content=body, headers=self._upstream_headers(route),

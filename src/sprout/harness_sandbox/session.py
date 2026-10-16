@@ -36,7 +36,7 @@ from typing import Optional
 
 from sprout_sandbox import MicroVMPool, PodmanPool, Sandbox, Snapshot
 from sprout_sandbox.result import ToolResult as SdkToolResult
-from sprout.harness.core.result import ToolResult
+from sprout.harness_core.result import ToolResult
 from sprout.harness_sandbox.backends import backend_name, build_pool, spawn_takes_shape
 from sprout.harness_sandbox.templates import builder_from_backend
 

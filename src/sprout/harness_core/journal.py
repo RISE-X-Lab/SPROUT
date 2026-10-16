@@ -17,7 +17,7 @@ import threading
 from typing import Callable, Iterator, List, Optional, Union
 import uuid
 
-from sprout.harness.core.events import JOURNAL_SCHEMA_VERSION, TOOL_STARTED
+from sprout.harness_core.events import JOURNAL_SCHEMA_VERSION, TOOL_STARTED
 
 
 #: Directories the OS empties on reboot (and tmpwatch empties sooner). A journal

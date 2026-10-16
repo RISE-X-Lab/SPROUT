@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 
 from sprout.harness.atif import ATIF_VERSION, journal_to_atif
-from sprout.harness.core import events as E
-from sprout.harness.core.journal import JournalWriter, read_journal
+from sprout.harness_core import events as E
+from sprout.harness_core.journal import JournalWriter, read_journal
 from sprout.harness_checkpoint.rollback import branch_checkpoints, closed_turns, uncaptured_turns
 
 

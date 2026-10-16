@@ -29,8 +29,8 @@ from sprout.harbor_plugin.agentenv_mini import AgentENVMini
 from sprout.harbor_plugin.branching import PodmanSnapshotEnvironment, read_branch_context
 from sprout.harbor_plugin.environment import SandboxEnvironment
 from sprout.harbor_plugin.podman import PodmanEnvironment
-from sprout.harness.core.journal import JournalWriter
-from sprout.harness.core.result import ToolResult
+from sprout.harness_core.journal import JournalWriter
+from sprout.harness_core.result import ToolResult
 from sprout.harness_orchestrator.run import RunOutcome
 from sprout_sandbox.podman import PodmanError, digest_reference
 

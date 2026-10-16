@@ -30,11 +30,11 @@ import yaml
 from sprout.harness.agents.mini_swe.history import validate_assistant_turn
 from sprout.harness.agents.mini_swe.history import History, load_prefix
 from sprout.harness.agents.mini_swe.tools import DEFAULT_COMMAND_TIMEOUT_S, mini_tool_schema
-from sprout.harness.core.control import GRADABLE_STOP_REASONS, RunAborted, RunControl
-from sprout.harness.core.events import RUN_RESULT, TURN_STARTED, USAGE_UPDATED, Usage
-from sprout.harness.core.control import post
-from sprout.harness.core.journal import JournalWriter
-from sprout.harness.core.slot import SlotResult, TaskSpec
+from sprout.harness_core.control import GRADABLE_STOP_REASONS, RunAborted, RunControl
+from sprout.harness_core.events import RUN_RESULT, TURN_STARTED, USAGE_UPDATED, Usage
+from sprout.harness_core.control import post
+from sprout.harness_core.journal import JournalWriter
+from sprout.harness_core.slot import SlotResult, TaskSpec
 from sprout.harness.tools.access import ToolAccess
 from sprout.harness_gateway.server import _absorb_usage
 from sprout.harness_gateway.auth import bearer_headers
@@ -83,7 +83,7 @@ class ChatModel(LitellmModel):
                                 control=self.control, headers=bearer_headers(self.key))
                 response.raise_for_status()
                 break
-            # ``asyncio.wait_for`` in harness.core.control raises the builtin
+            # ``asyncio.wait_for`` in harness_core.control raises the builtin
             # TimeoutError, while httpx raises TransportError subclasses. Both
             # are request-level failures and must be retried within the rollout
             # budget instead of being mislabeled as an exhausted actor budget.
