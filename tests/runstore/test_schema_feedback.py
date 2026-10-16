@@ -5,7 +5,7 @@ import pytest
 
 from sprout.harness.core.journal import read_journal
 from sprout.harness.orchestrator.run import Orchestrator
-from sprout.harness.checkpoint.rollback import branch_checkpoints
+from sprout.harness_checkpoint.rollback import branch_checkpoints
 from sprout.harness.agents.mini_swe.history import read_entries
 from tests.harness.test_mini_swe import FilesystemSession, model_server, owned_filesystem, pytestmark, reply, spec
 from sprout.runstore.messages import export_messages

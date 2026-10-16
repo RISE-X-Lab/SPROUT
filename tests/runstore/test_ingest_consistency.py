@@ -108,7 +108,7 @@ def test_inherited_tools_require_an_explicit_pinned_native_prefix(tmp_path, unjo
 
 
 def test_frozen_frame_does_not_reopen_the_growing_journal(tmp_path, monkeypatch):
-    from sprout.harness.checkpoint import rollback
+    from sprout.harness_checkpoint import rollback
 
     journal, native = fixture_files(tmp_path)
     append(journal, [*tool_events(1), *turn_events("turn-1", ["call-1"], 1)])

@@ -8,7 +8,7 @@
           |
        harbor_plugin         Sprout inside a Harbor trial
           |
-       harness               the agent runtime (mini-swe-agent, sandbox, tools, checkpoints)
+       harness, harness_*    the agent runtime (mini-swe-agent, sandbox, tools, checkpoints)
 
 The layers live under ``src/sprout/``; ``examples`` and ``ops`` sit beside
 ``src``, and ``ops`` may use any layer. ``src/sprout_sandbox`` (the sandbox
@@ -43,13 +43,18 @@ ALLOWED = {
 PACKAGES = set(ALLOWED) | {"ops"}
 
 
-def package_dir(package: str) -> Path:
-    return REPO / package if package in ("examples", "ops") else REPO / "src" / "sprout" / package
+def package_dirs(package: str) -> list[Path]:
+    if package in ("examples", "ops"):
+        return [REPO / package]
+    root = REPO / "src" / "sprout"
+    # The harness layer is harness/ and its parts, one harness_<part>/ package each.
+    return [root / package] + (sorted(root.glob("harness_*")) if package == "harness" else [])
 
 
 def _layer(module: str) -> str:
     parts = module.split(".")
-    return parts[1] if parts[0] == "sprout" and len(parts) > 1 else parts[0]
+    layer = parts[1] if parts[0] == "sprout" and len(parts) > 1 else parts[0]
+    return "harness" if layer.startswith("harness_") else layer
 
 
 def _imports(path: Path) -> set[str]:
@@ -87,7 +92,7 @@ def test_the_sdk_imports_nothing_from_sprout():
 def test_every_package_imports_only_the_layers_below_it():
     offenders = []
     for package, allowed in ALLOWED.items():
-        paths = sorted(package_dir(package).rglob("*.py"))
+        paths = sorted(p for d in package_dirs(package) for p in d.rglob("*.py"))
         assert paths, f"{package} has no modules to check"
         for path in paths:
             bad = _imports(path) - allowed - {package}

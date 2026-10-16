@@ -348,7 +348,7 @@ class Orchestrator:
         One pipeline serves every call: rollout limits first, then the mutation
         tracker the checkpointer reads, then the rules the run declares.
         """
-        from sprout.harness.checkpoint.checkpointer import Checkpointer
+        from sprout.harness_checkpoint.checkpointer import Checkpointer
         from sprout.harness.tools.access import ToolAccess
         from sprout.harness.tools.interceptors import MutationTracker, build_interceptors
         from sprout.harness.tools.pipeline import ToolPipeline

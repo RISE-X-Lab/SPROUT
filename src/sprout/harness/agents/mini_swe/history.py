@@ -14,7 +14,7 @@ import os
 from pathlib import Path
 
 from sprout.harness.agents.mini_swe.tools import validate_mini_tools
-from sprout.harness.checkpoint.rollback import branch_checkpoints, closed_turns
+from sprout.harness_checkpoint.rollback import branch_checkpoints, closed_turns
 from sprout.harness.core.journal import journal_events, read_journal
 
 FORMAT = "sprout-mini-v1"

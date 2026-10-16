@@ -308,7 +308,7 @@ def test_swap_tells_listeners_before_the_old_sandbox_is_destroyed():
 
 # --- the checkpoint contract -----------------------------------------------
 def test_the_methods_checkpointing_calls_are_present():
-    """The Checkpointer (sprout.harness.checkpoint.checkpointer) duck-types on these.
+    """The Checkpointer (sprout.harness_checkpoint.checkpointer) duck-types on these.
     A session missing one cannot record the environment half of a branch point."""
     for name in ("snapshot", "squash_snapshot", "swap_sandbox"):
         assert callable(getattr(SandboxSession, name, None)), name

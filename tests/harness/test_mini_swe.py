@@ -18,7 +18,7 @@ import pytest
 from sprout.harness.core.journal import read_journal
 from sprout.harness.core.result import CommandOutcome, ToolResult
 from sprout.harness.orchestrator.run import Orchestrator, OwnedSandbox, RunSpec
-from sprout.harness.checkpoint.rollback import branch_checkpoints
+from sprout.harness_checkpoint.rollback import branch_checkpoints
 from sprout.harness.agents.mini_swe.history import read_entries, training_messages
 from sprout.runstore.messages import clean_messages
 

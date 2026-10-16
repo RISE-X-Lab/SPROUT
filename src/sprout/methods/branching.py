@@ -22,7 +22,7 @@ from sprout.harness.agents.mini_swe.history import (
     actor_tools_at, conversation_restore, load_prefix, reference_at, training_messages,
     validate_assistant_turn,
 )
-from sprout.harness.checkpoint.rollback import Checkpoint, load_checkpoints
+from sprout.harness_checkpoint.rollback import Checkpoint, load_checkpoints
 from sprout.harness.core.journal import read_journal
 from sprout.harness.orchestrator.run import RunOutcome
 from sprout.methods.branch_plan import (

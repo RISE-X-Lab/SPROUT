@@ -15,7 +15,7 @@ import json
 from pathlib import Path
 import re
 
-from sprout.harness.checkpoint.rollback import branch_checkpoints
+from sprout.harness_checkpoint.rollback import branch_checkpoints
 from sprout.harness.core.events import (
     AGENT_MESSAGE, AGENT_THINKING, CHECKPOINT_CAPTURED, RUN_FINISHED, RUN_RESULT, RUN_STARTED,
     SANDBOX_CREATED, SNAPSHOT_MEMORY, TOOL_FINISHED, TOOL_STARTED, TURN_COMPLETED,
