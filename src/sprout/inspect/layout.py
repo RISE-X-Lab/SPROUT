@@ -11,11 +11,11 @@ are never read (they carry an endpoint and a key variable name).
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import json
 import os
-from pathlib import Path
 import re
+from dataclasses import dataclass
+from pathlib import Path
 
 from sprout.inspect.journal import Trajectory, relocate
 

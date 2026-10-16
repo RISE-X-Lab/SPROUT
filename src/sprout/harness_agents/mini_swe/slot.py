@@ -1,9 +1,9 @@
 """Optional mini-swe-agent slot. All effects go through the run's ToolAccess."""
 
-from importlib.metadata import PackageNotFoundError, version
 import os
-from pathlib import Path
 import threading
+from importlib.metadata import PackageNotFoundError, version
+from pathlib import Path
 from uuid import uuid4
 
 from sprout.harness_core.journal import JournalWriter

@@ -11,12 +11,12 @@ checking each one against the parent's recorded history.
 
 from __future__ import annotations
 
+import json
+import re
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 from functools import partial
-import json
 from pathlib import Path
-import re
-from typing import Callable, List, Optional, Tuple
 
 from sprout.harness_agents.mini_swe.history import (
     actor_tools_at,
@@ -29,6 +29,7 @@ from sprout.harness_agents.mini_swe.history import (
 from sprout.harness_checkpoint.rollback import Checkpoint, load_checkpoints
 from sprout.harness_core.journal import read_journal
 from sprout.harness_orchestrator.run import RunOutcome
+from sprout.methods import structured_review
 from sprout.methods.branch_plan import (
     PromptRejected,
     ReviewerPlanError,
@@ -37,7 +38,6 @@ from sprout.methods.branch_plan import (
     extract_branch_plan,
     review_with_feedback,
 )
-from sprout.methods import structured_review
 from sprout.methods.prompts import DEFAULT_PROMPTS, Prompts
 
 
@@ -46,12 +46,12 @@ class Grade:
     """A benchmark's verdict on one attempt, as Harbor's verifier reported it."""
 
     resolved: bool = False
-    reward: Optional[float] = None
+    reward: float | None = None
     #: The diff the verifier graded, when the task collected one (model.patch).
     patch: str = ""
     #: The verifier's own words: its result record and the tail of its logs.
     detail: str = ""
-    error: Optional[str] = None
+    error: str | None = None
 
     def summary(self) -> str:
         if self.error:
@@ -173,8 +173,8 @@ ELISION = "\n...[middle elided]...\n"
 
 
 def render_transcript(
-    journal_path, token_budget: int = 100_000, char_budget: Optional[int] = None
-) -> "tuple[str, int, int]":
+    journal_path, token_budget: int = 100_000, char_budget: int | None = None
+) -> tuple[str, int, int]:
     """One line per tool step, numbered by the checkpoint step they map to.
 
     ``char_budget`` is an exact bound on the rendering (the analyst's request
@@ -193,7 +193,7 @@ def render_transcript(
     enough to be worth reading is kept head-and-tail, never head-only: a test
     run's verdict is at the END.
     """
-    lines: List[str] = []
+    lines: list[str] = []
     step = 0
     for record in read_journal(journal_path):
         kind = record.get("type")
@@ -249,12 +249,12 @@ class Attempt:
     #: it so the reviewer can see hypothesis -> outcome in one place.
     hint: str = ""
     round_no: int = 0
-    assistant_turn: Optional[dict] = None
-    started_at: Optional[float] = None
-    validated_at: Optional[float] = None
-    seconds: Optional[float] = None
+    assistant_turn: dict | None = None
+    started_at: float | None = None
+    validated_at: float | None = None
+    seconds: float | None = None
     #: The final memory snapshot's fate ('kept', 'released', 'release_failed'), or None.
-    memory_snapshot: Optional[str] = None
+    memory_snapshot: str | None = None
 
     def verdict_text(self) -> str:
         """The grading verdict as the analysts see it."""
@@ -271,14 +271,14 @@ class BranchChoice:
     run_name: str
     base: Attempt
     checkpoint: Checkpoint
-    cut: Optional[str]
+    cut: str | None
     hint: str
     why: str
-    assistant_turn: Optional[dict] = None
+    assistant_turn: dict | None = None
     #: What ``review``'s ``turn_check`` said about ``assistant_turn`` (None
     #: when no check ran): kept with a turn that passed it, and with one that
     #: was still flagged once the check's resamples were spent.
-    turn_check: Optional[dict] = None
+    turn_check: dict | None = None
 
 
 def prepare_branches(
@@ -290,7 +290,7 @@ def prepare_branches(
     checkpoints: dict,
     count_mode: str = "adaptive",
     guidance_mode: str = DEFAULT_GUIDANCE,
-) -> List[BranchChoice]:
+) -> list[BranchChoice]:
     """Resolve each selected point exactly before any continuation starts."""
     if count_mode not in BRANCH_COUNT_MODES:
         raise ValueError("unknown branch count mode: %r" % count_mode)
@@ -428,9 +428,9 @@ class Window:
 @dataclass(frozen=True)
 class Stage:
     name: str
-    parent: Optional[Window]  # None: the parent's history is kept whole
-    branches: Optional[Window]
-    clip: Optional[int]  # tool results, reasoning and arguments longer than this are clipped
+    parent: Window | None  # None: the parent's history is kept whole
+    branches: Window | None
+    clip: int | None  # tool results, reasoning and arguments longer than this are clipped
 
 
 #: The reduction order of a reviewer request over budget, applied stage by stage
@@ -480,7 +480,7 @@ def omission_marker(first: int, last: int, total: int) -> dict:
     }
 
 
-def window_messages(messages: List[dict], cuts: List[int], window: Window) -> Tuple[List[dict], int]:
+def window_messages(messages: list[dict], cuts: list[int], window: Window) -> tuple[list[dict], int]:
     """The messages a window keeps, markers in place of the rest; returns them and
     how many were omitted. ``cuts`` are prefix_message_counts: the first ``cut``
     messages are what a branch there retains."""
@@ -503,7 +503,7 @@ def window_messages(messages: List[dict], cuts: List[int], window: Window) -> Tu
     return kept, omitted
 
 
-def clip_messages(messages: List[dict], limit: int) -> Tuple[List[dict], int]:
+def clip_messages(messages: list[dict], limit: int) -> tuple[list[dict], int]:
     """Tool results, provider reasoning and call arguments over ``limit`` kept
     head and tail, newlines and all (the reviewer reads them as the actor saw
     them); returns the messages and how many fields were clipped."""
@@ -535,7 +535,7 @@ def clip_messages(messages: List[dict], limit: int) -> Tuple[List[dict], int]:
     return out, clipped
 
 
-def reduce_row(row: dict, window: Optional[Window], clip: Optional[int]) -> Tuple[dict, dict]:
+def reduce_row(row: dict, window: Window | None, clip: int | None) -> tuple[dict, dict]:
     """One reviewer row at one stage: its native history windowed around the
     analyst's candidates and clipped; the report fields untouched."""
     native = row.get("native_history")
@@ -559,8 +559,8 @@ def reduce_row(row: dict, window: Optional[Window], clip: Optional[int]) -> Tupl
 
 
 def fit_review_prompt(
-    template: str, *, problem: str, rows: List[dict], count_rule: str, budget: int
-) -> Tuple[str, dict]:
+    template: str, *, problem: str, rows: list[dict], count_rule: str, budget: int
+) -> tuple[str, dict]:
     """The reviewer prompt within ``budget`` characters, with the record of how.
 
     Unchanged when it fits. Otherwise the ``STAGES`` are applied in order until
@@ -610,7 +610,7 @@ def analyst_prompt(
     token_budget: int,
     budget: int,
     prompts: Prompts = DEFAULT_PROMPTS,
-) -> Tuple[str, int, dict]:
+) -> tuple[str, int, dict]:
     """The analyst prompt within ``budget`` characters, the step count and the sizing.
 
     The transcript takes what the fixed parts (template, problem, verdict and
@@ -742,7 +742,7 @@ def review(
     transport,
     model: str,
     problem: str,
-    attempts: List[Attempt],
+    attempts: list[Attempt],
     cases: dict,
     *,
     round_no: int,
@@ -753,10 +753,10 @@ def review(
     reviewer_max_attempts: int = 3,
     prompt_chars: int = DEFAULT_PROMPT_CHARS,
     prompts: Prompts = DEFAULT_PROMPTS,
-    eligible: Optional[dict] = None,
-    turn_check: Optional[Callable[[BranchChoice], Optional[dict]]] = None,
+    eligible: dict | None = None,
+    turn_check: Callable[[BranchChoice], dict | None] | None = None,
     turn_resamples: int = 0,
-) -> List[BranchChoice]:
+) -> list[BranchChoice]:
     """The reviewer reads every analysis and picks branches; each is validated exactly.
 
     ``plan_path`` receives the whole exchange: eligible steps, every reviewer
@@ -919,7 +919,7 @@ def review(
             raise TurnRejected(TURN_REJECTED.format(branches=", ".join(map(str, flagged))), checks, marked)
         return marked
 
-    refused: List[dict] = []
+    refused: list[dict] = []
     if turn_check is not None:
         record["turn_resamples"] = turn_resamples
     result = review_with_feedback(

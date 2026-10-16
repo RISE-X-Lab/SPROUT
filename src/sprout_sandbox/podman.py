@@ -109,7 +109,6 @@ import secrets
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Optional
 
 from .backends import HttpBackend
 from .pool import Snapshot
@@ -184,7 +183,7 @@ class PodmanError(RuntimeError):
     """A podman or btrfs command failed; the message carries its stderr."""
 
 
-async def _command(argv: "list[str]", *, timeout: float, cwd: "str | Path | None" = None) -> str:
+async def _command(argv: list[str], *, timeout: float, cwd: str | Path | None = None) -> str:
     """Run one command; its stdout, or ``PodmanError`` with its stderr.
 
     ``cwd`` is where the command runs. It matters for podman: conmon, the
@@ -203,7 +202,7 @@ async def _command(argv: "list[str]", *, timeout: float, cwd: "str | Path | None
     )
     try:
         stdout, stderr = await asyncio.wait_for(process.communicate(), timeout)
-    except asyncio.TimeoutError:
+    except TimeoutError:
         process.kill()
         await process.wait()
         raise PodmanError("%s did not finish within %.0f s" % (_words(argv), timeout))
@@ -226,7 +225,7 @@ class BtrfsStore:
     construction together with the filesystem type.
     """
 
-    def __init__(self, path: "str | Path", timeout: float = 120):
+    def __init__(self, path: str | Path, timeout: float = 120):
         self.path = Path(path).resolve()
         self.timeout = float(timeout)
         if not self.path.is_dir():
@@ -285,7 +284,7 @@ class BtrfsStore:
         await self.delete(path)
         _config_path(path).unlink(missing_ok=True)
 
-    async def nested_subvolumes(self, rootfs: Path, *, podman_bin: "str | None" = None) -> "list[Path]":
+    async def nested_subvolumes(self, rootfs: Path, *, podman_bin: str | None = None) -> list[Path]:
         """Subvolumes made inside ``rootfs``, deepest first.
 
         A subvolume's root directory is inode 256 (files start at 257), so one
@@ -302,7 +301,7 @@ class BtrfsStore:
         found = [Path(line) for line in raw.splitlines() if line.strip()]
         return sorted(found, key=lambda path: len(path.parts), reverse=True)
 
-    async def discard_rootfs(self, rootfs: Path, *, podman_bin: "str | None" = None) -> None:
+    async def discard_rootfs(self, rootfs: Path, *, podman_bin: str | None = None) -> None:
         """Delete a container's rootfs subvolume and its config; anything made inside it first.
 
         A subvolume holding another cannot be deleted ("Directory not empty"),
@@ -359,11 +358,11 @@ class PodmanPool:
 
     def __init__(
         self,
-        store: "str | Path",
-        runtime_bin: "str | Path",
-        podman_bin: "str | None" = None,
-        allow_internet: "bool | None" = None,
-        socket_dir: "str | Path | None" = None,
+        store: str | Path,
+        runtime_bin: str | Path,
+        podman_bin: str | None = None,
+        allow_internet: bool | None = None,
+        socket_dir: str | Path | None = None,
         timeout: float = 120,
     ):
         """
@@ -424,7 +423,7 @@ class PodmanPool:
 
     # --- podman ---
 
-    async def _podman(self, *args: str, timeout: Optional[float] = None, cwd: "Path | None" = None) -> str:
+    async def _podman(self, *args: str, timeout: float | None = None, cwd: Path | None = None) -> str:
         """Run podman from the store (or ``cwd``), never from the caller's directory (see :func:`_command`)."""
         return await _command(
             [self.podman_bin, *args], timeout=timeout or self.timeout, cwd=cwd or self.store.path
@@ -465,7 +464,7 @@ class PodmanPool:
     # --- Host files ---
 
     async def upload_file(
-        self, sandbox: Sandbox, source, destination: str, timeout: Optional[float] = None
+        self, sandbox: Sandbox, source, destination: str, timeout: float | None = None
     ) -> None:
         """``podman cp`` a host file into the container, bypassing the runtime."""
         await self._podman(
@@ -476,7 +475,7 @@ class PodmanPool:
         )
 
     async def download_file(
-        self, sandbox: Sandbox, source: str, destination, timeout: Optional[float] = None
+        self, sandbox: Sandbox, source: str, destination, timeout: float | None = None
     ) -> None:
         """``podman cp`` a container file to the host, outside the runtime."""
         await self._podman(
@@ -495,9 +494,9 @@ class PodmanPool:
     async def spawn(
         self,
         image: str,
-        env: "dict[str, str] | None" = None,
+        env: dict[str, str] | None = None,
         agent_id: str = "",
-        resources: "dict | None" = None,
+        resources: dict | None = None,
     ) -> Sandbox:
         """Start a container from an image reference or a snapshot id.
 
@@ -513,7 +512,7 @@ class PodmanPool:
         return await self._start(image, env=env, agent_id=agent_id, resources=resources)
 
     async def spawn_from_image(
-        self, image: str, agent_id: str = "", resources: "dict | None" = None
+        self, image: str, agent_id: str = "", resources: dict | None = None
     ) -> Sandbox:
         """The same as :meth:`spawn`: a reference or a snapshot id, with a shape.
 
@@ -542,9 +541,9 @@ class PodmanPool:
         self,
         image: str,
         *,
-        env: "dict[str, str] | None" = None,
+        env: dict[str, str] | None = None,
         agent_id: str = "",
-        resources: "dict | None" = None,
+        resources: dict | None = None,
     ) -> Sandbox:
         if not image:
             raise ValueError("spawn needs an image reference or a snapshot id")
@@ -591,8 +590,8 @@ class PodmanPool:
         rootfs: Path,
         socket_dir: Path,
         config: dict,
-        env: "dict[str, str] | None",
-        resources: "dict | None",
+        env: dict[str, str] | None,
+        resources: dict | None,
     ) -> list[str]:
         """Everything after ``podman run -d`` / ``podman create``.
 
@@ -791,7 +790,7 @@ class PodmanPool:
         """
         sandbox_id = sandbox.require_id()
         deadline = asyncio.get_running_loop().time() + self.READY_TIMEOUT_S
-        last_error: "BaseException | str" = "socket %s not created yet" % self._socket_path(sandbox_id)
+        last_error: BaseException | str = "socket %s not created yet" % self._socket_path(sandbox_id)
         while True:
             try:
                 await sandbox.backend.list_tools()
@@ -953,7 +952,7 @@ class PodmanPool:
     # --- Snapshots ---
 
     async def snapshot(
-        self, sandbox: Sandbox, *, name: Optional[str] = None, disk_only: bool = True
+        self, sandbox: Sandbox, *, name: str | None = None, disk_only: bool = True
     ) -> Snapshot:
         """A read-only snapshot of the sandbox's rootfs; the container keeps running.
 
@@ -1020,7 +1019,7 @@ def docker_reference(image: str) -> str:
 
 
 async def image_info(
-    image: str, *, podman_bin: "str | None" = None, timeout: float = 1800.0, cwd: "str | Path | None" = None
+    image: str, *, podman_bin: str | None = None, timeout: float = 1800.0, cwd: str | Path | None = None
 ) -> dict:
     """``podman image inspect`` of ``image`` as one record, pulled first when it is not local.
 
@@ -1041,7 +1040,7 @@ async def image_info(
     return await _inspect_image(image, podman_bin, cwd)
 
 
-async def _inspect_image(image: str, podman_bin: str, cwd: "str | Path | None" = None) -> dict:
+async def _inspect_image(image: str, podman_bin: str, cwd: str | Path | None = None) -> dict:
     raw = await _command([podman_bin, "image", "inspect", "--format", "json", image], timeout=120, cwd=cwd)
     parsed = json.loads(raw)
     return parsed[0] if isinstance(parsed, list) else parsed
@@ -1069,7 +1068,7 @@ def digest_reference(image: str, info: dict) -> str:
     )
 
 
-def mount_problem(path: "str | Path") -> Optional[str]:
+def mount_problem(path: str | Path) -> str | None:
     """Why ``path`` cannot be a store, or ``None``: btrfs, mounted with ``user_subvol_rm_allowed``.
 
     ``findmnt`` names the filesystem type and the options of the mount holding
@@ -1124,7 +1123,7 @@ def _extraction_format(base: Path) -> int:
         return 0
 
 
-def _resource_flags(resources: "dict | None") -> list[str]:
+def _resource_flags(resources: dict | None) -> list[str]:
     """``podman run`` flags for a sandbox shape; ``disk_size_mb`` has no counterpart."""
     flags: list[str] = []
     if not resources:
@@ -1149,7 +1148,7 @@ def _safe(name: str) -> str:
     return _UNSAFE.sub("-", name).strip("-.")[:48] or "snapshot"
 
 
-def _words(argv: "list[str]") -> str:
+def _words(argv: list[str]) -> str:
     """``podman image inspect`` / ``btrfs subvolume delete``: the tool and its command words."""
     words = [Path(argv[0]).name]
     for arg in argv[1:3]:

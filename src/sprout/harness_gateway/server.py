@@ -21,7 +21,6 @@ from __future__ import annotations
 import json
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Optional, Tuple
 
 from sprout.harness_core.events import Usage
 from sprout.harness_gateway.routing import RoutingTable
@@ -71,7 +70,7 @@ class GatewayServer:
         self.request_policy = request_policy
         self._httpd = ThreadingHTTPServer((host, port), _make_handler(self))
         self._httpd.daemon_threads = True
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
         self._warned_unpriced = False
 
     # --- lifecycle ---------------------------------------------------------
@@ -80,7 +79,7 @@ class GatewayServer:
         host, port = self._httpd.server_address[:2]
         return "http://%s:%s" % (host, port)
 
-    def start(self) -> "GatewayServer":
+    def start(self) -> GatewayServer:
         self._thread = threading.Thread(target=self._httpd.serve_forever, daemon=True)
         self._thread.start()
         return self
@@ -91,7 +90,7 @@ class GatewayServer:
         if self._thread:
             self._thread.join(timeout=10)
 
-    def __enter__(self) -> "GatewayServer":
+    def __enter__(self) -> GatewayServer:
         return self.start()
 
     def __exit__(self, *exc) -> None:
@@ -318,7 +317,7 @@ def _upstream_error(response) -> dict:
 
 
 # --- usage extraction ------------------------------------------------------
-def _usage_from_response(response) -> Tuple[Usage, Optional[str]]:
+def _usage_from_response(response) -> tuple[Usage, str | None]:
     usage = Usage()
     model = None
     try:

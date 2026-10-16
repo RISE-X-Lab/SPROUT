@@ -5,12 +5,12 @@ snapshot; ``index_mini`` finds them, ``reference_at`` names the prefix a branch
 resumes from, and ``materialize`` writes that prefix for a new attempt.
 """
 
-from collections.abc import Sequence
-from copy import deepcopy
-from dataclasses import dataclass
 import hashlib
 import json
 import os
+from collections.abc import Sequence
+from copy import deepcopy
+from dataclasses import dataclass
 from pathlib import Path
 
 from sprout.harness_agents.mini_swe.tools import validate_mini_tools

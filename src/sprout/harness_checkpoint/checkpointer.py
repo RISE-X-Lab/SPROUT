@@ -50,7 +50,6 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Optional
 
 from sprout.harness_tools.interceptors.mutation import MutationTracker
 
@@ -66,7 +65,7 @@ from sprout.harness_tools.interceptors.mutation import MutationTracker
 SQUASH_LINEAGE_AT = 128
 
 
-def _failed_to_grow(previous: Optional[int], current: Optional[int]) -> bool:
+def _failed_to_grow(previous: int | None, current: int | None) -> bool:
     return previous is not None and current is not None and current <= previous
 
 
@@ -76,7 +75,7 @@ class CheckpointRecord:
 
     turn: int
     #: None only for a failed capture with no earlier snapshot to fall back to.
-    snapshot_id: Optional[str]
+    snapshot_id: str | None
     #: False when this step did not produce its own snapshot.
     captured: bool
     #: Why, when it did not. "clean" means nothing could have changed and the
@@ -89,7 +88,7 @@ class CheckpointRecord:
     disk_only: bool = False
     #: Set when this checkpoint triggered continuing on a new sandbox.
     reboarded: bool = False
-    delta_empty: Optional[bool] = None
+    delta_empty: bool | None = None
 
 
 @dataclass
@@ -102,19 +101,19 @@ class Checkpointer:
     """
 
     session: object
-    tracker: Optional[MutationTracker] = None
+    tracker: MutationTracker | None = None
     disk_only: bool = True
 
-    latest_snapshot_id: Optional[str] = None
+    latest_snapshot_id: str | None = None
     _failed_captures: int = 0
-    _previous_layers: Optional[int] = None
+    _previous_layers: int | None = None
     _consecutive_compactions: int = 0
     _warned_budget: bool = False
 
     def enabled(self) -> bool:
         return bool(getattr(self.session, "supports_snapshot", lambda: False)())
 
-    def after_step(self, turn: int) -> Optional[CheckpointRecord]:
+    def after_step(self, turn: int) -> CheckpointRecord | None:
         """Checkpoint the environment as it stands after step ``turn``.
 
         Returns the record, or ``None`` when checkpointing is unavailable and

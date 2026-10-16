@@ -22,9 +22,9 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
-from pathlib import Path
 import shutil
 import time
+from pathlib import Path
 from types import SimpleNamespace
 
 from harbor.models.task.task import Task

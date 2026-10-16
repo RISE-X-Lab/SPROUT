@@ -18,7 +18,6 @@ import os
 import secrets
 import threading
 from dataclasses import dataclass, field
-from typing import Dict, Optional
 
 DEFAULT_ROUTE = "default"
 
@@ -31,16 +30,16 @@ class ModelRoute:
     #: Literal key, or ``api_key_env`` to read one from the environment. Keeping
     #: the credential here means the agent never holds a provider key -- it only
     #: ever sees its own slot token.
-    api_key: Optional[str] = None
-    api_key_env: Optional[str] = None
+    api_key: str | None = None
+    api_key_env: str | None = None
     #: Rewrite the model name on the way out (agent asks X, upstream wants Y).
-    upstream_model: Optional[str] = None
+    upstream_model: str | None = None
     #: USD per million tokens, e.g. ``{"input": 3.0, "output": 15.0,
     #: "cache_read": 0.30, "cache_write": 3.75}``. The provider's responses
     #: carry token counts but no price, so without this the gateway can count
     #: everything and charge nothing -- ``budget_usd`` then never binds unless
     #: the provider reports a cost in its usage block (OpenRouter does).
-    pricing: Dict[str, float] = field(default_factory=dict)
+    pricing: dict[str, float] = field(default_factory=dict)
 
     def price(self, usage) -> float:
         """USD for one request's usage, 0.0 when this route has no pricing.
@@ -60,7 +59,7 @@ class ModelRoute:
             + usage.cache_creation_tokens * rate.get("cache_write", 0.0)
         )
 
-    def resolve_key(self) -> Optional[str]:
+    def resolve_key(self) -> str | None:
         if self.api_key:
             return self.api_key
         if self.api_key_env:
@@ -74,9 +73,9 @@ class SlotToken:
 
     token: str
     agent_id: str
-    run_id: Optional[str] = None
+    run_id: str | None = None
     #: Hard ceiling in USD; None means unlimited. Enforced before forwarding.
-    budget_usd: Optional[float] = None
+    budget_usd: float | None = None
     spent_usd: float = 0.0
 
     def over_budget(self) -> bool:
@@ -86,13 +85,13 @@ class SlotToken:
 class RoutingTable:
     """Routes + slot tokens. Thread-safe; the server is multi-threaded."""
 
-    def __init__(self, routes: Optional[Dict[str, ModelRoute]] = None) -> None:
-        self._routes: Dict[str, ModelRoute] = dict(routes or {})
-        self._tokens: Dict[str, SlotToken] = {}
+    def __init__(self, routes: dict[str, ModelRoute] | None = None) -> None:
+        self._routes: dict[str, ModelRoute] = dict(routes or {})
+        self._tokens: dict[str, SlotToken] = {}
         self._lock = threading.Lock()
 
     # --- routes ------------------------------------------------------------
-    def route_for(self, model: Optional[str]) -> ModelRoute:
+    def route_for(self, model: str | None) -> ModelRoute:
         """Exact model match, else ``default``; KeyError when neither exists."""
         if model and model in self._routes:
             return self._routes[model]
@@ -105,8 +104,8 @@ class RoutingTable:
         self,
         agent_id: str,
         *,
-        run_id: Optional[str] = None,
-        budget_usd: Optional[float] = None,
+        run_id: str | None = None,
+        budget_usd: float | None = None,
     ) -> SlotToken:
         token = SlotToken(
             token="sprout-slot-" + secrets.token_urlsafe(24),
@@ -118,7 +117,7 @@ class RoutingTable:
             self._tokens[token.token] = token
         return token
 
-    def lookup(self, presented: Optional[str]) -> Optional[SlotToken]:
+    def lookup(self, presented: str | None) -> SlotToken | None:
         if not presented:
             return None
         candidate = presented.strip()

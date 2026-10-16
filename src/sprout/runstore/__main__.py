@@ -2,8 +2,8 @@
 
 import argparse
 import os
-from pathlib import Path
 import signal
+from pathlib import Path
 from threading import Event
 
 from sprout.harness_core.journal import volatile_reason
@@ -35,6 +35,7 @@ def main() -> None:
         store.initialize()
     elif args.command == "serve":
         import uvicorn
+
         from sprout.runstore.api import create_app
 
         index = Index(store, snapshot_validator(store, config))

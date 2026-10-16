@@ -13,11 +13,10 @@ prompts it used (``summary.json``, ``plan-roundN.json``, the runner's manifest).
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import hashlib
+from dataclasses import dataclass
 from pathlib import Path
 from string import Formatter
-from typing import Optional
 
 import yaml
 
@@ -29,7 +28,7 @@ DEFAULT_PROMPTS_PATH = resource("methods/prompts.yaml")
 #: None marks a text that is sent verbatim, never through ``str.format``: its
 #: braces are literal (shepherd.system shows the JSON object it wants back), so
 #: it is not parsed as a template.
-REQUIRED_PLACEHOLDERS: dict[str, Optional[frozenset[str]]] = {
+REQUIRED_PLACEHOLDERS: dict[str, frozenset[str] | None] = {
     "analyst.case": frozenset(
         {"problem", "verdict", "transcript", "checkpoint_steps", "lo", "hi", "candidate_limit"}
     ),

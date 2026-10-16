@@ -32,13 +32,12 @@ import json
 import sys
 import threading
 from typing import Any
-from typing import Optional
 
-from sprout_sandbox import MicroVMPool, PodmanPool, Sandbox, Snapshot
-from sprout_sandbox.result import ToolResult as SdkToolResult
 from sprout.harness_core.result import ToolResult
 from sprout.harness_sandbox.backends import backend_name, build_pool, spawn_takes_shape
 from sprout.harness_sandbox.templates import builder_from_backend
+from sprout_sandbox import MicroVMPool, PodmanPool, Sandbox, Snapshot
+from sprout_sandbox.result import ToolResult as SdkToolResult
 
 #: Identity for the owner's own traffic (patch extraction, resets, test runs).
 #: Distinct from any agent's id so that bookkeeping does not appear in an agent's
@@ -55,7 +54,7 @@ class SandboxSession:
     call, so a call site cannot forget it and an agent cannot act as another.
     """
 
-    def __init__(self, timeout: float = 300.0, quiet: bool = False, backend: "dict | None" = None):
+    def __init__(self, timeout: float = 300.0, quiet: bool = False, backend: dict | None = None):
         self.timeout = timeout
         self.quiet = quiet
         #: Where sandboxes come from (``harness_sandbox/backends.py``): a
@@ -66,9 +65,9 @@ class SandboxSession:
         #: ``{"backend": "microvm", ...}`` is an AgentENV microVM, its endpoint
         #: from the section or the environment.
         self.backend = backend or {}
-        self._pool: "Optional[MicroVMPool | PodmanPool]" = None
-        self._sandbox: Optional[Sandbox] = None
-        self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._pool: MicroVMPool | PodmanPool | None = None
+        self._sandbox: Sandbox | None = None
+        self._loop: asyncio.AbstractEventLoop | None = None
         self._loop_lock = threading.RLock()
         #: Why the last :meth:`create` returned False. Kept because ``create``
         #: reports through a bool and the reason through ``_warn`` -- and a quiet
@@ -157,13 +156,13 @@ class SandboxSession:
             return "unknown"
         return getattr(self._sandbox, "sandbox_id", "") or "unknown"
 
-    def create(self, image: str, resources: "Optional[dict]" = None) -> bool:
+    def create(self, image: str, resources: dict | None = None) -> bool:
         """``resources``: e.g. ``{"cpu": 4, "memory_mb": 16384}``. A task that
         declares its needs must get them: running a build-heavy task in the
         backend's default (2 CPUs, 1 GB) OOMs it rather than failing loudly."""
         return self._drive(self._create_async(image, resources))
 
-    async def _create_async(self, image: str, resources: "Optional[dict]" = None) -> bool:
+    async def _create_async(self, image: str, resources: dict | None = None) -> bool:
         self.create_error = ""
         try:
             self._pool = build_pool(self.backend)
@@ -310,7 +309,7 @@ class SandboxSession:
         """Whether this session's backend can publish snapshots."""
         return bool(self._pool) and self._pool.supports_snapshot()
 
-    def snapshot(self, name: "str | None" = None, disk_only: bool = True) -> Optional["Snapshot"]:
+    def snapshot(self, name: str | None = None, disk_only: bool = True) -> Snapshot | None:
         """Checkpoint the live sandbox; it keeps running.
 
         Defaults to ``disk_only``: a rollout replays by restoring the disk and
@@ -327,7 +326,7 @@ class SandboxSession:
             self._warn("snapshot failed: %s" % e)
             return None
 
-    def squash_snapshot(self, snapshot, name: "str | None" = None):
+    def squash_snapshot(self, snapshot, name: str | None = None):
         """Flatten a snapshot's chain, returning an equivalent snapshot.
 
         Returns the input unchanged if the backend cannot squash or the call

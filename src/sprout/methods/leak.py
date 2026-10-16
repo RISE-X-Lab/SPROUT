@@ -29,10 +29,10 @@ is pure.
 
 from __future__ import annotations
 
-from collections.abc import Iterable
 import json
 import posixpath
 import re
+from collections.abc import Iterable
 
 MIN_TERM = 6
 MIN_IDENTIFIER = 8

@@ -30,9 +30,9 @@ import signal
 import subprocess
 import time
 from collections import deque
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Mapping, Sequence
 
 from sprout.services.health import Probe, which
 from sprout.services.state import Paths

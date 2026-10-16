@@ -33,15 +33,15 @@ whether it may enter RL (``eligible``).
 from __future__ import annotations
 
 import argparse
-from collections.abc import Iterable
-from dataclasses import dataclass, field
 import glob
 import json
 import os
-from pathlib import Path
 import re
 import sys
 import time
+from collections.abc import Iterable
+from dataclasses import dataclass, field
+from pathlib import Path
 
 import httpx
 

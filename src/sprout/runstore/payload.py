@@ -10,7 +10,6 @@ from typing import BinaryIO
 
 from sprout.runstore.specs import canonical, digest, no_credentials
 
-
 MAX_PAYLOAD_BYTES = 16 * 1024 * 1024
 
 

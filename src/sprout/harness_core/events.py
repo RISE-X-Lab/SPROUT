@@ -85,7 +85,7 @@ class Usage:
     reasoning_output_tokens: int = 0
     cost_usd: float = 0.0
 
-    def add(self, other: "Usage") -> None:
+    def add(self, other: Usage) -> None:
         self.input_tokens += other.input_tokens
         self.output_tokens += other.output_tokens
         self.cached_input_tokens += other.cached_input_tokens

@@ -19,10 +19,10 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional
+from typing import Any
 
-from sprout.harness_core.journal import JournalWriter
 from sprout.harness_core.control import RunControl
+from sprout.harness_core.journal import JournalWriter
 
 
 @dataclass
@@ -31,20 +31,20 @@ class TaskSpec:
 
     prompt: str
     cwd: str
-    model: Optional[str] = None
-    env: Dict[str, str] = field(default_factory=dict)
+    model: str | None = None
+    env: dict[str, str] = field(default_factory=dict)
     timeout_s: float = 3600.0
-    extra: Dict[str, object] = field(default_factory=dict)
-    control: Optional[RunControl] = field(default=None, repr=False)
+    extra: dict[str, object] = field(default_factory=dict)
+    control: RunControl | None = field(default=None, repr=False)
 
 
 @dataclass
 class SlotResult:
     status: str  # completed | error | timeout | killed
     final_text: str = ""
-    usage: Dict[str, object] = field(default_factory=dict)
-    native_session_id: Optional[str] = None
-    error: Optional[str] = None
+    usage: dict[str, object] = field(default_factory=dict)
+    native_session_id: str | None = None
+    error: str | None = None
 
 
 class AgentSlot(ABC):
@@ -56,6 +56,6 @@ class AgentSlot(ABC):
     def run(self, task: TaskSpec, journal: JournalWriter, tools: Any) -> SlotResult:
         """Execute the task through ``tools``, streaming events into ``journal``."""
 
-    def version(self) -> Optional[str]:
+    def version(self) -> str | None:
         """Upstream version string, for run.started provenance."""
         return None

@@ -1,8 +1,8 @@
 """The mini bash contract shared by actor prompts, requests and reviewers."""
 
-from copy import deepcopy
 import json
 import shlex
+from copy import deepcopy
 
 #: Seconds one agent command may run before the runtime kills it, unless the run
 #: names another (``--command-timeout``, the mini environment's ``timeout``). The

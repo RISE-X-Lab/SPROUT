@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import contextlib
-from dataclasses import asdict
 import os
-from pathlib import Path
 import signal
 import sys
 import time
 import traceback
+from dataclasses import asdict
+from pathlib import Path
 
 from sprout.harness_agents.mini_swe.continuation import Continuation, prepare
 from sprout.harness_agents.mini_swe.history import load_prefix, materialize

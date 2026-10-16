@@ -26,7 +26,7 @@ EXEC_TIMEOUT_S = 36000
 
 
 class PodmanEnvironment(SandboxEnvironment):
-    def __init__(self, *args, runtime_bin: str, store: str, podman_bin: "str | None" = None, **kwargs):
+    def __init__(self, *args, runtime_bin: str, store: str, podman_bin: str | None = None, **kwargs):
         self.store = str(Path(store).expanduser().resolve())
         self.podman_bin = podman_bin or default_podman_bin()
         super().__init__(*args, runtime_bin=runtime_bin, exec_timeout_s=EXEC_TIMEOUT_S, **kwargs)

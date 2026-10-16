@@ -64,16 +64,17 @@ directories under ``artifact_root`` and talks to the model endpoint.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from functools import partial
 import heapq
 import json
 import logging
 import os
-from pathlib import Path
 import queue
 import threading
-from typing import Any, Callable
+from collections.abc import Callable
+from dataclasses import dataclass
+from functools import partial
+from pathlib import Path
+from typing import Any
 
 from sprout.harness_agents.mini_swe.history import available_branch_points, training_messages
 from sprout.methods.branching import (
@@ -85,9 +86,9 @@ from sprout.methods.branching import (
     review,
     selected_prefix,
 )
-from sprout.methods.review_transport import RequestStopped, ReviewTransport
 from sprout.methods.leak import hidden_terms_of, leak_terms, visible_text
 from sprout.methods.leak_judge import REVIEW_ATTEMPTS, REVIEW_TIMEOUT_S, HiddenText, JevLeakJudge, check_turn
+from sprout.methods.review_transport import RequestStopped, ReviewTransport
 from sprout.runstore.messages import clean_messages
 from sprout.runstore.specs import ReviewSpec
 

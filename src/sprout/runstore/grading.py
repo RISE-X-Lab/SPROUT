@@ -32,9 +32,9 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
-from pathlib import Path
 import re
 import shlex
+from pathlib import Path
 from uuid import uuid4
 
 from sprout.harness_sandbox.backends import backend_name

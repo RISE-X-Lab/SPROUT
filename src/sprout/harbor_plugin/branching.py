@@ -4,16 +4,19 @@ from __future__ import annotations
 
 import hashlib
 import json
-from pathlib import Path
 import re
+from pathlib import Path
 
-from sprout.harness_agents.mini_swe.continuation import Continuation, prepare
-from sprout.harness_agents.mini_swe.history import load_prefix
-from sprout.harness_agents.mini_swe.history import reference_at
-from sprout.harness_agents.mini_swe.history import actor_tools_at, available_branch_points
 from sprout.harbor_plugin.agentenv import AgentENVEnvironment
 from sprout.harbor_plugin.agentenv_mini import AgentENVMini
 from sprout.harbor_plugin.podman import PodmanEnvironment
+from sprout.harness_agents.mini_swe.continuation import Continuation, prepare
+from sprout.harness_agents.mini_swe.history import (
+    actor_tools_at,
+    available_branch_points,
+    load_prefix,
+    reference_at,
+)
 
 #: A snapshot id as a backend names one: AgentENV's UUID, or a podman subvolume
 #: name (``<sandbox id>-<counter>[-<name>]``). Nothing a path could be built

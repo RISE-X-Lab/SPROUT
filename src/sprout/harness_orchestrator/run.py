@@ -31,10 +31,11 @@ return value only: a run that dies still leaves a record.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from contextlib import ExitStack
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any
 
 from sprout.harness_agents.mini_swe.slot import MiniSweSlot
 from sprout.harness_core.events import SANDBOX_CREATED
@@ -53,11 +54,11 @@ class RunSpec:
     #: before a sandbox is made.
     slot: str = "mini-swe-agent"
     cwd: str = "."
-    model: Optional[str] = None
+    model: str | None = None
     timeout_s: float = 3600.0
     agent_id: str = "agent"
-    run_id: Optional[str] = None
-    journal_path: Optional[Union[str, Path]] = None
+    run_id: str | None = None
+    journal_path: str | Path | None = None
 
     # --- sandbox ---
     #: Where the sandbox comes from (``harness_sandbox/backends.py``):
@@ -66,7 +67,7 @@ class RunSpec:
     #: for a rootless container whose rootfs is a subvolume of the store. Empty
     #: means podman, the default backend, whose section must still name the
     #: store and the runtime binary.
-    backend: Dict[str, Any] = field(default_factory=dict)
+    backend: dict[str, Any] = field(default_factory=dict)
     #: The sprout-runtime binary named on the command line (``harness run
     #: --runtime-bin``) or in a Run Store job's ``run_defaults``. Accepted for
     #: that contract (``runstore/specs.py`` validates job specs against these
@@ -74,25 +75,25 @@ class RunSpec:
     #: the one in its own section -- ``backend["podman"]["runtime_bin"]`` is
     #: mounted into every container, ``backend["microvm"]["runtime_bin"]`` builds
     #: the per-image template (``harness_sandbox/templates.py``).
-    runtime_bin: Optional[str] = None
+    runtime_bin: str | None = None
     #: The image (or snapshot) the sandbox is created from. Required.
-    sandbox_image: Optional[str] = None
+    sandbox_image: str | None = None
     #: Shape for that sandbox, ``{"cpu": 2, "memory_mb": 8192}``. A task that
     #: declares its needs must get them; the backend's default (2 CPUs, 1 GB)
     #: OOMs a build-heavy task instead of failing loudly. None = default.
-    sandbox_resources: Optional[Dict[str, Any]] = None
+    sandbox_resources: dict[str, Any] | None = None
     #: Keep the sandbox after the run -- grading and extraction need it alive.
     keep_sandbox: bool = False
     #: Rules mounted on the serving pipeline after the mutation tracker, by name
     #: (``harness_tools.interceptors.INTERCEPTORS``): ``[{"name": ..., **kwargs}]``.
-    interceptors: List[Dict[str, Any]] = field(default_factory=list)
+    interceptors: list[dict[str, Any]] = field(default_factory=list)
 
     # --- gateway ---
     #: USD ceiling the gateway enforces on this run's model traffic. Set by the
     #: RL contract and by Run Store continuations, never by hand: the gateway
     #: starts for a run with rollout controls, and a budget on its own has no
     #: upstream to route to.
-    budget_usd: Optional[float] = None
+    budget_usd: float | None = None
 
     # --- checkpoints ---
     #: One disk snapshot per closed model turn. Off for trajectories that are
@@ -110,9 +111,9 @@ class RunSpec:
     #: killed run leaves behind -- a branch whose ancestry lives anywhere else
     #: is unattributable exactly when attribution matters. The retained history
     #: itself travels as ``extra["native_prefix"]``.
-    origin: Optional[Dict[str, Any]] = None
+    origin: dict[str, Any] | None = None
 
-    extra: Dict[str, Any] = field(default_factory=dict)
+    extra: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -141,15 +142,15 @@ class RunOutcome:
     journal_path: Path
     status: str
     final_text: str = ""
-    usage: Dict[str, Any] = field(default_factory=dict)
-    native_session_id: Optional[str] = None
-    sandbox_id: Optional[str] = None
+    usage: dict[str, Any] = field(default_factory=dict)
+    native_session_id: str | None = None
+    sandbox_id: str | None = None
     checkpoints: int = 0
     #: The rollout's final disk snapshot: the durable record and the last branch point.
-    final_snapshot_id: Optional[str] = None
+    final_snapshot_id: str | None = None
     #: The full snapshot taken after it when the run asked for one.
-    final_memory_snapshot_id: Optional[str] = None
-    error: Optional[str] = None
+    final_memory_snapshot_id: str | None = None
+    error: str | None = None
     stop_reason: str | None = None
 
     @property
@@ -169,9 +170,9 @@ class Orchestrator:
     def __init__(
         self,
         *,
-        out_dir: Union[str, Path] = "runs",
-        ledger: Optional[ResourceLedger] = None,
-        on_event: Optional[Callable[[str, dict], None]] = None,
+        out_dir: str | Path = "runs",
+        ledger: ResourceLedger | None = None,
+        on_event: Callable[[str, dict], None] | None = None,
     ) -> None:
         self.out_dir = Path(out_dir)
         self.ledger = ledger
@@ -191,8 +192,8 @@ class Orchestrator:
         tools = None
         final = None
         rollout_controls = None
-        result: Optional[SlotResult] = None
-        error: Optional[str] = None
+        result: SlotResult | None = None
+        error: str | None = None
         control = None
 
         # ExitStack so the ledger's run context (which marks the run done even on
@@ -290,7 +291,7 @@ class Orchestrator:
         )
 
     # --- steps -------------------------------------------------------------
-    def _wire_sandbox(self, spec: RunSpec, claim) -> "OwnedSandbox":
+    def _wire_sandbox(self, spec: RunSpec, claim) -> OwnedSandbox:
         """Create the sandbox. The session stays here: every tool call, snapshot
         and the final teardown go through this one handle."""
         from sprout.harness_sandbox.backends import with_sandbox_budget
@@ -330,7 +331,7 @@ class Orchestrator:
             owned.release()
             raise
 
-    def _follow_reboards(self, spec: RunSpec, owned: "OwnedSandbox", claim) -> Callable[[], None]:
+    def _follow_reboards(self, spec: RunSpec, owned: OwnedSandbox, claim) -> Callable[[], None]:
         """Keep the run's record on the live sandbox across a re-board.
 
         A checkpoint that finds the chain compacted moves the session onto a
@@ -363,7 +364,7 @@ class Orchestrator:
         listeners.append(follow)
         return detach
 
-    def _tool_access(self, spec: RunSpec, journal, owned: "OwnedSandbox", control, rollout_controls=None):
+    def _tool_access(self, spec: RunSpec, journal, owned: OwnedSandbox, control, rollout_controls=None):
         """The functions the agent may call on its sandbox.
 
         One pipeline serves every call: rollout limits first, then the mutation
@@ -394,7 +395,7 @@ class Orchestrator:
             agent_id=spec.agent_id,
         )
 
-    def _finalize(self, spec: RunSpec, tools, owned: "OwnedSandbox", claim, journal):
+    def _finalize(self, spec: RunSpec, tools, owned: OwnedSandbox, claim, journal):
         """The rollout's final disk snapshot (plus memory when asked); (record, error).
 
         A sandbox is never destroyed before the disk snapshot exists: when it fails,

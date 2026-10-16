@@ -1,12 +1,12 @@
 """Execution-group contracts: what a driver may ask Run Store to execute."""
 
-from copy import deepcopy
 import hashlib
 import re
+from copy import deepcopy
 
 from sprout.harness_agents.mini_swe.continuation import Continuation
-from sprout.runstore.specs import BRANCH_OVERRIDES, JobSpec, no_credentials, validate_branch_budget
 from sprout.rl_driver.ledger import canonical
+from sprout.runstore.specs import BRANCH_OVERRIDES, JobSpec, no_credentials, validate_branch_budget
 
 IDENTIFIER = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,199}\Z")
 

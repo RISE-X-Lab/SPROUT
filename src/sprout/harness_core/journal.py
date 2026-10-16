@@ -10,15 +10,14 @@ Writers never rewrite history; corrections are new events.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import json
-from pathlib import Path
 import threading
-from typing import Callable, Iterator, List, Optional, Union
 import uuid
+from collections.abc import Callable, Iterator
+from datetime import UTC, datetime
+from pathlib import Path
 
 from sprout.harness_core.events import JOURNAL_SCHEMA_VERSION, TOOL_STARTED
-
 
 #: Directories the OS empties on reboot (and tmpwatch empties sooner). A journal
 #: is the ONLY record a run leaves -- snapshot ids, every step, the grading
@@ -28,7 +27,7 @@ from sprout.harness_core.events import JOURNAL_SCHEMA_VERSION, TOOL_STARTED
 VOLATILE_ROOTS = ("/tmp", "/var/tmp", "/dev/shm", "/run")
 
 
-def volatile_reason(path: Union[str, Path]) -> Optional[str]:
+def volatile_reason(path: str | Path) -> str | None:
     """Why this path will not survive a reboot, or None if it should.
 
     Entry points refuse volatile journal destinations; the library layer does
@@ -53,7 +52,7 @@ def new_run_id() -> str:
 def utc_now(timespec: str = "milliseconds") -> str:
     """RFC3339 UTC now, ``Z``-suffixed. The journal records milliseconds and the
     resource ledger seconds; both precisions are on disk, so neither may change."""
-    return datetime.now(timezone.utc).isoformat(timespec=timespec).replace("+00:00", "Z")
+    return datetime.now(UTC).isoformat(timespec=timespec).replace("+00:00", "Z")
 
 
 class JournalWriter:
@@ -68,9 +67,9 @@ class JournalWriter:
 
     def __init__(
         self,
-        path: Union[str, Path],
+        path: str | Path,
         *,
-        run_id: Optional[str] = None,
+        run_id: str | None = None,
         agent_id: str = "agent",
         sandbox_id: str = "default",
     ) -> None:
@@ -82,7 +81,7 @@ class JournalWriter:
         self._seq = 0
         self._lock = threading.Lock()
         self._fh = self.path.open("a", encoding="utf-8")
-        self._subscribers: List[Callable[[dict], None]] = []
+        self._subscribers: list[Callable[[dict], None]] = []
         self._notifying = threading.local()
         self._tools: dict[str, dict] = {}
 
@@ -167,14 +166,14 @@ class JournalWriter:
             if not self._fh.closed:
                 self._fh.close()
 
-    def __enter__(self) -> "JournalWriter":
+    def __enter__(self) -> JournalWriter:
         return self
 
     def __exit__(self, *exc) -> None:
         self.close()
 
 
-def iter_journal(path: Union[str, Path]) -> Iterator[dict]:
+def iter_journal(path: str | Path) -> Iterator[dict]:
     with Path(path).open(encoding="utf-8") as fh:
         for line in fh:
             line = line.strip()
@@ -182,11 +181,11 @@ def iter_journal(path: Union[str, Path]) -> Iterator[dict]:
                 yield json.loads(line)
 
 
-def read_journal(path: Union[str, Path]) -> List[dict]:
+def read_journal(path: str | Path) -> list[dict]:
     return list(iter_journal(path))
 
 
-def journal_events(path: Union[str, Path]) -> List[dict]:
+def journal_events(path: str | Path) -> list[dict]:
     """Every complete record; a missing file is empty and a torn last line is skipped.
 
     Safe on a journal another process is still appending to.

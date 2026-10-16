@@ -10,8 +10,8 @@ renderers are handed probe details and pids, never an environment.
 from __future__ import annotations
 
 import shlex
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Mapping, Sequence
 
 COLUMNS = ("name", "kind", "pid", "health", "port")
 

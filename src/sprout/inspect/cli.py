@@ -9,10 +9,10 @@ output file.
 from __future__ import annotations
 
 import argparse
-from dataclasses import asdict
 import json
-from pathlib import Path
 import sys
+from dataclasses import asdict
+from pathlib import Path
 
 import sprout.inspect
 from sprout.inspect import export, views

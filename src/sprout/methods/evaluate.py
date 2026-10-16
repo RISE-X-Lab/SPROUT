@@ -33,12 +33,12 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-from dataclasses import dataclass
 import hashlib
 import json
-from pathlib import Path
 import subprocess
 import time
+from dataclasses import dataclass
+from pathlib import Path
 
 from harbor.models.task.task import Task
 from harbor.models.trial.config import TrialConfig
@@ -624,7 +624,7 @@ class Evaluation:
             for choice in choices:
                 await self.branch(choice, round_no, capture_checkpoints=True)
 
-    def turn_check(self) -> "TurnCheck":
+    def turn_check(self) -> TurnCheck:
         """The round's leak check of each turn the reviewer writes (``leak_judge.check_turn``).
 
         Against what the reviewer could read and the actor could not: the task's

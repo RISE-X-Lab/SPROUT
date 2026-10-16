@@ -37,14 +37,14 @@ import re
 import shutil
 import subprocess
 import sys
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional
 
-from sprout_sandbox.podman import BtrfsStore, MANAGED_LABEL, SOCKET_MOUNT, STORE_LABEL, default_podman_bin
 from sprout.harness_orchestrator.resources import ResourceLedger
 from sprout.harness_sandbox.backends import default_aenv_server_url
+from sprout_sandbox.podman import MANAGED_LABEL, SOCKET_MOUNT, STORE_LABEL, BtrfsStore, default_podman_bin
 
 _DURATION = re.compile(r"^(\d+(?:\.\d+)?)\s*([smhd])$")
 
@@ -60,14 +60,14 @@ def parse_duration(text: str) -> timedelta:
 
 @dataclass
 class ReapPlan:
-    sandboxes: List[str] = field(default_factory=list)
-    kept: List[str] = field(default_factory=list)
+    sandboxes: list[str] = field(default_factory=list)
+    kept: list[str] = field(default_factory=list)
     #: Orphans of a backend this reaper has no client for: reported, never applied.
-    foreign: List[str] = field(default_factory=list)
-    reasons: Dict[str, str] = field(default_factory=dict)
+    foreign: list[str] = field(default_factory=list)
+    reasons: dict[str, str] = field(default_factory=dict)
     #: Which backend each planned sandbox belongs to, so ``apply`` asks the
     #: right client to delete it.
-    backends: Dict[str, str] = field(default_factory=dict)
+    backends: dict[str, str] = field(default_factory=dict)
 
     def total(self) -> int:
         return len(self.sandboxes)
@@ -81,7 +81,7 @@ class Reaper:
     ``delete_sandbox(id) -> bool``.
     """
 
-    def __init__(self, clients: Dict[str, object], ledger: Optional[ResourceLedger] = None) -> None:
+    def __init__(self, clients: dict[str, object], ledger: ResourceLedger | None = None) -> None:
         self.clients = dict(clients)
         self.ledger = ledger or ResourceLedger()
 
@@ -90,7 +90,7 @@ class Reaper:
         self,
         *,
         include_unknown: bool = False,
-        older_than: Optional[timedelta] = None,
+        older_than: timedelta | None = None,
     ) -> ReapPlan:
         plan = ReapPlan()
 
@@ -151,10 +151,10 @@ class Reaper:
         return plan
 
     # --- applying ----------------------------------------------------------
-    def apply(self, plan: ReapPlan) -> Dict[str, List[str]]:
+    def apply(self, plan: ReapPlan) -> dict[str, list[str]]:
         """Delete planned sandboxes, each through its backend's client. Failures
         are reported, never raised."""
-        done: Dict[str, List[str]] = {"sandboxes": [], "failed": []}
+        done: dict[str, list[str]] = {"sandboxes": [], "failed": []}
         for sandbox_id in plan.sandboxes:
             client = self.clients[plan.backends[sandbox_id]]
             if client.delete_sandbox(sandbox_id):
@@ -176,7 +176,7 @@ class AgentEnvClient:
     reaper itself never calls it.
     """
 
-    def __init__(self, base_url: Optional[str] = None, api_key: Optional[str] = None) -> None:
+    def __init__(self, base_url: str | None = None, api_key: str | None = None) -> None:
         import os
 
         self.base_url = (base_url or default_aenv_server_url()).rstrip("/")
@@ -205,7 +205,7 @@ class AgentEnvClient:
             return False
         return response.status_code < 300 or response.status_code == 404
 
-    def list_sandboxes(self) -> List[dict]:
+    def list_sandboxes(self) -> list[dict]:
         return [
             {
                 "id": item.get("sandboxID") or "",
@@ -246,11 +246,11 @@ class PodmanClient:
     whole with no store given. A host without podman has nothing to list.
     """
 
-    def __init__(self, podman_bin: "str | None" = None, stores: "Iterable[str]" = ()) -> None:
+    def __init__(self, podman_bin: str | None = None, stores: Iterable[str] = ()) -> None:
         self.podman_bin = podman_bin or default_podman_bin()
         self.stores = sorted({str(Path(store).expanduser().resolve()) for store in stores})
 
-    def _podman(self, *args: str) -> Optional[str]:
+    def _podman(self, *args: str) -> str | None:
         """stdout of a podman command, or ``None`` (with stderr reported) when it failed."""
         try:
             completed = subprocess.run([self.podman_bin, *args], capture_output=True, text=True, timeout=120)
@@ -262,7 +262,7 @@ class PodmanClient:
             return None
         return completed.stdout
 
-    def list_sandboxes(self) -> List[dict]:
+    def list_sandboxes(self) -> list[dict]:
         """Every managed container, plus every rootfs in a known store and every sandbox network without one."""
         result = self._containers()
         seen = {item["id"] for item in result}
@@ -277,9 +277,7 @@ class PodmanClient:
                 result.append(
                     {
                         "id": rootfs.name,
-                        "created_at": datetime.fromtimestamp(
-                            rootfs.stat().st_mtime, tz=timezone.utc
-                        ).isoformat(),
+                        "created_at": datetime.fromtimestamp(rootfs.stat().st_mtime, tz=UTC).isoformat(),
                         "names": [],
                     }
                 )
@@ -296,7 +294,7 @@ class PodmanClient:
                 )
         return result
 
-    def _networks(self) -> List[dict]:
+    def _networks(self) -> list[dict]:
         """The sandbox networks podman holds -- name, the store its label names, creation time."""
         raw = self._podman("network", "ls", "--filter", "label=" + MANAGED_LABEL, "--format", "json")
         try:
@@ -313,7 +311,7 @@ class PodmanClient:
             if isinstance(item, dict) and item.get("name")
         ]
 
-    def _containers(self) -> List[dict]:
+    def _containers(self) -> list[dict]:
         raw = self._podman("ps", "-a", "--filter", "label=" + MANAGED_LABEL, "--format", "json")
         try:
             items = json.loads(raw or "[]")
@@ -329,7 +327,7 @@ class PodmanClient:
                 {
                     "id": names[0],
                     "created_at": (
-                        datetime.fromtimestamp(created, tz=timezone.utc).isoformat()
+                        datetime.fromtimestamp(created, tz=UTC).isoformat()
                         if isinstance(created, (int, float))
                         else None
                     ),
@@ -340,7 +338,7 @@ class PodmanClient:
             )
         return result
 
-    def leftovers(self, sandbox_id: str) -> List[str]:
+    def leftovers(self, sandbox_id: str) -> list[str]:
         """What of a sandbox still exists: its container, its network, a rootfs in a known store.
 
         The podman counterpart of AgentENV answering 404 for a deleted
@@ -400,7 +398,7 @@ class PodmanClient:
             return False
         return self._discard_traces(sandbox_id, [store] if store else [], sockets)
 
-    def _discard_traces(self, sandbox_id: str, stores: List[str], sockets: List[str]) -> bool:
+    def _discard_traces(self, sandbox_id: str, stores: list[str], sockets: list[str]) -> bool:
         """The sandbox's network, the rootfs in each store (subvolumes made inside it first) and the socket directories."""
         # A sandbox of an older pool joined one network per store and has none
         # of its own; `network exists` answers that with no output.
@@ -424,10 +422,10 @@ class PodmanClient:
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
-def _parse_ts(text) -> Optional[datetime]:
+def _parse_ts(text) -> datetime | None:
     if not text or not isinstance(text, str):
         return None
     candidate = text.replace("Z", "+00:00")
@@ -435,4 +433,4 @@ def _parse_ts(text) -> Optional[datetime]:
         parsed = datetime.fromisoformat(candidate)
     except ValueError:
         return None
-    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)

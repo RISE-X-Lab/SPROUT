@@ -32,9 +32,9 @@ from __future__ import annotations
 import json
 import os
 import threading
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterator, List, Optional, Set, Union
 
 from sprout.harness_core.journal import utc_now
 
@@ -50,11 +50,11 @@ class Resource:
     kind: str  # "sandbox"
     id: str
     run_id: str
-    pid: Optional[int] = None
+    pid: int | None = None
     keep: bool = False
     released: bool = False
     run_done: bool = False
-    created: Optional[str] = None
+    created: str | None = None
     #: Which backend made it, so the reaper frees it through that backend's
     #: client (AgentENV for microvm, podman for podman); a claim naming a
     #: backend the reaper has no client for is listed as foreign and never
@@ -62,7 +62,7 @@ class Resource:
     backend: str = "microvm"
     #: For podman, the store holding its rootfs subvolume: where the reaper
     #: looks for what a container leaves behind once the container is gone.
-    store: Optional[str] = None
+    store: str | None = None
 
     def orphaned(self) -> bool:
         """Allocated, never released, and its owning process is gone."""
@@ -78,13 +78,13 @@ class Resource:
 class RunClaim:
     """Records what one run allocates. Obtained from ``ResourceLedger.run``."""
 
-    def __init__(self, ledger: "ResourceLedger", run_id: str) -> None:
+    def __init__(self, ledger: ResourceLedger, run_id: str) -> None:
         self._ledger = ledger
         self.run_id = run_id
-        self.sandboxes: List[str] = []
+        self.sandboxes: list[str] = []
 
     def sandbox(
-        self, sandbox_id: str, *, keep: bool = False, backend: str = "microvm", store: Optional[str] = None
+        self, sandbox_id: str, *, keep: bool = False, backend: str = "microvm", store: str | None = None
     ) -> str:
         self.sandboxes.append(sandbox_id)
         self._ledger._append(
@@ -106,7 +106,7 @@ class RunClaim:
 class ResourceLedger:
     """Append-only record of allocations, and the replay ``reap`` needs."""
 
-    def __init__(self, path: Union[str, Path] = DEFAULT_LEDGER) -> None:
+    def __init__(self, path: str | Path = DEFAULT_LEDGER) -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._lock = threading.Lock()
@@ -121,7 +121,7 @@ class ResourceLedger:
                 fh.write(line)
                 fh.flush()
 
-    def run(self, run_id: str) -> "_RunContext":
+    def run(self, run_id: str) -> _RunContext:
         return _RunContext(self, run_id)
 
     def mark_run_done(self, run_id: str) -> None:
@@ -141,10 +141,10 @@ class ResourceLedger:
                 except ValueError:
                     continue  # torn write: skip, never abort the reap
 
-    def resources(self) -> List[Resource]:
+    def resources(self) -> list[Resource]:
         """Replay the ledger into current resource state."""
-        table: Dict[tuple, Resource] = {}
-        done_runs: Set[str] = set()
+        table: dict[tuple, Resource] = {}
+        done_runs: set[str] = set()
 
         for entry in self.entries():
             event = entry.get("event")
@@ -187,7 +187,7 @@ class _RunContext:
         self._ledger.mark_run_done(self.claim.run_id)
 
 
-def _pid_alive(pid: Optional[int]) -> bool:
+def _pid_alive(pid: int | None) -> bool:
     """True if the process still exists. Unknown pid counts as alive.
 
     Treating an unknown pid as alive is the safe direction: reaping something a

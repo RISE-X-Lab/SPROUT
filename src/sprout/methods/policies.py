@@ -8,11 +8,11 @@ selected state.
 
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor
 import json
 import math
-from pathlib import Path
 import time
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 import httpx
 

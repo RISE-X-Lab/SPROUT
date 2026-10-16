@@ -9,24 +9,26 @@ files exist (a stage's log, a store's snapshot directories).
 
 from __future__ import annotations
 
-from collections import Counter, defaultdict
-from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
 import json
 import os
-from pathlib import Path
 import re
 import sys
+from collections import Counter, defaultdict
+from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
+from pathlib import Path
 
 from sprout.inspect.journal import (
     Capture,
     Trajectory,
-    minutes as journal_minutes,
     read_trajectory,
     relocate,
     step_count,
     summarize_command,
     turn_count,
+)
+from sprout.inspect.journal import (
+    minutes as journal_minutes,
 )
 from sprout.inspect.layout import (
     METHODS,
@@ -1336,7 +1338,7 @@ def round_nodes(r: RoundView) -> list:
 def _epoch_to_text(epoch: float | None) -> str | None:
     if not isinstance(epoch, (int, float)):
         return None
-    return datetime.fromtimestamp(epoch, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return datetime.fromtimestamp(epoch, UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def render_task(tree: TaskTree) -> str:

@@ -34,7 +34,7 @@ class Snapshot:
     delta_empty: bool | None = None
 
     @classmethod
-    def from_api(cls, body: dict[str, Any], *, disk_only: bool = False) -> "Snapshot":
+    def from_api(cls, body: dict[str, Any], *, disk_only: bool = False) -> Snapshot:
         return cls(
             id=body["snapshotID"],
             rootfs_layers=body.get("rootfsLayerCount"),
@@ -88,7 +88,7 @@ class MicroVMPool:
         api_key: str = "",
         request_timeout: float = 120,
         sandbox_ttl: int = 300,
-        allow_internet: "bool | None" = None,
+        allow_internet: bool | None = None,
     ):
         """
         Args:
@@ -166,8 +166,8 @@ class MicroVMPool:
         self, sandbox: Sandbox, source: str, destination, timeout: float | None = None
     ) -> None:
         """Stream a guest file to an atomic host destination, outside the runtime."""
-        from pathlib import Path
         import tempfile
+        from pathlib import Path
 
         destination = Path(destination)
         headers = {self.SANDBOX_ID_HEADER: sandbox.require_id(), self.TARGET_PORT_HEADER: self.ENVD_PORT}

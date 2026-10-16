@@ -11,7 +11,6 @@ from sprout.harbor_plugin.environment import SandboxEnvironment
 from sprout.harness_sandbox.backends import default_aenv_server_url, resolve_microvm_endpoint
 from sprout.harness_sandbox.templates import find_regctl
 
-
 MIN_OCI_DISK_MB = 64 * 1024
 
 

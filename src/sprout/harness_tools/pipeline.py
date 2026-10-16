@@ -32,8 +32,9 @@ interceptors -- the pipeline itself is never a concurrency bottleneck.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, replace
-from typing import Callable, Literal, Union
+from typing import Literal, Union
 
 from sprout.harness_core.result import ToolResult
 
@@ -108,7 +109,7 @@ _VERDICT_TYPES = (Continue, Reject, Rewrite)
 class ToolInterceptor:
     """One interceptor on the tool-call path. Subclass and override ``before``."""
 
-    tools: "set[str] | Literal['*']" = "*"  # which tools this interceptor sees
+    tools: set[str] | Literal["*"] = "*"  # which tools this interceptor sees
     fail_mode: Literal["open", "closed"] = "open"
 
     @property
@@ -131,7 +132,7 @@ class ToolInterceptor:
 class ToolPipeline:
     """Ordered interceptor chain in front of one executor. Order is semantics."""
 
-    def __init__(self, interceptors: "list[ToolInterceptor] | None" = None) -> None:
+    def __init__(self, interceptors: list[ToolInterceptor] | None = None) -> None:
         self._interceptors: tuple[ToolInterceptor, ...] = tuple(interceptors or ())
 
     @property

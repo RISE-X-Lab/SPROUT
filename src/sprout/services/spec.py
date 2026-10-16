@@ -50,9 +50,10 @@ from __future__ import annotations
 
 import os
 import re
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Iterable, Mapping
+from typing import Any
 
 import yaml
 
@@ -270,7 +271,7 @@ class Context:
 def expand(text: str, ctx: Context) -> str:
     """``text`` with every placeholder resolved against ``ctx``; :class:`ExpandError` when one cannot be."""
 
-    def value(match: "re.Match[str]") -> str:
+    def value(match: re.Match[str]) -> str:
         key = match.group(1)
         if key == "python":
             return ctx.python

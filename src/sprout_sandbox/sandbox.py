@@ -12,7 +12,7 @@ class Sandbox:
 
     #: How calls reach the runtime: through AgentENV's proxy (``GatewayBackend``)
     #: or straight at a URL or Unix socket (``HttpBackend``). Both take the same call.
-    backend: "GatewayBackend | HttpBackend"
+    backend: GatewayBackend | HttpBackend
     #: Who this handle acts as. Sent beside the arguments of every call, so a
     #: request names its caller on the wire and an argument called ``agent_id``
     #: can never stand in for one. The runtime does not read it; the harness

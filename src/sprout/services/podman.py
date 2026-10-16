@@ -21,9 +21,9 @@ from __future__ import annotations
 
 import os
 import subprocess
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping
 
 from sprout.services.health import which
 from sprout.services.spec import Context, Service, expand, expand_all, podman_bin_for

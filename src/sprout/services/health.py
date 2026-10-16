@@ -18,14 +18,13 @@ from __future__ import annotations
 
 import os
 import shutil
-import socket
 import subprocess
 import urllib.error
 import urllib.request
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from http.client import HTTPException  # by name: `http` below is the probe
 from pathlib import Path
-from typing import Iterable, Sequence
 
 from sprout.services.spec import Context, ExpandError, Health, expand, podman_bin_for
 
@@ -68,7 +67,7 @@ def http(
         reason = error.reason
         text = reason.strerror if isinstance(reason, OSError) and reason.strerror else str(reason)
         return Probe(False, text)
-    except (socket.timeout, TimeoutError):
+    except TimeoutError:
         return Probe(False, "timed out after %gs" % timeout)
     except HTTPException as error:
         # urllib wraps only OSError into URLError; a port served by something

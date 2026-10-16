@@ -1,13 +1,12 @@
 """One restartable coordinator; all agent and grader jobs execute elsewhere."""
 
-from copy import deepcopy
 import math
 import threading
 import time
+from copy import deepcopy
 
 import httpx
 
-from sprout.runstore.specs import JobSpec
 from sprout.rl_driver.ledger import Ledger
 from sprout.rl_driver.outcome import (
     SHAPES,
@@ -19,7 +18,7 @@ from sprout.rl_driver.outcome import (
     search_shape,
 )
 from sprout.rl_driver.specs import initial_document, submission_key, validate_request
-
+from sprout.runstore.specs import JobSpec
 
 DONE = {"succeeded", "failed", "cancelled", "skipped", "expired"}
 

@@ -8,7 +8,7 @@ goes through HarfBuzz, so the measured width is the width that renders.
 from __future__ import annotations
 
 import urllib.request
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
 
 import uharfbuzz as hb
@@ -34,7 +34,7 @@ def nunito(weight: int) -> Path:
     return path
 
 
-@lru_cache(maxsize=None)
+@cache
 def _load(font_path: Path) -> tuple[hb.Font, TTFont]:
     return hb.Font(hb.Face(font_path.read_bytes())), TTFont(str(font_path))
 

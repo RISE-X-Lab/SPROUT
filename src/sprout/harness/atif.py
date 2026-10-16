@@ -23,7 +23,6 @@ costs one module.
 from __future__ import annotations
 
 import os
-from typing import Dict, List, Optional, Union
 
 from sprout.harness_core import events as E
 from sprout.harness_core.journal import read_journal
@@ -32,11 +31,11 @@ ATIF_VERSION = "ATIF-v1.8"
 
 
 def journal_to_atif(
-    records: List[dict],
+    records: list[dict],
     *,
-    trajectory_id: Optional[str] = None,
-    continued_from: Optional[str] = None,
-    inherited: Optional[List[dict]] = None,
+    trajectory_id: str | None = None,
+    continued_from: str | None = None,
+    inherited: list[dict] | None = None,
 ) -> dict:
     """Build an ATIF document from journal records.
 
@@ -51,9 +50,9 @@ def journal_to_atif(
     finished = _last_of_type(records, E.RUN_FINISHED) or {}
     session = _last_of_type(records, E.SESSION_REF) or {}
 
-    steps: List[dict] = []
-    pending_tools: Dict[str, dict] = {}
-    current: Optional[dict] = None
+    steps: list[dict] = []
+    pending_tools: dict[str, dict] = {}
+    current: dict | None = None
 
     def flush() -> None:
         nonlocal current
@@ -161,7 +160,7 @@ def journal_to_atif(
 
 
 def export_file(
-    journal_path: Union[str, os.PathLike],
+    journal_path: str | os.PathLike,
     **kwargs,
 ) -> dict:
     return journal_to_atif(read_journal(journal_path), **kwargs)
@@ -199,7 +198,7 @@ def _placeholder_step(started: dict) -> dict:
     }
 
 
-def _checkpoints(records: List[dict]) -> List[dict]:
+def _checkpoints(records: list[dict]) -> list[dict]:
     return [
         {
             "step": r.get("step"),
@@ -212,27 +211,27 @@ def _checkpoints(records: List[dict]) -> List[dict]:
     ]
 
 
-def _join(existing: Optional[str], addition: Optional[str]) -> Optional[str]:
+def _join(existing: str | None, addition: str | None) -> str | None:
     if not addition:
         return existing
     return addition if not existing else existing + "\n" + addition
 
 
-def _first(records: List[dict], key: str):
+def _first(records: list[dict], key: str):
     for record in records:
         if record.get(key):
             return record[key]
     return None
 
 
-def _first_of_type(records: List[dict], etype: str) -> Optional[dict]:
+def _first_of_type(records: list[dict], etype: str) -> dict | None:
     for record in records:
         if record.get("type") == etype:
             return record
     return None
 
 
-def _last_of_type(records: List[dict], etype: str) -> Optional[dict]:
+def _last_of_type(records: list[dict], etype: str) -> dict | None:
     found = None
     for record in records:
         if record.get("type") == etype:

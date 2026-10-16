@@ -9,11 +9,11 @@ emitted after turn K+1's model response, and the final one after
 
 from __future__ import annotations
 
+import json
+import re
 from dataclasses import dataclass
 from datetime import datetime
-import json
 from pathlib import Path
-import re
 
 from sprout.harness_checkpoint.rollback import branch_checkpoints
 from sprout.harness_core.events import (

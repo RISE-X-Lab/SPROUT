@@ -16,8 +16,8 @@ and it is read as package data.
 
 from __future__ import annotations
 
-from importlib import resources
 import json
+from importlib import resources
 from pathlib import Path
 
 #: The checked-in declaration, when this module runs from a source checkout

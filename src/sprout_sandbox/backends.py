@@ -4,7 +4,6 @@ import httpx
 
 from .result import ToolResult
 
-
 #: How much longer than a call's own ``timeout`` the transport waits for the
 #: answer. The runtime replies once the command has finished or been killed, and
 #: the kill, the output and the trip back take a moment; a reply the HTTP client
@@ -104,14 +103,14 @@ class HttpBackend:
     sandbox handle; ``close`` releases it.
     """
 
-    def __init__(self, url: str, timeout: float = 360, uds: "str | None" = None):
+    def __init__(self, url: str, timeout: float = 360, uds: str | None = None):
         self.url = url.rstrip("/")
         self.uds = uds
         self.timeout = timeout
         transport = httpx.AsyncHTTPTransport(uds=uds) if uds else None
         self._client = httpx.AsyncClient(timeout=timeout, transport=transport)
 
-    async def _rpc(self, method: str, params: dict | None = None, wait: "float | None" = None) -> dict:
+    async def _rpc(self, method: str, params: dict | None = None, wait: float | None = None) -> dict:
         body: dict = {"jsonrpc": "2.0", "id": 1, "method": method}
         if params is not None:
             body["params"] = params

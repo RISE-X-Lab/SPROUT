@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from concurrent.futures import Future
 import logging
-from threading import Event, Thread
 import time
-from typing import Callable
+from collections.abc import Callable
+from concurrent.futures import Future
+from threading import Event, Thread
 
 from sprout.runstore.worker import Worker
 

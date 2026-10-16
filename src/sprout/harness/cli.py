@@ -30,12 +30,12 @@ import asyncio
 import json
 import sys
 from collections import Counter
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
-from sprout_sandbox import BtrfsStore
 from sprout.harness.atif import export_file
 from sprout.harness_core.events import SANDBOX_CREATED
+from sprout.harness_core.journal import journal_events, read_journal, volatile_reason
 from sprout.harness_orchestrator import (
     AgentEnvClient,
     Orchestrator,
@@ -45,11 +45,11 @@ from sprout.harness_orchestrator import (
     RunSpec,
     parse_duration,
 )
-from sprout.harness_core.journal import journal_events, read_journal, volatile_reason
 from sprout.harness_sandbox.backends import default_podman_store
+from sprout_sandbox import BtrfsStore
 
 
-def _backend_section(name: str, runtime_bin: "str | None", store: "str | None" = None) -> dict:
+def _backend_section(name: str, runtime_bin: str | None, store: str | None = None) -> dict:
     """The backend config from CLI flags.
 
     ``server_url`` and ``api_key`` are left out on purpose: ``build_pool`` reads
@@ -164,7 +164,7 @@ def _cmd_atif(args: argparse.Namespace) -> int:
     return 0
 
 
-def _snapshot_deleter(backend: str, store: "str | None") -> "Callable[[str], bool] | str":
+def _snapshot_deleter(backend: str, store: str | None) -> Callable[[str], bool] | str:
     """How a journal's snapshots die, by the backend that took them -- or why they cannot.
 
     AgentENV records are deleted through its API; a podman run's snapshots are

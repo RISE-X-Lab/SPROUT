@@ -6,10 +6,10 @@ request, a per-trajectory turn limit (one turn = one model call), and a wall-tim
 deadline. Tool calls are counted but not limited.
 """
 
-from copy import deepcopy
 import math
 import threading
 import time
+from copy import deepcopy
 from urllib.parse import urlsplit
 
 from sprout.harness_tools.pipeline import Continue, Reject, ToolInterceptor

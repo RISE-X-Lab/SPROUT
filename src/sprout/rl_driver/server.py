@@ -1,13 +1,13 @@
 """Independent HTTP service on the original rollout-driver port, 11001."""
 
-from contextlib import asynccontextmanager
 import logging
 import secrets
 import threading
+from contextlib import asynccontextmanager
 
+import httpx
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import JSONResponse
-import httpx
 
 from sprout.rl_driver.driver import Driver
 from sprout.rl_driver.ledger import Conflict

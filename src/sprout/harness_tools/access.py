@@ -24,9 +24,9 @@ paired with a known filesystem.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
 import threading
-from typing import Any, Optional
+from dataclasses import asdict, dataclass, field
+from typing import Any
 
 from sprout.harness_core.events import CHECKPOINT_CAPTURED, SESSION_REF, SNAPSHOT_MEMORY
 from sprout.harness_core.result import CommandOutcome, ToolResult
@@ -55,8 +55,8 @@ class ToolAccess:
         session: Any,
         journal: Any,
         *,
-        tools: Optional[list] = None,
-        pipeline: Optional[ToolPipeline] = None,
+        tools: list | None = None,
+        pipeline: ToolPipeline | None = None,
         control: Any = None,
         checkpointer: Any = None,
         agent_id: str = "agent",
@@ -70,11 +70,11 @@ class ToolAccess:
         self.agent_id = agent_id
         self.tools = list(tools if tools is not None else runtime_tools())
         self._accepts = {t["name"]: set(t["inputSchema"].get("properties", {})) for t in self.tools}
-        self.session_ref: Optional[str] = None
+        self.session_ref: str | None = None
         self._lock = threading.Lock()
-        self._turn: Optional[_Turn] = None
+        self._turn: _Turn | None = None
         self._calls: set = set()
-        self._uncertain: Optional[dict] = None
+        self._uncertain: dict | None = None
         self._closed = False
         journal.subscribe(self._on_event)
 
@@ -151,7 +151,7 @@ class ToolAccess:
                 raise ToolInfraError("tool execution did not settle: %s" % detail)
             return result
 
-    def _check(self, name: str, args: dict) -> Optional[str]:
+    def _check(self, name: str, args: dict) -> str | None:
         """Why the runtime would not do what this call asks, or None."""
         accepted = self._accepts.get(name)
         if accepted is None:
@@ -173,7 +173,7 @@ class ToolAccess:
             self._turn.closed = True
 
     # --- end of the rollout ---------------------------------------------------
-    def finalize(self, *, memory: bool = False) -> Optional[dict]:
+    def finalize(self, *, memory: bool = False) -> dict | None:
         """Take the rollout's final disk snapshot and stop accepting calls.
 
         Returns the journaled record, or None when the backend cannot snapshot
@@ -260,7 +260,7 @@ def _settled(tool: str, result: ToolResult) -> ToolResult:
     return result
 
 
-def _uncertainty(failure: list, result: ToolResult) -> Optional[dict]:
+def _uncertainty(failure: list, result: ToolResult) -> dict | None:
     if failure:
         error = failure[0]
         return {

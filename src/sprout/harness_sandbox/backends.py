@@ -31,8 +31,8 @@ from __future__ import annotations
 
 import math
 import os
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 from sprout_sandbox import MicroVMPool, PodmanPool
 from sprout_sandbox.podman import default_podman_bin
@@ -185,7 +185,7 @@ def spawn_takes_shape(config: dict) -> bool:
     return backend_name(config) == "podman"
 
 
-def snapshot_store(config: dict) -> "str | None":
+def snapshot_store(config: dict) -> str | None:
     """Where this config's snapshots live when they are files on this host.
 
     The podman store, expanded and made absolute, or ``None`` for the microVM
@@ -233,7 +233,7 @@ def _read_api_key(section: dict, env_var: str) -> str:
     return os.environ.get(env_var, "")
 
 
-def resolve_microvm_endpoint(section: dict) -> "tuple[str, str]":
+def resolve_microvm_endpoint(section: dict) -> tuple[str, str]:
     """Where AgentENV is and how to authenticate, as (server_url, api_key).
 
     One resolver so the pool and the template builder cannot disagree. They did:
@@ -300,13 +300,13 @@ def _podman(config: dict) -> PodmanPool:
 
 
 #: Every backend a config may name, and how its pool is built.
-BACKENDS: "dict[str, Callable[[dict], MicroVMPool | PodmanPool]]" = {
+BACKENDS: dict[str, Callable[[dict], MicroVMPool | PodmanPool]] = {
     "microvm": _microvm,
     "podman": _podman,
 }
 
 
-def build_pool(config: dict | None = None) -> "MicroVMPool | PodmanPool":
+def build_pool(config: dict | None = None) -> MicroVMPool | PodmanPool:
     """The pool this config asks for."""
     config = dict(config or {})
     backend = backend_name(config)

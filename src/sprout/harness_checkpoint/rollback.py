@@ -17,7 +17,6 @@ agent whose memory agrees with its disk.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional
 
 from sprout.harness_core.events import CHECKPOINT_CAPTURED
 from sprout.harness_core.journal import read_journal
@@ -27,21 +26,21 @@ from sprout.harness_core.journal import read_journal
 class Checkpoint:
     step: int
     seq: int
-    snapshot_id: Optional[str]
-    session_ckpt: Optional[str] = None
+    snapshot_id: str | None
+    session_ckpt: str | None = None
     reason: str = "captured"
-    turn_id: Optional[str] = None
+    turn_id: str | None = None
     final: bool = False
-    delta_empty: Optional[bool] = None
+    delta_empty: bool | None = None
 
     def is_complete(self) -> bool:
         """Both halves present."""
         return bool(self.snapshot_id) and bool(self.session_ckpt)
 
 
-def load_checkpoints(journal_path, *, events=None) -> List[Checkpoint]:
+def load_checkpoints(journal_path, *, events=None) -> list[Checkpoint]:
     """Every ``checkpoint.captured`` record, in journal order."""
-    out: List[Checkpoint] = []
+    out: list[Checkpoint] = []
     for record in read_journal(journal_path) if events is None else events:
         if record.get("type") != CHECKPOINT_CAPTURED:
             continue
@@ -60,7 +59,7 @@ def load_checkpoints(journal_path, *, events=None) -> List[Checkpoint]:
     return out
 
 
-def closed_turns(events) -> Dict[str, dict]:
+def closed_turns(events) -> dict[str, dict]:
     """turn_id -> {step, call_ids} for turns whose every call finished; ``step`` is
     the turn's last call.
 
@@ -87,11 +86,11 @@ def closed_turns(events) -> Dict[str, dict]:
     return closed
 
 
-def branch_checkpoints(journal_path, *, events=None) -> Dict[int, Checkpoint]:
+def branch_checkpoints(journal_path, *, events=None) -> dict[int, Checkpoint]:
     """step -> the checkpoint of the closed turn that ends there."""
     events = list(read_journal(journal_path) if events is None else events)
     turns = closed_turns(events)
-    eligible: Dict[int, Checkpoint] = {}
+    eligible: dict[int, Checkpoint] = {}
     latest_capture = None
     for checkpoint in load_checkpoints(journal_path, events=events):
         uncertain = False
@@ -111,7 +110,7 @@ def branch_checkpoints(journal_path, *, events=None) -> Dict[int, Checkpoint]:
     return eligible
 
 
-def uncaptured_turns(journal_path) -> List[str]:
+def uncaptured_turns(journal_path) -> list[str]:
     """Closed turns with no snapshot at all: checkpointing silently stopped."""
     events = list(read_journal(journal_path))
     covered = {c.turn_id for c in load_checkpoints(journal_path, events=events) if c.snapshot_id}

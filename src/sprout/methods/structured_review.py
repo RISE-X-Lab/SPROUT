@@ -17,8 +17,8 @@ the wire form it always did. A branch written in the old nested form is
 still accepted, so a plan recorded before the change replays.
 """
 
-from copy import deepcopy
 import json
+from copy import deepcopy
 
 from jsonschema import Draft202012Validator, ValidationError
 

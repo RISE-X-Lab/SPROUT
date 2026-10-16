@@ -17,8 +17,9 @@ import shlex
 import sys
 import time
 from collections import deque
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
-from typing import Any, Callable, Mapping, Sequence
+from typing import Any
 
 import sprout.services
 from sprout.resource import resource

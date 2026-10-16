@@ -35,12 +35,10 @@ import logging
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 import httpx
 
 from sprout_sandbox import MicroVMPool
-
 
 #: Where the runtime lands in the template, and how it is started.
 RUNTIME_PATH = "/usr/local/bin/sprout-runtime"
@@ -86,7 +84,7 @@ def _could_be_snapshot_name(name: str) -> bool:
 
 
 def template_name(
-    image: str, runtime_fingerprint: str, port: int, resources: "Optional[dict]" = None, salt: str = ""
+    image: str, runtime_fingerprint: str, port: int, resources: dict | None = None, salt: str = ""
 ) -> str:
     """A stable, legal template name for one (image, runtime, port, shape).
 
@@ -133,7 +131,7 @@ def template_name(
 REGCTL_DEPS_GLOB = "/var/lib/aenv/deps/regctl/*/regctl"
 
 
-def find_regctl() -> Optional[Path]:
+def find_regctl() -> Path | None:
     """regctl on this host: ``$SPROUT_REGCTL``, PATH, or AgentENV's own deps copy.
 
     AgentENV downloads regctl to resolve images, so a host that can run
@@ -156,7 +154,7 @@ def find_regctl() -> Optional[Path]:
     return None
 
 
-def image_config_env(image: str, regctl: Path, timeout: float = 120.0) -> "list[str]":
+def image_config_env(image: str, regctl: Path, timeout: float = 120.0) -> list[str]:
     """``KEY=VALUE`` entries of the image's OCI config ``Env``, in order."""
     import json
     import subprocess
@@ -180,7 +178,7 @@ def image_config_env(image: str, regctl: Path, timeout: float = 120.0) -> "list[
     return [str(e) for e in env if "=" in str(e)]
 
 
-def start_command(port: int, env: "Optional[list[str]]" = None) -> str:
+def start_command(port: int, env: list[str] | None = None) -> str:
     """The template's startCmd: the runtime, under the image's ENV when given.
 
     ``env K=V ... runtime`` rather than exporting in a shell profile: it is
@@ -196,7 +194,7 @@ def start_command(port: int, env: "Optional[list[str]]" = None) -> str:
     return "env " + " ".join(shlex.quote(item) for item in env) + " " + base
 
 
-def env_salt(env: "list[str]") -> str:
+def env_salt(env: list[str]) -> str:
     return "env:" + hashlib.sha256("\0".join(env).encode()).hexdigest()[:12]
 
 
@@ -223,19 +221,19 @@ class TemplateBuilder:
     runtime_bin: Path
     #: Optional ripgrep binary to bake in next to the runtime. None leaves the
     #: sandbox shell without `rg`; grep_files does not need it.
-    ripgrep_bin: Optional[Path] = None
+    ripgrep_bin: Path | None = None
     runtime_port: int = DEFAULT_RUNTIME_PORT
     request_timeout: float = 120.0
     build_timeout: float = BUILD_TIMEOUT_SECONDS
     #: Launch the runtime under the image's OCI ENV (read with ``regctl_bin``).
     #: Changes the template's name, so it never collides with a plain build.
     image_env: bool = False
-    regctl_bin: Optional[Path] = None
+    regctl_bin: Path | None = None
     _resolved: dict[str, str] = field(default_factory=dict)
-    _env_cache: dict[str, "list[str]"] = field(default_factory=dict)
+    _env_cache: dict[str, list[str]] = field(default_factory=dict)
     _fingerprint: str = ""
 
-    def _env_for(self, image: str) -> "Optional[list[str]]":
+    def _env_for(self, image: str) -> list[str] | None:
         """The image's ENV when ``image_env`` is on; None otherwise (or for a
         name that is a snapshot/template rather than an image reference)."""
         if not self.image_env or _could_be_snapshot_name(image):
@@ -264,7 +262,7 @@ class TemplateBuilder:
         if self.ripgrep_bin is not None:
             self._fingerprint += ":" + runtime_fingerprint(self.ripgrep_bin)
 
-    def template_for(self, image: str, resources: "Optional[dict]" = None) -> str:
+    def template_for(self, image: str, resources: dict | None = None) -> str:
         """The name of a template built from ``image``, building if needed.
 
         A name the backend already knows -- a checkpoint snapshot a replay
@@ -307,9 +305,7 @@ class TemplateBuilder:
         """
         return self._lookup(client, f"/snapshots/{name}", name) or self._template_exists(client, name)
 
-    def _usable_template(
-        self, client: httpx.Client, base: str, image: str, resources: "Optional[dict]"
-    ) -> str:
+    def _usable_template(self, client: httpx.Client, base: str, image: str, resources: dict | None) -> str:
         """The name of a usable template for ``image``, building if needed.
 
         Tries the content-addressed name first, then suffixed variants. The
@@ -400,7 +396,7 @@ class TemplateBuilder:
         raise TemplateError(f"could not check {name}: HTTP {resp.status_code} {resp.text[:200]}")
 
     def _stage_runtime(
-        self, client: httpx.Client, image: str, name: str, resources: "Optional[dict]" = None
+        self, client: httpx.Client, image: str, name: str, resources: dict | None = None
     ) -> str:
         """Cold-start ``image``, install the runtime, and snapshot it.
 
@@ -479,7 +475,7 @@ class TemplateBuilder:
         name: str,
         image: str,
         staged_snapshot: str,
-        resources: "Optional[dict]" = None,
+        resources: dict | None = None,
     ) -> None:
         # The template's declared shape must match the staged snapshot's: a
         # snapshot-based build resumes a committed VM, so the backend refuses
@@ -557,7 +553,7 @@ class TemplateBuilder:
         )
 
 
-def ensure_ripgrep(cache_dir: Optional[Path] = None) -> Optional[Path]:
+def ensure_ripgrep(cache_dir: Path | None = None) -> Path | None:
     """A ripgrep binary to bake into templates, downloaded once per host.
 
     Returns ``None`` when it cannot be fetched -- templates still build, but
@@ -593,7 +589,7 @@ def ensure_ripgrep(cache_dir: Optional[Path] = None) -> Optional[Path]:
         return None
 
 
-def builder_from_backend(backend: dict) -> Optional[TemplateBuilder]:
+def builder_from_backend(backend: dict) -> TemplateBuilder | None:
     """A builder for a microvm backend that asks for per-image templates.
 
     Returns ``None`` unless the backend names a ``runtime_bin``: without the

@@ -6,38 +6,36 @@ the run's ToolAccess, close each turn once its observations are recorded,
 restore an exact prefix and keep the submission command's actual result.
 """
 
-from copy import deepcopy
 import json
 import math
 import os
-from pathlib import Path
 import re
 import shlex
 import threading
 import time
+from copy import deepcopy
+from pathlib import Path
 from uuid import uuid4
 
 import httpx
 import litellm
+import yaml
 from minisweagent import package_dir
 from minisweagent.agents.default import DefaultAgent
 from minisweagent.environments.local import LocalEnvironment
 from minisweagent.exceptions import FormatError, Submitted
 from minisweagent.models.litellm_model import LitellmModel
 from minisweagent.models.utils.actions_toolcall import BASH_TOOL
-import yaml
 
-from sprout.harness_agents.mini_swe.history import validate_assistant_turn
-from sprout.harness_agents.mini_swe.history import History, load_prefix
+from sprout.harness_agents.mini_swe.history import History, load_prefix, validate_assistant_turn
 from sprout.harness_agents.mini_swe.tools import DEFAULT_COMMAND_TIMEOUT_S, mini_tool_schema
-from sprout.harness_core.control import GRADABLE_STOP_REASONS, RunAborted, RunControl
+from sprout.harness_core.control import GRADABLE_STOP_REASONS, RunAborted, RunControl, post
 from sprout.harness_core.events import RUN_RESULT, TURN_STARTED, USAGE_UPDATED, Usage
-from sprout.harness_core.control import post
 from sprout.harness_core.journal import JournalWriter
 from sprout.harness_core.slot import SlotResult, TaskSpec
-from sprout.harness_tools.access import ToolAccess
-from sprout.harness_gateway.server import _absorb_usage
 from sprout.harness_gateway.auth import bearer_headers
+from sprout.harness_gateway.server import _absorb_usage
+from sprout.harness_tools.access import ToolAccess
 
 #: How OpenAI-compatible servers (sglang, vLLM, OpenAI) word a request whose
 #: prompt plus completion budget exceeds the model's context window.

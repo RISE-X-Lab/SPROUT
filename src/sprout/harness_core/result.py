@@ -26,7 +26,7 @@ class ToolResult:
 
     success: bool
     output: str
-    error: Optional[str] = None
+    error: str | None = None
     #: What running a command produced, when the tool ran one and had something
     #: to report beyond its stdout (:class:`CommandOutcome`: ``exit_code``,
     #: ``stdout``, ``stderr``, ``timed_out``, byte counts, truncation flags).
@@ -63,7 +63,7 @@ class CommandOutcome:
     with ``is None``; ``0`` is a real answer.
     """
 
-    exit_code: Optional[int] = None
+    exit_code: int | None = None
     stdout: str = ""
     stderr: str = ""
     running: bool = False
@@ -78,7 +78,7 @@ class CommandOutcome:
         return self.stdout_truncated or self.stderr_truncated
 
     @classmethod
-    def from_sdk(cls, result) -> "Optional[CommandOutcome]":
+    def from_sdk(cls, result) -> "CommandOutcome | None":
         """Lift an ``sprout_sandbox.ToolResult``'s outcome fields, or None."""
         if getattr(result, "stdout", None) is None:
             return None  # no command outcome in this response

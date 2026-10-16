@@ -23,9 +23,9 @@ from __future__ import annotations
 
 import os
 import sys
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping
 
 CONFIG_DIR_VAR = "SPROUT_SERVICES_CONFIG_DIR"
 STATE_DIR_VAR = "SPROUT_SERVICES_STATE_DIR"
@@ -46,7 +46,7 @@ class Paths:
     repo: Path
 
     @classmethod
-    def from_env(cls, environ: Mapping[str, str] | None = None) -> "Paths":
+    def from_env(cls, environ: Mapping[str, str] | None = None) -> Paths:
         env = os.environ if environ is None else environ
         home = Path(env.get("HOME") or Path.home())
         config = env.get(CONFIG_DIR_VAR)

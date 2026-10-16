@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
 import secrets
+from dataclasses import replace
 
 from sprout.harness_agents.mini_swe.continuation import Continuation, prepare
 from sprout.harness_agents.mini_swe.history import load_prefix
-from sprout.runstore.index import Index
 from sprout.runstore.config import merge
+from sprout.runstore.index import Index
 from sprout.runstore.specs import (
     BRANCH_OVERRIDES,
     JobSpec,

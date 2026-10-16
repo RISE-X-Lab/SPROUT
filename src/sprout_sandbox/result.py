@@ -51,7 +51,7 @@ class ToolResult:
         return self.stdout_truncated or self.stderr_truncated
 
     @classmethod
-    def from_response(cls, result: dict[str, Any]) -> "ToolResult":
+    def from_response(cls, result: dict[str, Any]) -> ToolResult:
         """Build from one JSON-RPC ``tools/call`` result.
 
         The one parser for the payload: a hand-rolled copy of this drifted the
@@ -79,7 +79,7 @@ class ToolResult:
         return self
 
 
-def _parse_outcome(text: str) -> "dict[str, Any] | None":
+def _parse_outcome(text: str) -> dict[str, Any] | None:
     """The CommandOutcome in ``text``, or None if it is not one.
 
     Requires both streams and a recognised field set: a JSON document a *command*
