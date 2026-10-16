@@ -7,7 +7,7 @@ Layering:
 - ``harness.tools``         ToolAccess, the runtime schema, interceptor pipeline
 - ``harness_checkpoint``    checkpointer, branch points
 - ``harness.agents``        the mini-swe-agent driver and its native history
-- ``harness.gateway``       Chat Completions inference gateway
+- ``harness_gateway``       Chat Completions inference gateway
 - ``harness.orchestrator``  the shape of one run
 - ``harness.atif``          journal -> ATIF v1.8 export
 

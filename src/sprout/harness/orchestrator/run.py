@@ -398,12 +398,12 @@ class Orchestrator:
         controls = getattr(task, "_rollout_controls", None)
         if controls is None and not spec.budget_usd:
             return None
-        from sprout.harness.gateway import GatewayServer, RoutingTable
+        from sprout.harness_gateway import GatewayServer, RoutingTable
 
         table = RoutingTable()
         kwargs = {}
         if controls is not None:
-            from sprout.harness.gateway.routing import ModelRoute
+            from sprout.harness_gateway.routing import ModelRoute
 
             route = ModelRoute(base_url=controls.base_url,
                                upstream_model=controls.contract.get("model"),

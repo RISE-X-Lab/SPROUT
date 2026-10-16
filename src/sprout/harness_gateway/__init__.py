@@ -14,7 +14,7 @@ Not a policy engine for tools: tool calls are governed on the ToolAccess path.
 The agent is wired with ``OPENAI_BASE_URL`` and a per-slot ``OPENAI_API_KEY``.
 """
 
-from sprout.harness.gateway.routing import ModelRoute, RoutingTable, SlotToken
-from sprout.harness.gateway.server import GatewayServer
+from sprout.harness_gateway.routing import ModelRoute, RoutingTable, SlotToken
+from sprout.harness_gateway.server import GatewayServer
 
 __all__ = ["ModelRoute", "RoutingTable", "SlotToken", "GatewayServer"]

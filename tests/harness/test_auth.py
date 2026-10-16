@@ -2,7 +2,7 @@
 
 import pytest
 
-from sprout.harness.gateway.auth import bearer_headers, bearer_key
+from sprout.harness_gateway.auth import bearer_headers, bearer_key
 
 
 def test_bearer_key_reads_the_named_variable(monkeypatch):

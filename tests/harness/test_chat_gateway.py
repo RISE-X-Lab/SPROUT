@@ -10,8 +10,8 @@ import httpx
 import pytest
 
 from sprout.harness.core.control import RunAborted, RunControl
-from sprout.harness.gateway.routing import ModelRoute, RoutingTable
-from sprout.harness.gateway.server import GatewayServer
+from sprout.harness_gateway.routing import ModelRoute, RoutingTable
+from sprout.harness_gateway.server import GatewayServer
 
 
 def test_stop_cancels_silent_http_transport(monkeypatch):

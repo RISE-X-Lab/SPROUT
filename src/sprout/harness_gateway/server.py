@@ -24,7 +24,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Optional, Tuple
 
 from sprout.harness.core.events import Usage
-from sprout.harness.gateway.routing import RoutingTable
+from sprout.harness_gateway.routing import RoutingTable
 
 CHAT_PATH = "/v1/chat/completions"
 

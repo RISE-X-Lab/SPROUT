@@ -256,7 +256,7 @@ def test_everything_is_released_when_the_slot_raises(tmp_path, monkeypatch):
     provisioned = FakeProvisioned()
     gateway = FakeGateway()
     monkeypatch.setattr(Orchestrator, "_wire_sandbox", lambda self, run_spec, claim: provisioned)
-    monkeypatch.setattr("sprout.harness.gateway.GatewayServer", lambda *a, **k: gateway)
+    monkeypatch.setattr("sprout.harness_gateway.GatewayServer", lambda *a, **k: gateway)
     RecordingSlot.raises = RuntimeError("agent exploded")
 
     outcome = Orchestrator(out_dir=tmp_path).run(
@@ -276,7 +276,7 @@ def test_a_failing_teardown_step_does_not_block_the_others(tmp_path, monkeypatch
     gateway = FakeGateway()
     stubborn = Stubborn()
     monkeypatch.setattr(Orchestrator, "_wire_sandbox", lambda self, run_spec, claim: stubborn)
-    monkeypatch.setattr("sprout.harness.gateway.GatewayServer", lambda *a, **k: gateway)
+    monkeypatch.setattr("sprout.harness_gateway.GatewayServer", lambda *a, **k: gateway)
 
     outcome = Orchestrator(out_dir=tmp_path).run(
         spec(tmp_path, sandbox_image="img", extra=controlled()))

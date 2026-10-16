@@ -18,8 +18,8 @@ httpx = pytest.importorskip("httpx")
 
 from sprout.harness.core.events import Usage
 from sprout.harness.core.journal import JournalWriter, read_journal
-from sprout.harness.gateway.routing import ModelRoute, RoutingTable
-from sprout.harness.gateway.server import GATEWAY_EVENT, GatewayServer
+from sprout.harness_gateway.routing import ModelRoute, RoutingTable
+from sprout.harness_gateway.server import GATEWAY_EVENT, GatewayServer
 
 RESPONSE = {
     "id": "chat-1",
@@ -228,7 +228,7 @@ def test_api_key_env_is_resolved_lazily(monkeypatch):
 
 
 def test_upstream_error_detail_redacts_the_bearer_key():
-    from sprout.harness.gateway.server import _upstream_error
+    from sprout.harness_gateway.server import _upstream_error
 
     request = httpx.Request("POST", "https://example.com",
                             headers={"Authorization": "Bearer provider-secret"})

@@ -36,8 +36,8 @@ from sprout.harness.core.control import post
 from sprout.harness.core.journal import JournalWriter
 from sprout.harness.core.slot import SlotResult, TaskSpec
 from sprout.harness.tools.access import ToolAccess
-from sprout.harness.gateway.server import _absorb_usage
-from sprout.harness.gateway.auth import bearer_headers
+from sprout.harness_gateway.server import _absorb_usage
+from sprout.harness_gateway.auth import bearer_headers
 
 #: How OpenAI-compatible servers (sglang, vLLM, OpenAI) word a request whose
 #: prompt plus completion budget exceeds the model's context window.
