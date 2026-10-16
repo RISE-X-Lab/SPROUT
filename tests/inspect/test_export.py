@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 import shutil
 
-from sprout.inspect import cli
-from sprout.inspect.export import lineage, render_json, render_markdown
+from ops.report import cli
+from ops.report.export import lineage, render_json, render_markdown
 
 from tests.inspect.conftest import FIXTURES, make_journal, simple_turns
 

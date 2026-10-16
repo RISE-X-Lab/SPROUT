@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from sprout.inspect.layout import ANALYST_PROMPT, REVIEWER_PROMPT
+from ops.report.layout import ANALYST_PROMPT, REVIEWER_PROMPT
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "inspect" / "abs-module-cache-flags"
 TASK = "datacurve/alpha"

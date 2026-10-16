@@ -44,8 +44,8 @@ export OPENAI_BASE_URL=<url> OPENAI_API_KEY=<key>   # any OpenAI-compatible Chat
 python -m sprout.worker run --model <model> --runtime-bin runtime/sprout-runtime \
     --sandbox-image docker.io/library/python:3.11-slim --cwd /tmp --journal runs/first.jsonl \
     "write fizzbuzz.py, run it, and check that 15 prints FizzBuzz"
-python -m sprout.inspect snapshots runs/first.jsonl            # every snapshot the run took
-python -m sprout.inspect export runs/first.jsonl -o first.md   # the trajectory as markdown
+python -m ops.report snapshots runs/first.jsonl            # every snapshot the run took
+python -m ops.report export runs/first.jsonl -o first.md   # the trajectory as markdown
 ```
 
 `ops/setup_podman.sh` installs podman 6 under `~/.local/opt/podman`, apart from any
@@ -68,7 +68,7 @@ python -m sprout.eval.evaluate --task-dir ~/datasets/deep-swe/tasks/<task> \
     --output runs/<task>-sprout --method sprout \
     --model <model> --model-endpoint <url> --model-key-env OPENAI_API_KEY \
     --runtime-bin runtime/sprout-runtime --rounds 2 --branches 4 3
-python -m sprout.inspect task runs/<task>-sprout          # the fork tree
+python -m ops.report task runs/<task>-sprout          # the fork tree
 ```
 
 `--rounds 2 --branches 4 3` is two review rounds, up to 4 branches and then 3.
@@ -189,7 +189,7 @@ any other.
 ├── src/sprout/worker/jobs/        # the jobs a worker runs: rollout, grade, review, training export
 ├── src/sprout/eval/               # local evaluation of one task with one method: evaluate, gate, policies
 ├── src/sprout/eval/harbor/        # Sprout as a Harbor environment and agent
-├── src/sprout/inspect/            # read-only CLI over run output
+├── ops/report/            # read-only CLI over run output
 ├── src/sprout/runstore/           # the Run Store: PostgreSQL job records, its HTTP API and client
 ├── src/sprout/rl_driver/          # the RL trainer's (Miles) rollout adapter over the Run Store
 ├── src/sprout/services/           # the host's long-running pieces: db, LiteLLM proxy, Run Store, RL driver

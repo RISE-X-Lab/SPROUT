@@ -1,4 +1,4 @@
-"""``python -m sprout.inspect``: argument parsing, dispatch and exit codes.
+"""``python -m ops.report``: argument parsing, dispatch and exit codes.
 
 Exit 0 whenever the target was read, partial, errored, live or swept included
 (the output says what is missing); 2 when the target does not exist or is none
@@ -14,9 +14,9 @@ import sys
 from dataclasses import asdict
 from pathlib import Path
 
-import sprout.inspect
-from sprout.inspect import export, views
-from sprout.inspect.layout import KINDS, detect
+import ops.report
+from ops.report import export, views
+from ops.report.layout import KINDS, detect
 
 #: What detect() looks for, in its order.
 NOT_A_ROOT = (
@@ -136,8 +136,8 @@ def _cmd_list(args: argparse.Namespace) -> int:
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(
-        prog="python -m sprout.inspect",
-        description=sprout.inspect.__doc__,
+        prog="python -m ops.report",
+        description=ops.report.__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     sub = parser.add_subparsers(dest="command", required=True)

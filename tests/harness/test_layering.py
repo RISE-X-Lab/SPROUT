@@ -36,7 +36,6 @@ ALLOWED = {
     "rl_driver": {"contract", "runstore"},
     # The local Harbor evaluation runs trials on this machine with the worker's parts.
     "eval": {"contract", "runstore", "worker"},
-    "inspect": {"contract", "worker", "eval"},
     "examples": {"contract", "worker", "eval"},
     # The service manager starts the layers above; it imports none of them
     # (stdlib + PyYAML), so it works before the extras are installed.
@@ -104,7 +103,7 @@ def test_every_package_imports_only_the_layers_below_it():
 
 
 def test_the_harness_package_root_imports_nothing():
-    """`python -m sprout.inspect` is stdlib plus three harness modules. The
+    """`python -m ops.report` is stdlib plus three harness modules. The
     package root once re-exported the journal and the slot contract, so any
     import under sprout.worker also loaded the run control and httpx."""
     probe = ("import json, sys, sprout.worker; print(json.dumps(sorted("

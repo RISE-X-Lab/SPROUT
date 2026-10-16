@@ -11,12 +11,12 @@ import time
 
 import pytest
 
-from sprout.inspect import cli, layout
+from ops.report import cli, layout
 
 from tests.inspect.conftest import FIXTURES, make_experiment
 
 REPO = Path(__file__).resolve().parents[2]
-PACKAGE = REPO / "src" / "sprout" / "inspect"
+PACKAGE = REPO / "ops" / "report"
 ALLOWED_SPROUT = {"sprout.worker.run.journal", "sprout.worker.run.events", "sprout.worker.checkpoint.rollback"}
 
 
@@ -32,7 +32,7 @@ def test_every_subcommand_is_dispatched(experiment, tmp_path, capsys):
         assert token in capsys.readouterr().out, argv
     env = dict(os.environ)
     env.pop("PYTHONPATH", None)
-    result = subprocess.run([sys.executable, "-m", "sprout.inspect", "--help"], cwd=tmp_path, env=env,
+    result = subprocess.run([sys.executable, "-m", "ops.report", "--help"], cwd=REPO, env=env,
                             capture_output=True, text=True, timeout=60)
     assert result.returncode == 0, result.stderr
     assert all(name in result.stdout for name in ("runs", "task", "export", "snapshots", "list"))
@@ -97,7 +97,7 @@ def test_export_supersedes_the_ops_trajectory_viewer():
     hits = subprocess.run(["git", "grep", "-l", "trajectory_view", "--", ".", ":(exclude)tests/inspect/test_cli.py"],
                           cwd=REPO, capture_output=True, text=True)
     assert hits.returncode == 1 and hits.stdout == "", hits.stdout
-    assert "python -m sprout.inspect export" in (REPO / "README.md").read_text()
+    assert "python -m ops.report export" in (REPO / "README.md").read_text()
 
 
 def test_inspect_is_stdlib_plus_harness_only():
@@ -113,10 +113,10 @@ def test_inspect_is_stdlib_plus_harness_only():
                 continue
             for name in names:
                 root = name.split(".")[0]
-                assert root in sys.stdlib_module_names or root == "sprout", "%s imports %s" % (path.name, name)
+                assert root in sys.stdlib_module_names or root in ("sprout", "ops"), "%s imports %s" % (path.name, name)
                 assert root != "examples"
-                if root == "sprout":
-                    assert name in ALLOWED_SPROUT or name.startswith("sprout.inspect"), "%s imports %s" % (path.name, name)
+                if root in ("sprout", "ops"):
+                    assert name in ALLOWED_SPROUT or name.startswith("ops.report"), "%s imports %s" % (path.name, name)
 
 
 def test_output_is_deterministic(experiment, monkeypatch, capsys):

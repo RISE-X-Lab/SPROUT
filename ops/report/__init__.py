@@ -1,6 +1,6 @@
 """Read-only inspection of what a run leaves on disk.
 
-``python -m sprout.inspect`` reads journals, receipts, summaries and plans and
+``python -m ops.report`` reads journals, receipts, summaries and plans and
 prints what they say; it writes nothing under a run directory or a snapshot
 store, starts no process and asks no backend. Five commands:
 

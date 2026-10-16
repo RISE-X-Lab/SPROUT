@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from sprout.inspect.journal import (
+from ops.report.journal import (
     clip, minutes, read_trajectory, step_count, summarize_command, turn_count,
 )
 

@@ -6,8 +6,8 @@ import json
 import os
 import shutil
 
-from sprout.inspect import cli
-from sprout.inspect.layout import (
+from ops.report import cli
+from ops.report.layout import (
     load_evaluation, load_grade, load_stage, load_trial, read_dict, detect,
 )
 

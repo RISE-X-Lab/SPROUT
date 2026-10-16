@@ -15,7 +15,7 @@ import hashlib
 from dataclasses import dataclass
 from pathlib import Path
 
-from sprout.inspect.journal import (
+from ops.report.journal import (
     Call,
     Capture,
     Trajectory,
@@ -26,7 +26,7 @@ from sprout.inspect.journal import (
     relocate,
     step_count,
 )
-from sprout.inspect.layout import receipt_identity
+from ops.report.layout import receipt_identity
 
 MAX_DEPTH = 16
 

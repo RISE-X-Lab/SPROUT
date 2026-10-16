@@ -18,7 +18,7 @@ from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-from sprout.inspect.journal import (
+from ops.report.journal import (
     Capture,
     Trajectory,
     read_trajectory,
@@ -27,10 +27,10 @@ from sprout.inspect.journal import (
     summarize_command,
     turn_count,
 )
-from sprout.inspect.journal import (
+from ops.report.journal import (
     minutes as journal_minutes,
 )
-from sprout.inspect.layout import (
+from ops.report.layout import (
     METHODS,
     Evaluation,
     MethodRoot,

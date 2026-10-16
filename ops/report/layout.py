@@ -17,7 +17,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from sprout.inspect.journal import Trajectory, relocate
+from ops.report.journal import Trajectory, relocate
 
 KINDS = ("experiment", "method", "task", "evaluate", "trial", "journal", "gate")
 #: The runner's methods, in report order (examples/qwen/run.py METHODS).
