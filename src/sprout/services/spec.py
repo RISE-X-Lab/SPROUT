@@ -4,7 +4,7 @@ The file names each service, its kind and how to tell it is alive; the code
 knows how to start a process or a container and how to probe, nothing about any
 particular service. So adding a service, moving a port or pointing the proxy
 at another venv is an edit to the file, never to the code, and the packaged
-template (``templates/services.yaml``) is one example of the file rather than
+template (``resources/services/services.yaml``) is one example of the file rather than
 a special case.
 
 Everything is validated at load time with the service and field named in the
@@ -56,6 +56,7 @@ from typing import Any, Callable, Iterable, Mapping
 
 import yaml
 
+from sprout.resource import resource
 from sprout.services.state import Paths
 
 KINDS = ("process", "podman", "external", "check")
@@ -300,8 +301,8 @@ def expand_all(pairs: Iterable[tuple[str, str]], ctx: Context) -> dict[str, str]
 # --- loading ------------------------------------------------------------------
 
 def template_path(name: str) -> Path:
-    """A file shipped in ``templates/`` beside this module (hatchling packages them)."""
-    return Path(__file__).with_name("templates") / name
+    """A template the service manager seeds a host's config from (``resources/services/<name>``)."""
+    return resource(f"services/{name}")
 
 
 def load_spec(path: Path) -> Spec:

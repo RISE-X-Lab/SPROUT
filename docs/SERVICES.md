@@ -102,7 +102,7 @@ from the shell that runs `up`, and `FORCE_COLOR` is removed from the proxy's
 environment (`unset_env`) so the log stays plain text. Health: `GET /health/liveliness` is 200; `up` waits up to
 120 s for it (the proxy imports for a while before it listens). The aliases
 (`luna`, `sonnet5`, `kimi-k3`) are in `~/.config/sprout/litellm.yaml`, seeded
-from `src/sprout/services/templates/litellm.yaml`.
+from `resources/services/litellm.yaml`.
 
 **runstore-api** -- `python -m sprout.runstore serve --config
 ~/.config/sprout/runstore.json --host 127.0.0.1 --port 18110`, after
@@ -126,7 +126,7 @@ ran `eval "$(python -m sprout.services env)"` and the Run Store worker (which
 depends on this check in the template) run the same podman as the setup script
 verified. A `services.yaml` written before this check existed must gain it by hand
 (`init` never overwrites): copy the `podman` entry and the `exports` of `store` from
-`src/sprout/services/templates/services.yaml`, add `podman, store` to the worker's
+`resources/services/services.yaml`, add `podman, store` to the worker's
 `depends_on`, then `restart runstore-worker` so the worker inherits the two exports.
 
 **store** (check only) -- the podman backend's store, `$SPROUT_PODMAN_STORE`
@@ -145,7 +145,7 @@ answers; nothing is run.
 
 ## services.yaml
 
-The template (`src/sprout/services/templates/services.yaml`) is commented in
+The template (`resources/services/services.yaml`) is commented in
 full. Kinds: `process` (started detached), `podman` (a container), `external`
 (started by hand; `up` prints `start_hint`), `check` (a host fact). Health
 kinds: `http` (a GET must answer 200, optional `headers`), `pg_isready`,

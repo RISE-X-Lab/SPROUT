@@ -90,7 +90,7 @@ compare widths 1, 2, 4, 8, 16 and 32, run each width into its own output root
 with the same `--baseline-root` and `--baseline-rollouts 1`.
 
 Every analyst, reviewer and Shepherd prompt is in
-`src/sprout/methods/prompts.yaml`. `--prompts PATH` (passed through to every
+`resources/methods/prompts.yaml`. `--prompts PATH` (passed through to every
 evaluator) runs an edited copy; the file's sha256 is recorded in the manifest
 (`prompts_sha256`), `summary.json` and each `plan-roundN.json` (`prompts`), so
 runs under different prompts are told apart. The reviewer prompt asks for

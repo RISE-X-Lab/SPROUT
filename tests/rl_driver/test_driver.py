@@ -388,7 +388,7 @@ def test_the_shipped_config_starts_the_driver_with_its_ledger_outside_the_source
     from pathlib import Path
     from sprout.rl_driver import __main__ as command
 
-    example = Path(command.__file__).with_name("config.example.json")
+    example = Path(__file__).resolve().parents[2] / "resources" / "rl_driver" / "config.example.json"
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setenv("SPROUT_RUNSTORE_TOKEN", "backend-fixture")
     monkeypatch.setattr("sys.argv", ["rl_driver", "--config", str(example)])

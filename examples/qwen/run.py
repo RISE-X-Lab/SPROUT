@@ -375,7 +375,7 @@ def parse_args(argv=None):
                    help="adaptive treats each width as a cap; fixed requires exactly that many branches")
     p.add_argument("--prompts", type=Path,
                    help="YAML with every analyst/reviewer/shepherd prompt, passed to every methods.evaluate "
-                        "(default: the packaged src/sprout/methods/prompts.yaml); its sha256 is recorded in "
+                        "(default: resources/methods/prompts.yaml); its sha256 is recorded in "
                         "the manifest as prompts_sha256")
     p.add_argument("--structured-review", action="store_true",
                    help="passed to every methods.evaluate: the analyst and reviewer answer in schema-constrained "

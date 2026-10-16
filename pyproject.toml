@@ -37,6 +37,7 @@ packages = ["src/sprout", "src/sprout_sandbox"]
 # directory to read it from (src/sprout/harness_tools/schema.py).
 [tool.hatch.build.targets.wheel.force-include]
 "runtime/schema/tools.json" = "sprout/harness_tools/tools.json"
+"resources" = "sprout/resources"
 
 # Lint and format for every Python file (gate/pending/lint.py runs both).
 [tool.ruff]

@@ -13,6 +13,8 @@ import ast
 import sys
 from pathlib import Path
 
+from sprout.services.spec import template_path
+
 PACKAGE = Path(__file__).resolve().parents[2] / "src" / "sprout" / "services"
 
 
@@ -35,8 +37,8 @@ def test_the_package_imports_only_the_stdlib_yaml_and_itself():
             top = module.split(".")[0]
             if top in sys.stdlib_module_names or top == "yaml":
                 continue
-            if module == "sprout.services" or module.startswith("sprout.services."):
+            if module in ("sprout.services", "sprout.resource") or module.startswith("sprout.services."):
                 continue
             offenders.append("%s imports %s" % (path.name, module))
     assert not offenders, offenders
-    assert (PACKAGE / "templates" / "services.yaml").is_file() and (PACKAGE / "templates" / "litellm.yaml").is_file()
+    assert template_path("services.yaml").is_file() and template_path("litellm.yaml").is_file()

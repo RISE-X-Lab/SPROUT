@@ -26,7 +26,7 @@ Run from the Sprout root; the Run Store and the workers must already be running:
 ```bash
 python3.12 -m pip install -e ".[rl]"
 export SPROUT_RUNSTORE_TOKEN='<existing-runstore-token>'
-python3.12 -m sprout.rl_driver --config src/sprout/rl_driver/config.example.json [--host H] [--port P]
+python3.12 -m sprout.rl_driver --config resources/rl_driver/config.example.json [--host H] [--port P]
 ```
 
 `python -m sprout.services up rl-driver` starts it too: it first makes sure the Run Store

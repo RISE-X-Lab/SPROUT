@@ -137,7 +137,7 @@ verify. That turn runs through the normal tool path, so the branch's history and
 agree, and the actor continues from it. Rounds repeat until a branch resolves the task or
 `--rounds` is spent. The analyst and reviewer can run on a stronger model than the actor
 (`--review-model`, `--review-endpoint`), and every analyst, reviewer and Shepherd prompt
-lives in [prompts.yaml](src/sprout/methods/prompts.yaml), whose sha256 each run records.
+lives in [prompts.yaml](resources/methods/prompts.yaml), whose sha256 each run records.
 
 The same branch points feed RL. [Run Store](docs/RUNSTORE.md) queues rollout, grade and
 review jobs on PostgreSQL and grades [SWE-rebench V2](https://github.com/SWE-rebench/SWE-rebench-V2)

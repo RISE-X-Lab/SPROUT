@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from pathlib import Path
 from typing import Iterator
 from uuid import uuid4
 
+from sprout.resource import resource
 from sprout.runstore.payload import checked_payload, encode_payload
 from sprout.runstore.specs import JobSpec, canonical, digest
 
@@ -42,7 +42,7 @@ class Store:
     def initialize(self) -> None:
         with self.transaction() as cursor:
             cursor.execute("SELECT pg_advisory_xact_lock(82951734)")
-            cursor.execute(Path(__file__).with_name("schema.sql").read_text())
+            cursor.execute(resource("runstore/schema.sql").read_text())
 
     def submit(self, request: JobSpec, idempotency_key: str) -> dict:
         body = request.validate()

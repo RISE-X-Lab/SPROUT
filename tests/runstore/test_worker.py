@@ -404,7 +404,7 @@ def test_example_profiles_only_default_real_runspec_fields():
     from sprout.runstore.specs import GradeSpec
     from sprout.runstore.worker import owned_backend
 
-    config = json.loads((Path(__file__).resolve().parents[2] / "src" / "sprout" / "runstore" / "config.example.json").read_text())
+    config = json.loads((Path(__file__).resolve().parents[2] / "resources" / "runstore" / "config.example.json").read_text())
     allowed = {item.name for item in fields(RunSpec)}
     graded = {item.name for item in fields(GradeSpec)}
     for name, profile in config["profiles"].items():

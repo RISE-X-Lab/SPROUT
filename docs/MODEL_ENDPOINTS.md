@@ -53,7 +53,7 @@ http://127.0.0.1:4000/v1 --review-key-env SPROUT_LITELLM_KEY` (and
 to the actor's `--model`, `--model-endpoint`, `--model-key-env` and
 `--reasoning-effort`.
 
-`src/sprout/services/templates/litellm.yaml` (copied to `~/.config/sprout/litellm.yaml`
+`resources/services/litellm.yaml` (copied to `~/.config/sprout/litellm.yaml`
 by `init`, never overwritten) explains each setting: one route per alias in LiteLLM's
 `<provider>/<model id>` notation, with whatever the provider takes beside it (a
 region, an `api_base`), `cache_control_injection_points` on the system and user

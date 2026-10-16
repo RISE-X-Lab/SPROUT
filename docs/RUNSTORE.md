@@ -46,9 +46,9 @@ DSN and token, `init`, `serve`, `worker` -- from `~/.config/sprout/runstore.json
 python3 -m pip install -e ".[mini,runstore]"
 export SPROUT_RUNSTORE_DSN='host=127.0.0.1 dbname=sprout_runstore user=sprout_runstore'
 export SPROUT_RUNSTORE_TOKEN="$(openssl rand -hex 32)"
-python3 -m sprout.runstore init   --config src/sprout/runstore/config.example.json
-python3 -m sprout.runstore serve  --config src/sprout/runstore/config.example.json   # --host 127.0.0.1 --port 18110
-python3 -m sprout.runstore worker --config src/sprout/runstore/config.example.json --concurrency 8
+python3 -m sprout.runstore init   --config resources/runstore/config.example.json
+python3 -m sprout.runstore serve  --config resources/runstore/config.example.json   # --host 127.0.0.1 --port 18110
+python3 -m sprout.runstore worker --config resources/runstore/config.example.json --concurrency 8
 ```
 
 `init` is idempotent; a volatile `artifact_root` (e.g. `/tmp`) is refused. One

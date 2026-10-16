@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
 import sprout.services
+from sprout.resource import resource
 from sprout.services import health, secrets
 from sprout.services.podman import Podman
 from sprout.services.render import StatusRow, doctor_line, env_lines, status_table
@@ -44,8 +45,8 @@ def _one_line(text: str, limit: int = 160) -> str:
 SETTLE_S = 2.0
 #: The per-service config files `init` seeds beside services.yaml, from the
 #: packages that read them (data files, not imports).
-RUNSTORE_TEMPLATE = Path(__file__).resolve().parent.parent / "runstore" / "config.example.json"
-RL_DRIVER_TEMPLATE = Path(__file__).resolve().parent.parent / "rl_driver" / "config.example.json"
+RUNSTORE_TEMPLATE = resource("runstore/config.example.json")
+RL_DRIVER_TEMPLATE = resource("rl_driver/config.example.json")
 
 
 class Manager:
