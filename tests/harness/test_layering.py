@@ -31,10 +31,10 @@ REPO = Path(__file__).resolve().parents[2]
 ALLOWED = {
     # The formats RunStore, the RL driver and the worker agree on; it imports no other layer.
     "contract": set(),
-    "worker": {"contract"},
+    "worker": {"contract", "runstore", "methods"},
     "harbor_plugin": {"contract", "worker"},
     "methods": {"contract", "worker", "harbor_plugin"},
-    "runstore": {"contract", "worker", "methods"},
+    "runstore": {"contract"},
     "inspect": {"contract", "worker", "harbor_plugin", "methods"},
     "rl_driver": {"contract", "runstore"},
     "examples": {"contract", "worker", "harbor_plugin", "methods"},

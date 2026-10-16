@@ -43,7 +43,7 @@ import tomllib
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-from sprout.worker.sandbox.backends import default_podman_store
+from sprout.contract.backend import default_podman_store
 from sprout.worker.sandbox.session import SandboxSession
 from sprout_sandbox import PodmanPool
 

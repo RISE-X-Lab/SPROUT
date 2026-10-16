@@ -6,7 +6,7 @@ import pytest
 from sprout.worker.run.runner import Orchestrator
 from sprout.contract.mini_history import read_entries, training_messages
 from tests.harness.test_mini_swe import FilesystemSession, model_server, owned_filesystem, reply, spec, pytestmark
-from sprout.runstore.messages import export_messages
+from sprout.worker.jobs.export import export_messages
 from sprout.contract.messages import mark_hint
 from sprout.worker.agents.mini_swe.history import index_native
 from sprout.contract.mini_history import materialize, read_prefix
@@ -133,7 +133,7 @@ def test_branch_point_inspection_uses_the_latest_session_reference(tmp_path, mon
 def test_timeout_between_actions_grades_the_matching_closed_prefix(tmp_path, monkeypatch):
     from dataclasses import asdict
     from sprout.worker.agents.mini_swe.sandbox import ToolEnvironment
-    from sprout.runstore.messages import complete_message_result
+    from sprout.worker.jobs.export import complete_message_result
     from sprout.contract.messages import is_truncated_result
 
     original_execute = ToolEnvironment.execute
@@ -169,7 +169,7 @@ def salvage_point(point, identifier="point-last"):
 def test_a_failed_attempt_is_cut_back_to_its_last_closed_turn(tmp_path, monkeypatch):
     from dataclasses import asdict
     from sprout.contract.messages import clean_messages, is_truncated_result
-    from sprout.runstore.messages import salvage_interrupted
+    from sprout.worker.jobs.export import salvage_interrupted
 
     memory, outcome, points = parent_run(tmp_path, monkeypatch)
     last = points[-1]
@@ -188,7 +188,7 @@ def test_a_failed_attempt_is_cut_back_to_its_last_closed_turn(tmp_path, monkeypa
 def test_the_worker_grades_a_rollout_that_failed_for_good_at_its_last_valid_point(tmp_path, monkeypatch, store):
     from dataclasses import asdict
     from sprout.runstore.specs import JobSpec
-    from sprout.runstore.worker import Worker
+    from sprout.worker.attempts import Worker
 
     memory, outcome, points = parent_run(tmp_path, monkeypatch)
     point = salvage_point(points[-1])

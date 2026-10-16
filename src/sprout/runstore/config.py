@@ -8,8 +8,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from sprout.contract.backend import backend_name, default_podman_store, snapshot_store
 from sprout.runstore.specs import no_credentials
-from sprout.worker.sandbox.backends import backend_name, default_podman_store, snapshot_store
 
 
 def resolve(value: Any) -> Any:

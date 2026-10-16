@@ -1,31 +1,22 @@
-"""Run Store service and concurrent worker manager."""
+"""The Run Store service: create its schema (`init`) or serve its HTTP API (`serve`)."""
 
 import argparse
 import os
-import signal
 from pathlib import Path
-from threading import Event
 
+from sprout.contract.storage import volatile_reason
 from sprout.runstore.config import read_config, snapshot_validator
 from sprout.runstore.index import Index
 from sprout.runstore.store import Store
-from sprout.worker.run.journal import volatile_reason
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["init", "serve", "worker", "reconcile"])
+    parser.add_argument("command", choices=["init", "serve"])
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=18110)
-    parser.add_argument("--once", action="store_true")
-    parser.add_argument("--job-id")
-    parser.add_argument(
-        "--concurrency", type=int, default=1, help="Maximum concurrent attempts per worker (default: 1)"
-    )
     args = parser.parse_args()
-    if args.concurrency < 1:
-        parser.error("--concurrency must be positive")
     config = read_config(args.config)
     reason = volatile_reason(config["artifact_root"])
     if reason:
@@ -33,7 +24,7 @@ def main() -> None:
     store = Store(os.environ["SPROUT_RUNSTORE_DSN"])
     if args.command == "init":
         store.initialize()
-    elif args.command == "serve":
+    else:
         import uvicorn
 
         from sprout.runstore.api import create_app
@@ -44,21 +35,6 @@ def main() -> None:
             host=args.host,
             port=args.port,
         )
-    else:
-        from sprout.runstore.worker import Worker
-
-        worker = Worker(store, config)
-        if args.command == "reconcile":
-            if not args.job_id:
-                parser.error("reconcile requires --job-id")
-            print("reconciled" if worker.reconcile(args.job_id) else "still quarantined")
-            return
-        from sprout.runstore.manager import WorkerManager
-
-        stop = Event()
-        signal.signal(signal.SIGTERM, lambda *_: stop.set())
-        signal.signal(signal.SIGINT, lambda *_: stop.set())
-        WorkerManager(worker, concurrency=args.concurrency).run(stop=stop, once=args.once)
 
 
 if __name__ == "__main__":

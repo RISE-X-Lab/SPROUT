@@ -30,7 +30,8 @@ from __future__ import annotations
 import asyncio
 import sys
 
-from sprout.worker.sandbox.backends import backend_name, build_pool
+from sprout.contract.backend import backend_name
+from sprout.worker.sandbox.backends import build_pool
 from sprout.worker.sandbox.session_loop import SessionLoop
 from sprout.worker.sandbox.spawn import spawn_sandbox
 from sprout.worker.tools.result import ToolResult

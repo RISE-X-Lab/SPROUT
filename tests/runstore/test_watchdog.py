@@ -6,8 +6,8 @@ import time
 import pytest
 
 from tests.runstore.test_manager import eventually
-from sprout.runstore.worker import AttemptStopped, Watchdog
-from sprout.runstore.worker import process_identity, stop_process
+from sprout.worker.attempts import AttemptStopped, Watchdog
+from sprout.worker.attempts import process_identity, stop_process
 
 
 @pytest.mark.parametrize("reason", ["timeout", "lease_expired", "worker_shutdown"])

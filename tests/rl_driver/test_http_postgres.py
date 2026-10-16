@@ -169,7 +169,7 @@ def test_real_http_cancel_waits_for_running_execution(store, tmp_path):
 def test_worker_bounds_child_startup_by_remaining_group_deadline(store, tmp_path, monkeypatch):
     from pathlib import Path
     from sprout.runstore.specs import JobSpec, digest
-    from sprout.runstore.worker import Worker
+    from sprout.worker.attempts import Worker
     from tests.runstore.test_worker import run_once
 
     seen = []
@@ -179,7 +179,7 @@ def test_worker_bounds_child_startup_by_remaining_group_deadline(store, tmp_path
         assert command[-1] == digest(payload)
         seen.append(payload)
         raise RuntimeError("Controlled probe stops before child execution")
-    monkeypatch.setattr("sprout.runstore.worker.subprocess.Popen", before_launch)
+    monkeypatch.setattr("sprout.worker.attempts.subprocess.Popen", before_launch)
     spec = {"prompt": "task", "slot": "mini-swe-agent", "sandbox_image": "fixture",
             "backend": {"backend": "microvm"}, "timeout_s": 3600,
             "extra": {"rollout_contract": {"deadline_at": time.time() + 5}}}

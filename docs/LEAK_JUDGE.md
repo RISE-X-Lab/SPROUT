@@ -89,7 +89,7 @@ With `review.leak_judge` in the adapter config (`{"threshold", "model",
 "resamples", "api_key_env"}`, all optional; the key lives in the review
 worker's environment, `TYPESAFE_API_KEY` by default), the review job checks
 every repair turn the reviewer writes **before** it is taken
-(`runstore/review.py` `_candidate`, through `branching.review`'s `turn_check`):
+(`worker/jobs/review/job.py` `_candidate`, through `branching.review`'s `turn_check`):
 
 1. `check_turn` runs both checks against the point's parent: `leak_terms`
    (hidden names, h_s) and Jev (the test patch the grade applied -- the grade

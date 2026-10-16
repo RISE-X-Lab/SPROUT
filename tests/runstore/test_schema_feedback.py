@@ -8,7 +8,7 @@ from sprout.worker.run.runner import Orchestrator
 from sprout.worker.checkpoint.rollback import branch_checkpoints
 from sprout.contract.mini_history import read_entries
 from tests.harness.test_mini_swe import FilesystemSession, model_server, owned_filesystem, pytestmark, reply, spec
-from sprout.runstore.messages import export_messages
+from sprout.worker.jobs.export import export_messages
 from sprout.worker.agents.mini_swe.history import index_native
 from sprout.contract.mini_history import materialize, read_prefix
 from sprout.worker.agents.mini_swe.tools import malformed_tool_calls

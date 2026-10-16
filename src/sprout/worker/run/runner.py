@@ -37,13 +37,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from sprout.contract.backend import backend_name, snapshot_store
 from sprout.contract.run_spec import RunSpec
 from sprout.worker.agents.mini_swe.slot import MiniSweSlot
 from sprout.worker.agents.slot import SlotResult, TaskSpec
 from sprout.worker.run.events import SANDBOX_CREATED
 from sprout.worker.run.journal import JournalWriter, new_run_id, read_journal
 from sprout.worker.run.resources import ResourceLedger
-from sprout.worker.sandbox.backends import backend_name, snapshot_store
 
 
 @dataclass

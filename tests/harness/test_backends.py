@@ -28,9 +28,9 @@ from pathlib import Path
 import pytest
 
 from sprout_sandbox import MicroVMPool, PodmanPool
-from sprout.worker.sandbox.backends import (BACKENDS, DEFAULT_AENV_SERVER_URL, BackendError,
-                                             backend_name, build_pool, default_aenv_server_url,
-                                             snapshot_store, with_sandbox_budget)
+from sprout.worker.sandbox.backends import BACKENDS, DEFAULT_AENV_SERVER_URL, build_pool, default_aenv_server_url, with_sandbox_budget
+from sprout.contract.backend import BackendError
+from sprout.contract.backend import backend_name, snapshot_store
 
 #: Stand-ins, in the parametrized configs below, for the per-test store and
 #: runtime binary: both live under tmp_path, so a row cannot name them.

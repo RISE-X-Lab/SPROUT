@@ -37,8 +37,8 @@ import shlex
 from pathlib import Path
 from uuid import uuid4
 
+from sprout.contract.backend import backend_name
 from sprout.runstore.specs import GradeSpec
-from sprout.worker.sandbox.backends import backend_name
 
 
 def dataset_rows(spec: GradeSpec) -> list[dict]:

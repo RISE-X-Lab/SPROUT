@@ -7,7 +7,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from pathlib import Path
 
-from sprout.worker.sandbox.backends import backend_name, resolve_microvm_endpoint, spawn_takes_shape
+from sprout.contract.backend import backend_name
+from sprout.worker.sandbox.backends import resolve_microvm_endpoint, spawn_takes_shape
 from sprout.worker.sandbox.template_recipe import (
     DEFAULT_RUNTIME_PORT,
     REGCTL_DEPS_GLOB,

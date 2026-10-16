@@ -105,7 +105,7 @@ services:
     # podman and store: their exports (SPROUT_PODMAN_BIN, SPROUT_PODMAN_STORE) reach the worker,
     # so its sandboxes run on the same podman and store an experiment shell gets from `env`.
     depends_on: [runstore-api, podman, store]
-    command: ["{python}", -m, sprout.runstore, worker, --config, "{config}/runstore.json", --concurrency, "1"]
+    command: ["{python}", -m, sprout.worker, start, --config, "{config}/runstore.json", --concurrency, "1"]
     health: {kind: process}
 
   # The Miles adapter over the Run Store (docs/RL_DRIVER.md); tasks and profiles in

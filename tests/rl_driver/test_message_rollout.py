@@ -13,7 +13,7 @@ from sprout.rl_driver.messages import MessageAdapter
 from sprout.rl_driver.server import create_app
 from tests.rl_driver.test_driver import peer as peer
 from sprout.contract.messages import clean_messages, mark_hint
-from sprout.runstore.grading import resolved
+from sprout.worker.jobs.grade import resolved
 
 
 EXAMPLE = Path(__file__).resolve().parents[2] / "examples" / "rl_driver" / "request.example.json"

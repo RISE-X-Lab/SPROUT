@@ -11,9 +11,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from sprout.runstore.messages import export_messages
+from sprout.worker.jobs.export import export_messages
 from sprout.contract.messages import mark_hint
-from sprout.runstore.grading import expected_pass_share, grade_swerebench, progress, resolved
+from sprout.worker.jobs.grade import expected_pass_share, grade_swerebench, progress, resolved
 
 
 def test_progress_is_the_share_of_target_tests_that_passed():
@@ -83,7 +83,7 @@ class Grading:
         monkeypatch.setattr("sprout.worker.sandbox.commands.shell", self.shell)
         monkeypatch.setattr("sprout.worker.sandbox.commands.checked", self.checked)
         monkeypatch.setattr("sprout.worker.sandbox.commands.shell_outcome", self.shell_outcome)
-        monkeypatch.setattr("sprout.runstore.grading.guest_directory", self.guest_directory)
+        monkeypatch.setattr("sprout.worker.jobs.grade.guest_directory", self.guest_directory)
 
     def git(self, *argv):
         return subprocess.check_output(["git", *argv], cwd=self.repo, text=True).strip()

@@ -28,11 +28,17 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
+import signal
 import sys
 from collections import Counter
 from collections.abc import Callable
 from pathlib import Path
+from threading import Event
+from typing import TYPE_CHECKING
 
+from sprout.contract.backend import default_podman_store
+from sprout.contract.storage import volatile_reason
 from sprout.worker.run import (
     AgentEnvClient,
     Orchestrator,
@@ -44,9 +50,11 @@ from sprout.worker.run import (
 )
 from sprout.worker.run.atif import export_file
 from sprout.worker.run.events import SANDBOX_CREATED
-from sprout.worker.run.journal import journal_events, read_journal, volatile_reason
-from sprout.worker.sandbox.backends import default_podman_store
+from sprout.worker.run.journal import journal_events, read_journal
 from sprout_sandbox import BtrfsStore
+
+if TYPE_CHECKING:
+    from sprout.runstore.store import Store
 
 
 def _backend_section(name: str, runtime_bin: str | None, store: str | None = None) -> dict:
@@ -318,9 +326,64 @@ def _cmd_reap(args: argparse.Namespace) -> int:
     return 0
 
 
+def _positive_int(value: str) -> int:
+    number = int(value)
+    if number < 1:
+        raise argparse.ArgumentTypeError("must be a positive integer")
+    return number
+
+
+def _store_and_config(config_path: Path) -> tuple[Store, dict]:
+    """The Run Store and its config; refuses an artifact root under a volatile directory."""
+    from sprout.runstore.config import read_config
+    from sprout.runstore.store import Store
+
+    config = read_config(config_path)
+    reason = volatile_reason(config["artifact_root"])
+    if reason:
+        raise SystemExit(reason)
+    return Store(os.environ["SPROUT_RUNSTORE_DSN"]), config
+
+
+def _cmd_start(args: argparse.Namespace) -> int:
+    """Claim and run Run Store jobs on this machine until SIGTERM or SIGINT, or one job with --once."""
+    from sprout.worker.attempts import Worker
+    from sprout.worker.manager import WorkerManager
+
+    store, config = _store_and_config(args.config)
+    stop = Event()
+    signal.signal(signal.SIGTERM, lambda *_: stop.set())
+    signal.signal(signal.SIGINT, lambda *_: stop.set())
+    WorkerManager(Worker(store, config), concurrency=args.concurrency).run(stop=stop, once=args.once)
+    return 0
+
+
+def _cmd_reconcile(args: argparse.Namespace) -> int:
+    from sprout.worker.attempts import Worker
+
+    store, config = _store_and_config(args.config)
+    print("reconciled" if Worker(store, config).reconcile(args.job_id) else "still quarantined")
+    return 0
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="worker", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
+
+    start = sub.add_parser("start", help="claim and run Run Store jobs on this machine")
+    start.add_argument(
+        "--config", type=Path, required=True, help="the Run Store config (artifact root, profiles)"
+    )
+    start.add_argument(
+        "--concurrency", type=_positive_int, default=1, help="maximum concurrent attempts (default: 1)"
+    )
+    start.add_argument("--once", action="store_true", help="run one claimed job, then exit")
+    start.set_defaults(func=_cmd_start)
+
+    reconcile = sub.add_parser("reconcile", help="settle a quarantined job whose attempt outcome is unknown")
+    reconcile.add_argument("--config", type=Path, required=True, help="the Run Store config")
+    reconcile.add_argument("--job-id", required=True)
+    reconcile.set_defaults(func=_cmd_reconcile)
 
     run = sub.add_parser("run", help="run a task through mini-swe-agent")
     run.add_argument("prompt")

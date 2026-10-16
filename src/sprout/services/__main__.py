@@ -343,7 +343,7 @@ def _runstore_config(paths: Paths, python: str) -> str:
     """The Run Store template with what this host knows filled in: the artifact
     root under state (``runstore init`` refuses a volatile one), the checkout's
     runtime binary, and the venv interpreter for every profile (a child is
-    ``python -m sprout.runstore.child``, so it has to import sprout)."""
+    ``python -m sprout.worker.jobs.rollout``, so it has to import sprout)."""
     config = json.loads(RUNSTORE_TEMPLATE.read_text(encoding="utf-8"))
     config["artifact_root"] = str(paths.state / "runstore-artifacts")
     config = _rewrite(config, "runtime_bin", str(paths.runtime_binary()))

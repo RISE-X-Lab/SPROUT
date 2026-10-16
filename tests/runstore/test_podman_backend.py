@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from sprout.runstore.config import podman_snapshot_present, snapshot_validator
-from sprout.runstore.worker import OWNED_BACKENDS, Worker, owned_backend
+from sprout.worker.attempts import OWNED_BACKENDS, Worker, owned_backend
 from tests.conftest import fake_networks, recorded_calls
 
 

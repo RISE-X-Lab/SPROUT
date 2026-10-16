@@ -4,9 +4,9 @@ import json
 
 import pytest
 
-from sprout.runstore import review as review_module
+from sprout.worker.jobs.review import job as review_module
 from sprout.methods.leak_judge import JevError, LeakJudgement
-from sprout.runstore.review import run_review
+from sprout.worker.jobs.review.job import run_review
 from sprout.runstore.specs import ReviewSpec
 from tests.harness.test_mini_swe import pytestmark
 from tests.runstore.test_mini_native import parent_run

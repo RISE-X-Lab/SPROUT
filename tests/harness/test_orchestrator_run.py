@@ -511,7 +511,7 @@ def test_volatile_paths_are_named_and_persistent_ones_are_not():
     rebooted mid-regrade; hours of agent time now exist only as prose. The guard
     is a resolved-prefix check at the ENTRY POINTS only: the library layer stays
     unguarded because tests legitimately journal into pytest's /tmp fixtures."""
-    from sprout.worker.run.journal import volatile_reason
+    from sprout.contract.storage import volatile_reason
 
     for doomed in ("/tmp/v32", "/tmp", "/var/tmp/x/deep/run.jsonl",
                    "/dev/shm/j.jsonl", "/tmp/../tmp/sneaky"):

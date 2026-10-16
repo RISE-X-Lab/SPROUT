@@ -1,6 +1,6 @@
 """The attempt child inherits the podman and store the worker resolved."""
 
-from sprout.runstore.worker import CHILD_ENV_PASSTHROUGH
+from sprout.worker.attempts import CHILD_ENV_PASSTHROUGH
 
 
 def test_the_attempt_child_inherits_the_podman_and_store_variables():

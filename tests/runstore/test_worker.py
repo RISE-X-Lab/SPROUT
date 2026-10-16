@@ -8,12 +8,12 @@ from pathlib import Path
 import pytest
 
 from sprout.contract.messages import failure_kind
-from sprout.runstore.files import read_json, write_json
+from sprout.worker.files import read_json, write_json
 from sprout.runstore.specs import JobSpec, digest
 from tests.runstore.test_payload import envelope
 from tests.runstore.test_store import request, store
 from sprout.runstore.store import Fenced, Store
-from sprout.runstore.worker import Worker, process_identity, stop_process
+from sprout.worker.attempts import Worker, process_identity, stop_process
 
 
 def run_once(worker: Worker) -> str | None:
@@ -156,7 +156,7 @@ def test_worker_freezes_payload_and_registers_pid_before_child_execution(store, 
             stages.append("child-blocked-before-registration")
         heartbeat(job_id, token, **kwargs)
 
-    from sprout.runstore import worker as module
+    from sprout.worker import attempts as module
     send = module.send_payload
 
     def deliver(stream, data, **kwargs):
@@ -368,7 +368,7 @@ def test_failed_process_registration_never_delivers_payload(store, tmp_path, mon
 
     monkeypatch.setattr(subprocess, "Popen", launch)
     monkeypatch.setattr(store, "heartbeat", fenced)
-    monkeypatch.setattr("sprout.runstore.worker.send_payload", refuse_send)
+    monkeypatch.setattr("sprout.worker.attempts.send_payload", refuse_send)
     assert run_once(worker) == job["id"]
     attempt = store.attempts(job["id"])[0]
     assert store.get(job["id"])["state"] == "quarantined"
@@ -402,7 +402,7 @@ def test_example_profiles_only_default_real_runspec_fields():
     from sprout.contract.run_spec import RunSpec
 
     from sprout.runstore.specs import GradeSpec
-    from sprout.runstore.worker import owned_backend
+    from sprout.worker.attempts import owned_backend
 
     config = json.loads((Path(__file__).resolve().parents[2] / "resources" / "runstore" / "config.example.json").read_text())
     allowed = {item.name for item in fields(RunSpec)}

@@ -8,7 +8,7 @@ from types import SimpleNamespace
 import pytest
 
 from sprout.worker.agents.mini_swe.history import index_native
-from sprout.runstore.worker import Worker
+from sprout.worker.attempts import Worker
 
 SESSION = "session"
 

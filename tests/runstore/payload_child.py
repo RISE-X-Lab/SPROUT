@@ -5,8 +5,8 @@ from pathlib import Path
 import sys
 import time
 
-from sprout.runstore import child
-from sprout.runstore.files import write_json
+from sprout.worker.jobs import rollout as child
+from sprout.worker.files import write_json
 
 
 def execute(payload: dict, directory: Path) -> dict:

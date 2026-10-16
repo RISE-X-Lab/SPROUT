@@ -8,7 +8,7 @@ from collections.abc import Callable
 from concurrent.futures import Future
 from threading import Event, Thread
 
-from sprout.runstore.worker import Worker
+from sprout.worker.attempts import Worker
 
 
 class WorkerManager:

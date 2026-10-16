@@ -34,41 +34,25 @@ import os
 from collections.abc import Callable
 from pathlib import Path
 
+from sprout.contract.backend import PODMAN_KEYS, BackendError, backend_name, backend_section, expanded_path
 from sprout_sandbox import MicroVMPool, PodmanPool
 from sprout_sandbox.podman_cli import default_podman_bin
 
 __all__ = [
     "build_pool",
-    "backend_name",
-    "BackendError",
     "BACKENDS",
     "resolve_microvm_endpoint",
     "with_sandbox_budget",
-    "snapshot_store",
     "spawn_takes_shape",
-    "default_podman_store",
     "default_aenv_server_url",
 ]
 
 
-class BackendError(ValueError):
-    """A backend was named or configured in a way that cannot work."""
-
-
-DEFAULT_BACKEND = "podman"
 VM_LIFETIME_MARGIN_S = 600
 #: Where an AgentENV server listens unless it is told otherwise: its own
 #: ``API_ADDR`` default, port 8000. A server elsewhere (this project's bench
 #: instance listens on 18000) is named in AENV_SERVER_URL.
 DEFAULT_AENV_SERVER_URL = "http://127.0.0.1:8000"
-
-
-def default_podman_store() -> str:
-    """The podman store when none is named: ``$SPROUT_PODMAN_STORE``, else
-    ``~/sprout-btrfs``, the directory ``ops/setup_podman.sh`` makes. A pool
-    refuses one that is not a btrfs mount it can manage, so a host without a
-    store fails at the first spawn with what to run."""
-    return os.environ.get("SPROUT_PODMAN_STORE") or str(Path.home() / "sprout-btrfs")
 
 
 def default_aenv_server_url() -> str:
@@ -98,7 +82,7 @@ def with_sandbox_budget(config: dict, budget_s: float) -> dict:
         or budget_s <= 0
     ):
         raise BackendError("VM lifetime requires a finite positive operation budget")
-    section = _section(config, "microvm", MICROVM_KEYS)
+    section = backend_section(config, "microvm", MICROVM_KEYS)
     explicit = section.get("sandbox_ttl", 0)
     if (
         isinstance(explicit, bool)
@@ -143,33 +127,6 @@ MICROVM_KEYS = {
     "image_env",
 }
 
-#: Recognised keys of the ``podman`` section. No lease; a container lives
-#: until it is removed.
-PODMAN_KEYS = {
-    # A directory on a btrfs filesystem mounted with user_subvol_rm_allowed and
-    # owned by this user, required: every sandbox is a subvolume in it. Made
-    # once as root with ops/btrfs_store.sh.
-    "store",
-    # The sprout-runtime binary, required: it is bind-mounted into every
-    # container and started as its entrypoint, so an image needs no rebuild
-    # (a musl image needs the static CGO_ENABLED=0 build of it).
-    "runtime_bin",
-    # The podman executable, when it is not $SPROUT_PODMAN_BIN / the `podman` on PATH.
-    "podman_bin",
-    # False = every sandbox is disconnected before it starts; unset/True =
-    # connected. A benchmark whose tasks declare no-network sets it, and a
-    # running sandbox can be toggled either way (set_network).
-    "allow_internet",
-    # Where the per-sandbox runtime socket directories live (default
-    # <store>/sockets).
-    "socket_dir",
-}
-
-
-def backend_name(config: dict) -> str:
-    """The backend this config selects."""
-    return str(config.get("backend") or DEFAULT_BACKEND).strip().lower()
-
 
 def spawn_takes_shape(config: dict) -> bool:
     """Whether every spawn on this backend takes the sandbox's shape.
@@ -183,38 +140,6 @@ def spawn_takes_shape(config: dict) -> bool:
     path to hand the task's resources to.
     """
     return backend_name(config) == "podman"
-
-
-def snapshot_store(config: dict) -> str | None:
-    """Where this config's snapshots live when they are files on this host.
-
-    The podman store, expanded and made absolute, or ``None`` for the microVM
-    backend, whose snapshots are AgentENV records. The orchestrator puts it on
-    the run's record (``sandbox.created``), so ``harness sweep`` can delete a
-    finished run's subvolumes given nothing but its journal.
-    """
-    if backend_name(config) != "podman":
-        return None
-    store = _section(config, "podman", PODMAN_KEYS).get("store")
-    return str(Path(_expanded(store)).resolve()) if store else None
-
-
-def _expanded(path) -> str:
-    """A path from a config with ``~`` expanded: a YAML file names the home the
-    shell would have expanded on a command line."""
-    return os.path.expanduser(str(path))
-
-
-def _section(config: dict, name: str, keys: set) -> dict:
-    section = config.get(name) or {}
-    if not isinstance(section, dict):
-        raise BackendError(f"config key {name!r} must be a mapping of settings")
-    unknown = set(section) - keys
-    if unknown:
-        raise BackendError(
-            f"unknown {name} setting(s): {', '.join(sorted(unknown))}; known: {', '.join(sorted(keys))}"
-        )
-    return dict(section)
 
 
 def _read_api_key(section: dict, env_var: str) -> str:
@@ -251,7 +176,7 @@ def resolve_microvm_endpoint(section: dict) -> tuple[str, str]:
 
 
 def _microvm(config: dict) -> MicroVMPool:
-    section = _section(config, "microvm", MICROVM_KEYS)
+    section = backend_section(config, "microvm", MICROVM_KEYS)
     server_url, api_key = resolve_microvm_endpoint(section)
     if not server_url:
         raise BackendError(
@@ -268,7 +193,7 @@ def _microvm(config: dict) -> MicroVMPool:
 
 
 def _podman(config: dict) -> PodmanPool:
-    section = _section(config, "podman", PODMAN_KEYS)
+    section = backend_section(config, "podman", PODMAN_KEYS)
     # The CLI hands --runtime-bin over at the top level as well, as it does for
     # the template builder; either spelling names the same binary.
     runtime_bin = section.get("runtime_bin") or config.get("runtime_bin")
@@ -285,13 +210,13 @@ def _podman(config: dict) -> PodmanPool:
         )
     try:
         return PodmanPool(
-            store=_expanded(section["store"]),
-            runtime_bin=_expanded(runtime_bin),
+            store=expanded_path(section["store"]),
+            runtime_bin=expanded_path(runtime_bin),
             podman_bin=str(section.get("podman_bin") or default_podman_bin()),
             allow_internet=(
                 None if section.get("allow_internet") is None else bool(section["allow_internet"])
             ),
-            socket_dir=_expanded(section["socket_dir"]) if section.get("socket_dir") else None,
+            socket_dir=expanded_path(section["socket_dir"]) if section.get("socket_dir") else None,
         )
     except ValueError as error:
         # The pool's own refusals (a missing binary, a store that is not on

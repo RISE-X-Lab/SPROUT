@@ -110,7 +110,7 @@ from `resources/services/litellm.yaml`.
 `artifact_root`, so `init` puts it under state). Depends on db. Health: `GET
 /v1/jobs` with the bearer token is 200 -- there is no `/health` route, and a
 401 says the token is not the one the API was started with.
-**runstore-worker** -- `python -m sprout.runstore worker --config ...
+**runstore-worker** -- `python -m sprout.worker start --config ...
 --concurrency 1` (edit the concurrency in `services.yaml`); depends on the
 API; health is the process being alive. **rl-driver** -- `python -m
 sprout.rl_driver --config ~/.config/sprout/rl_driver.json --host 127.0.0.1

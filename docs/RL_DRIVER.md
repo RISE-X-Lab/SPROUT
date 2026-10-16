@@ -87,7 +87,7 @@ resolves to the upstream `docker.io/swerebenchv2/...`. Resources come from
 `image_resources`.
 
 `tasks[task_id].grade` must exist. The `swe-rebench-v2` grader (`grade_swerebench` in
-`src/sprout/runstore/grading.py`): `dataset_path` / `dataset_sha256` pin the task row,
+`src/sprout/worker/jobs/grade.py`): `dataset_path` / `dataset_sha256` pin the task row,
 `parser_path` points at the SWE-rebench log-parser file, and `grader_revision` is that
 file's `sha256:<digest>`. Grading uses two sandboxes: the one restored from the final
 snapshot only exports the agent's diff against `base_commit`; the tests run in a fresh

@@ -15,8 +15,8 @@ from sprout.contract.continuation import Continuation, prepare
 from sprout.contract.mini_history import load_prefix, materialize
 from sprout.contract.run_spec import RunSpec
 from sprout.runstore.config import referenced_env, resolve
-from sprout.runstore.files import write_json
 from sprout.runstore.payload import receive_payload
+from sprout.worker.files import write_json
 from sprout.worker.run.resources import ResourceLedger
 from sprout.worker.run.runner import Orchestrator
 from sprout.worker.sandbox.session import SandboxSession
@@ -59,11 +59,11 @@ def execute(request: dict, directory: Path) -> dict:
     native_home.mkdir(exist_ok=True)
     ledger = ResourceLedger(directory / "resources.jsonl")
     if request["kind"] == "review":
-        from sprout.runstore.review import run_review
+        from sprout.worker.jobs.review.job import run_review
 
         return run_review(spec, directory)
     if request["kind"] == "grade":
-        from sprout.runstore.grading import grade
+        from sprout.worker.jobs.grade import grade
 
         return grade(
             spec, directory, session_factory=lambda **kwargs: TrackingSession(ledger=ledger, **kwargs)
@@ -140,7 +140,7 @@ def execute(request: dict, directory: Path) -> dict:
     result["native_home"] = str(native_home)
     result["failure_kind"] = "actor" if outcome.status != "completed" else None
     if message_export:
-        from sprout.runstore.messages import complete_message_result
+        from sprout.worker.jobs.export import complete_message_result
 
         result = complete_message_result(
             result, directory, slot, request.get("recovery"), request.get("branch_point")

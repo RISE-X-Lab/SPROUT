@@ -7,8 +7,8 @@ import pytest
 from sprout.worker.run.control import RunControl
 from sprout.worker.agents.slot import SlotResult
 from sprout.worker.run.runner import Orchestrator, RunOutcome
-from sprout.runstore.child import execute
-from sprout.runstore.messages import complete_message_result
+from sprout.worker.jobs.rollout import execute
+from sprout.worker.jobs.export import complete_message_result
 from sprout.contract.messages import is_truncated_result
 
 
@@ -126,7 +126,7 @@ def test_timeout_outcome_records_status_without_claiming_natural_completion():
 
 @pytest.mark.parametrize("cleanup_ok", [True, False])
 def test_worker_publishes_scored_limit_episodes_only_after_cleanup(tmp_path, cleanup_ok):
-    from sprout.runstore.worker import Worker
+    from sprout.worker.attempts import Worker
 
     finished = []
     worker = object.__new__(Worker)

@@ -5,7 +5,7 @@ from sprout.worker.run.control import RunControl
 from sprout.worker.agents.slot import TaskSpec
 from sprout.worker.run.rollout import RolloutControls
 from sprout.worker.run.runner import Orchestrator, RunOutcome
-from sprout.runstore.child import execute
+from sprout.worker.jobs.rollout import execute
 
 
 def test_worker_credentials_are_hidden_and_gateway_wins_over_agent_env(tmp_path, monkeypatch):

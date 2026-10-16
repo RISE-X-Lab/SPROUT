@@ -48,7 +48,7 @@ export SPROUT_RUNSTORE_DSN='host=127.0.0.1 dbname=sprout_runstore user=sprout_ru
 export SPROUT_RUNSTORE_TOKEN="$(openssl rand -hex 32)"
 python3 -m sprout.runstore init   --config resources/runstore/config.example.json
 python3 -m sprout.runstore serve  --config resources/runstore/config.example.json   # --host 127.0.0.1 --port 18110
-python3 -m sprout.runstore worker --config resources/runstore/config.example.json --concurrency 8
+python3 -m sprout.worker start --config resources/runstore/config.example.json --concurrency 8
 ```
 
 `init` is idempotent; a volatile `artifact_root` (e.g. `/tmp`) is refused. One
@@ -233,7 +233,7 @@ False, or `null` when a check could not run (`docs/LEAK_JUDGE.md`).
 `queued -> running -> succeeded | failed`; uncertain ownership/cleanup -> `quarantined`.
 - **Expired leases never requeue directly.** Managers fence the old lease, stop
   the child's process group (boot ID/PID/start time) and reconcile its sandboxes
-  first. Investigate other quarantines, then `python3 -m sprout.runstore reconcile --config ... --job-id ID`.
+  first. Investigate other quarantines, then `python3 -m sprout.worker reconcile --config ... --job-id ID`.
 - **Frozen payload.** Effective spec, profile and recovery point are frozen in
   `rs_attempts.payload` (+ hash) and sent over stdin (16 MiB max) once the
   child's identity is recorded. The child never touches PostgreSQL and rejects

@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from sprout.runstore.grading import APPLY, DIFF, GIT, GRADE_FACT_KEYS, patch_facts, patch_paths
+from sprout.worker.jobs.grade import APPLY, DIFF, GIT, GRADE_FACT_KEYS, patch_facts, patch_paths
 
 
 class Repo:

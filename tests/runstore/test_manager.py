@@ -8,10 +8,10 @@ from types import SimpleNamespace
 
 import pytest
 
-from sprout.runstore.manager import WorkerManager
+from sprout.worker.manager import WorkerManager
 from tests.runstore.test_payload import envelope
 from tests.runstore.test_store import request, store
-from sprout.runstore.worker import Worker, process_identity, stop_process
+from sprout.worker.attempts import Worker, process_identity, stop_process
 
 
 def eventually(predicate, timeout: float = 15) -> None:
@@ -148,7 +148,7 @@ def fixture_children(monkeypatch):
     processes = []
 
     def launch(command, **kwargs):
-        assert command[2] == "sprout.runstore.child"
+        assert command[2] == "sprout.worker.jobs.rollout"
         process = popen([*command[:2], "tests.runstore.payload_child", *command[3:]], **kwargs)
         processes.append((process, process_identity(process.pid)))
         return process
@@ -262,7 +262,7 @@ def test_cli_routes_concurrency_and_once_to_manager(tmp_path, monkeypatch):
     import json
     import sys
 
-    from sprout.runstore import __main__ as cli
+    from sprout.worker import cli
 
     configuration = tmp_path / "worker.json"
     configuration.write_text(json.dumps(config(tmp_path / "artifacts")))
@@ -277,11 +277,11 @@ def test_cli_routes_concurrency_and_once_to_manager(tmp_path, monkeypatch):
             assert not stop.is_set()
 
     monkeypatch.setenv("SPROUT_RUNSTORE_DSN", "fixture-not-connected")
-    monkeypatch.setattr(sys, "argv", ["runstore", "worker", "--config", str(configuration),
+    monkeypatch.setattr(sys, "argv", ["worker", "start", "--config", str(configuration),
                                     "--concurrency", "24", "--once"])
     monkeypatch.setattr(cli, "volatile_reason", lambda root: None)
     monkeypatch.setattr(cli.signal, "signal", lambda *args: None)
-    monkeypatch.setattr("sprout.runstore.manager.WorkerManager", Manager)
+    monkeypatch.setattr("sprout.worker.manager.WorkerManager", Manager)
     cli.main()
     assert captured == {"concurrency": 24, "once": True}
 

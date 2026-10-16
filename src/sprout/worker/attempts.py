@@ -13,16 +13,16 @@ from pathlib import Path
 from threading import Event, Lock, Thread
 from uuid import uuid4
 
+from sprout.contract.backend import backend_name, default_podman_store, snapshot_store
 from sprout.contract.messages import failure_kind
 from sprout.runstore.config import merge, referenced_env, resolve, snapshot_validator
-from sprout.runstore.files import read_json, write_json
 from sprout.runstore.index import Index
 from sprout.runstore.payload import PayloadUnavailable, encode_payload, send_payload
 from sprout.runstore.specs import defaults_key, digest, validate_continuation
 from sprout.runstore.store import Store
 from sprout.worker.agents.mini_swe.history import index_native
+from sprout.worker.files import read_json, write_json
 from sprout.worker.run.journal import journal_events
-from sprout.worker.sandbox.backends import backend_name, default_podman_store, snapshot_store
 from sprout_sandbox.podman_cli import default_podman_bin
 
 #: Where a queued job's sandboxes may live: on this host, owned by the attempt,
@@ -331,7 +331,7 @@ class Worker:
         What it did up to there is the policy's own and is graded; a run that
         failed before closing a turn, or was misconfigured, stays failed.
         """
-        from sprout.runstore.messages import salvage_interrupted
+        from sprout.worker.jobs.export import salvage_interrupted
 
         contract = envelope["effective_spec"].get("extra", {}).get("rollout_contract", {})
         if (
@@ -435,7 +435,7 @@ class Worker:
                     [
                         profile.get("python", sys.executable),
                         "-m",
-                        "sprout.runstore.child",
+                        "sprout.worker.jobs.rollout",
                         str(directory),
                         digest(envelope),
                     ],

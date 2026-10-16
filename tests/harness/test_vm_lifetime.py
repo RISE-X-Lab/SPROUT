@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from sprout.worker.sandbox.backends import BackendError
+from sprout.contract.backend import BackendError
 from sprout.worker.run.runner import Orchestrator
 from sprout.contract.run_spec import RunSpec
 

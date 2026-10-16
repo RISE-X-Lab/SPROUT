@@ -21,7 +21,7 @@ from sprout.contract.continuation import Continuation, prepare, render_reasoning
 from sprout.rl_driver.backend import RunStoreClient
 from sprout.rl_driver.driver import REVIEW_GRADE_KEYS
 from sprout.rl_driver.messages import SearchSpec
-from sprout.runstore.grading import GRADE_FACT_KEYS, patch_facts
+from sprout.worker.jobs.grade import GRADE_FACT_KEYS, patch_facts
 from sprout.methods.leak import hidden_terms_of
 from sprout.contract.messages import branch_origin
 from tests.rl_driver.test_driver import QueueHTTP

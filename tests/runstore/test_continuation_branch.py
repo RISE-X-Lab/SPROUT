@@ -15,10 +15,10 @@ from sprout.contract.continuation import render_branch_note, render_reasoning
 from sprout.contract.mini_history import read_entries, read_prefix, training_messages
 from sprout.worker.run.journal import read_journal
 from sprout.worker.run.runner import Orchestrator
-from sprout.runstore import child
+from sprout.worker.jobs import rollout as child
 from sprout.contract.messages import clean_messages, mark_hint
 from sprout.runstore.specs import JobSpec
-from sprout.runstore.worker import apply_branch_budget, starting_point
+from sprout.worker.attempts import apply_branch_budget, starting_point
 from tests.harness.test_assistant_turn import assistant_turn
 from tests.harness.test_mini_swe import model_server, owned_filesystem, pytestmark, reply
 from tests.runstore.test_assistant_turn_branch import restore_files

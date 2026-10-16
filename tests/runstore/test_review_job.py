@@ -21,14 +21,14 @@ from sprout.contract.mini_history import materialize
 from sprout.worker.run.runner import Orchestrator
 from sprout.methods import review_transport
 from sprout.methods.review_transport import RequestStopped, ReviewTransport
-from sprout.runstore import review as review_module
+from sprout.worker.jobs.review import job as review_module
 from sprout.contract.messages import mark_hint
 from sprout.runstore.payload import encode_payload, send_payload
-from sprout.runstore.review import (
+from sprout.worker.jobs.review.job import (
     ANALYSIS, CANDIDATE, POINTS, Call, ReviewStopped, commands_of, grade_of, run_review,
 )
 from sprout.runstore.specs import JobSpec, ReviewSpec, digest
-from sprout.runstore.worker import Watchdog, process_identity, stop_process
+from sprout.worker.attempts import Watchdog, process_identity, stop_process
 from tests.harness.test_mini_swe import (
     FilesystemSession, model_server, owned_filesystem, pytestmark, reply, spec as run_spec,
 )
@@ -1025,11 +1025,11 @@ def test_a_stopped_review_child_exits_within_the_workers_grace(tmp_path, monkeyp
     directory.mkdir(parents=True)
     envelope = {"version": 1, "job_id": "review-job", "attempt_id": "attempt-1", "kind": "review",
                 "effective_spec": spec, "profile_config": {}, "recovery": None}
-    repo = Path(review_module.__file__).resolve().parents[3]
+    repo = Path(__file__).resolve().parents[2]
     log_path = tmp_path / "worker.log"
     with log_path.open("w") as log:
         process = subprocess.Popen(
-            [sys.executable, "-m", "sprout.runstore.child", str(directory), digest(envelope)], cwd=repo,
+            [sys.executable, "-m", "sprout.worker.jobs.rollout", str(directory), digest(envelope)], cwd=repo,
             env={**os.environ, "FIXTURE_KEY": "fixture-key", "PYTHONPATH": f"{repo / 'src'}:{repo}"},
             stdin=subprocess.PIPE, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
     identity = process_identity(process.pid)

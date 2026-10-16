@@ -32,7 +32,7 @@ from harbor.environments.base import BaseEnvironment, ExecResult
 from harbor.environments.capabilities import EnvironmentCapabilities, EnvironmentResourceCapabilities
 from harbor.models.task.config import NetworkMode
 
-from sprout.worker.sandbox.backends import backend_name
+from sprout.contract.backend import backend_name
 from sprout.worker.sandbox.session import SandboxSession
 from sprout.worker.tools.interceptors import shell_command
 
