@@ -9,7 +9,7 @@ import math
 from typing import Any
 
 from sprout.harness.agents.mini_swe.continuation import Continuation
-from sprout.harness.orchestrator.run import RunSpec
+from sprout.harness_orchestrator.run import RunSpec
 
 #: What a branch may change about the run it continues. What the actor is given
 #: next is the branch's continuation, never a different prompt.

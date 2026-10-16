@@ -15,7 +15,7 @@ from harbor.models.trial.paths import TrialPaths
 from harbor.models.agent.context import AgentContext
 from sprout.harness.core.journal import JournalWriter, read_journal
 from sprout.harness.core.result import CommandOutcome, ToolResult
-from sprout.harness.orchestrator.run import OwnedSandbox, RunOutcome, RunSpec
+from sprout.harness_orchestrator.run import OwnedSandbox, RunOutcome, RunSpec
 from sprout.harness.tools.interceptors import shell_command
 from sprout.harbor_plugin import environment as sandbox_environment
 from sprout.harbor_plugin.agentenv import AgentENVEnvironment
@@ -56,7 +56,7 @@ def test_unsupported_requirements_fail_before_start(tmp_path, change, files, err
 def test_the_server_is_the_one_the_memory_snapshot_release_assumes(tmp_path, monkeypatch):
     """methods.evaluate releases a trial's memory snapshot through
     AgentEnvClient; named nowhere, the two once defaulted to different ports."""
-    from sprout.harness.orchestrator.reap import AgentEnvClient
+    from sprout.harness_orchestrator.reap import AgentEnvClient
 
     monkeypatch.delenv("AENV_SERVER_URL", raising=False)
     assert environment(tmp_path).server_url == AgentEnvClient().base_url == "http://127.0.0.1:8000"

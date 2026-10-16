@@ -13,7 +13,7 @@ from harbor.models.agent.context import AgentContext
 
 from sprout.harness.atif import export_file
 from sprout.harness_checkpoint.rollback import uncaptured_turns
-from sprout.harness.orchestrator.run import Orchestrator, OwnedSandbox, RunSpec
+from sprout.harness_orchestrator.run import Orchestrator, OwnedSandbox, RunSpec
 from sprout.harbor_plugin.environment import SandboxEnvironment
 
 

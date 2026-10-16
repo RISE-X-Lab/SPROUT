@@ -8,7 +8,7 @@ import time
 from typing import Any
 from urllib.parse import urlsplit
 
-from sprout.harness.orchestrator.rollout import validate as validate_sampling
+from sprout.harness_orchestrator.rollout import validate as validate_sampling
 from sprout.rl_driver.ledger import Conflict, canonical
 from sprout.rl_driver.outcome import export_problem, grade_verdict, zero_reason
 from sprout.runstore.messages import is_truncated_result

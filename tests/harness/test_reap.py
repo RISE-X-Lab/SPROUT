@@ -17,8 +17,8 @@ from datetime import timedelta
 
 import pytest
 
-from sprout.harness.orchestrator.reap import PodmanClient, ReapPlan, Reaper, parse_duration
-from sprout.harness.orchestrator.resources import ResourceLedger
+from sprout.harness_orchestrator.reap import PodmanClient, ReapPlan, Reaper, parse_duration
+from sprout.harness_orchestrator.resources import ResourceLedger
 from tests.conftest import fake_networks, recorded_calls, recorded_sequence
 
 
@@ -566,7 +566,7 @@ def test_nothing_in_the_run_lifecycle_calls_snapshot_deletion():
     from pathlib import Path
 
     root = Path(__file__).resolve().parents[2]
-    for module in ("src/sprout/harness/orchestrator/run.py", "src/sprout/harness/tools/access.py",
+    for module in ("src/sprout/harness_orchestrator/run.py", "src/sprout/harness/tools/access.py",
                    "src/sprout/harness_checkpoint/checkpointer.py", "src/sprout/harness_sandbox/session.py"):
         text = (root / module).read_text()
         assert "delete_snapshot" not in text, \

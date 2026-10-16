@@ -14,7 +14,7 @@ import pytest
 from sprout.harness.agents.mini_swe.continuation import render_branch_note, render_reasoning
 from sprout.harness.agents.mini_swe.history import read_entries, read_prefix, training_messages
 from sprout.harness.core.journal import read_journal
-from sprout.harness.orchestrator.run import Orchestrator
+from sprout.harness_orchestrator.run import Orchestrator
 from sprout.runstore import child
 from sprout.runstore.messages import clean_messages, mark_hint
 from sprout.runstore.specs import JobSpec

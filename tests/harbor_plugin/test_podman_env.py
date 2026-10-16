@@ -31,7 +31,7 @@ from sprout.harbor_plugin.environment import SandboxEnvironment
 from sprout.harbor_plugin.podman import PodmanEnvironment
 from sprout.harness.core.journal import JournalWriter
 from sprout.harness.core.result import ToolResult
-from sprout.harness.orchestrator.run import RunOutcome
+from sprout.harness_orchestrator.run import RunOutcome
 from sprout_sandbox.podman import PodmanError, digest_reference
 
 IMAGE = "public.ecr.aws/org/task:v1"

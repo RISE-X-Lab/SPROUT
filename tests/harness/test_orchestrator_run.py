@@ -21,7 +21,7 @@ import pytest
 from sprout.harness.core import events as E
 from sprout.harness.core.journal import read_journal
 from sprout.harness.core.slot import AgentSlot, SlotResult
-from sprout.harness.orchestrator import Orchestrator, RunSpec
+from sprout.harness_orchestrator import Orchestrator, RunSpec
 
 #: The real sandbox wiring, for the tests that exercise it directly; every other
 #: test gets a fake sandbox from the autouse fixture below.
@@ -65,7 +65,7 @@ class RecordingSlot(AgentSlot):
 def fake_slot(monkeypatch):
     RecordingSlot.calls = []
     RecordingSlot.raises = None
-    monkeypatch.setattr("sprout.harness.orchestrator.run.MiniSweSlot", RecordingSlot)
+    monkeypatch.setattr("sprout.harness_orchestrator.run.MiniSweSlot", RecordingSlot)
     yield RecordingSlot
 
 
@@ -332,12 +332,12 @@ def test_a_reboard_moves_the_claim_and_the_record_to_the_replacement(tmp_path, m
     would otherwise leave a sandbox `harness reap` cannot attribute -- and the
     release at teardown and the outcome must name it, not the destroyed one."""
     import sprout.harness_sandbox.session as session_module
-    from sprout.harness.orchestrator import ResourceLedger
+    from sprout.harness_orchestrator import ResourceLedger
 
     session = ReboardingSession()
     monkeypatch.setattr(Orchestrator, "_wire_sandbox", REAL_WIRE_SANDBOX)
     monkeypatch.setattr(session_module, "SandboxSession", lambda **kw: session)
-    monkeypatch.setattr("sprout.harness.orchestrator.run.MiniSweSlot", ThreeTurns)
+    monkeypatch.setattr("sprout.harness_orchestrator.run.MiniSweSlot", ThreeTurns)
     ledger = ResourceLedger(tmp_path / "ledger.jsonl")
     outcome = Orchestrator(out_dir=tmp_path, ledger=ledger).run(
         spec(tmp_path, run_id="r1", sandbox_image="img", backend={"backend": "microvm"}))
@@ -394,7 +394,7 @@ def _own(monkeypatch, session, **spec_kwargs):
     """Drive the real sandbox wiring with a fake session, returning (orchestrator, owned)."""
     import sprout.harness_sandbox.session as session_module
 
-    from sprout.harness.orchestrator.run import Orchestrator, RunSpec
+    from sprout.harness_orchestrator.run import Orchestrator, RunSpec
 
     monkeypatch.setattr(session_module, "SandboxSession", lambda **kw: session)
     spec = RunSpec(prompt="x", sandbox_image="img", **spec_kwargs)
@@ -411,7 +411,7 @@ def test_one_run_start_to_finish_on_the_sandbox_it_owns(tmp_path, monkeypatch):
     on, since a killed *process* releases nothing."""
     import sprout.harness_sandbox.session as session_module
 
-    from sprout.harness.orchestrator import ResourceLedger
+    from sprout.harness_orchestrator import ResourceLedger
     from sprout.harness.tools.access import ToolAccess
     from sprout.harness.tools.schema import runtime_tools
 
@@ -447,8 +447,8 @@ def test_the_ledger_claim_names_the_backend(monkeypatch, tmp_path):
     has to say so, or reap reads it as "already gone" forever."""
     import sprout.harness_sandbox.session as session_module
 
-    from sprout.harness.orchestrator import ResourceLedger
-    from sprout.harness.orchestrator.run import Orchestrator, RunSpec
+    from sprout.harness_orchestrator import ResourceLedger
+    from sprout.harness_orchestrator.run import Orchestrator, RunSpec
 
     session = _FakeSession()
     monkeypatch.setattr(session_module, "SandboxSession", lambda **kw: session)
@@ -476,7 +476,7 @@ def test_the_outcome_can_still_name_its_sandbox_after_teardown():
     """Teardown runs before the outcome is assembled, and a destroyed session
     answers "unknown" -- so reading the id lazily left every completed run unable
     to say which sandbox produced it."""
-    from sprout.harness.orchestrator.run import OwnedSandbox
+    from sprout.harness_orchestrator.run import OwnedSandbox
 
     session = _FakeSession()
     owned = OwnedSandbox(session=session, sandbox_id=session.sandbox_id)
@@ -535,7 +535,7 @@ def test_the_pipeline_is_limits_then_the_tracker_then_declared_rules(tmp_path):
     """The checkpointer must read the tracker the pipeline feeds: a second,
     unfed tracker once recorded every step after the first as clean reuse."""
     from sprout.harness.core.journal import JournalWriter
-    from sprout.harness.orchestrator.run import OwnedSandbox, RunSpec
+    from sprout.harness_orchestrator.run import OwnedSandbox, RunSpec
     from sprout.harness.tools.interceptors import MutationTracker, ShellContext
 
     limits = object()
@@ -552,7 +552,7 @@ def test_the_pipeline_is_limits_then_the_tracker_then_declared_rules(tmp_path):
 
 def test_a_failed_final_snapshot_keeps_the_sandbox_on_the_record(tmp_path, fake_sandbox):
     """Until the final snapshot exists the sandbox is the only copy of the result."""
-    from sprout.harness.orchestrator import ResourceLedger
+    from sprout.harness_orchestrator import ResourceLedger
 
     class NoSnapshotSession(FakeSession):
         def snapshot(self, name=None, disk_only=True):

@@ -267,7 +267,7 @@ def test_the_callers_that_assume_a_server_assume_one(monkeypatch):
     none is named, and a trial's memory snapshot is released through the second:
     they once fell back to different ports. AgentENV's own default is 8000;
     AENV_SERVER_URL comes first and a named URL before both."""
-    from sprout.harness.orchestrator.reap import AgentEnvClient
+    from sprout.harness_orchestrator.reap import AgentEnvClient
 
     monkeypatch.delenv("AENV_SERVER_URL", raising=False)
     assert default_aenv_server_url() == DEFAULT_AENV_SERVER_URL == "http://127.0.0.1:8000"

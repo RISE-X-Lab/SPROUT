@@ -36,7 +36,7 @@ from typing import Callable
 from sprout_sandbox import BtrfsStore
 from sprout.harness.atif import export_file
 from sprout.harness.core.events import SANDBOX_CREATED
-from sprout.harness.orchestrator import (AgentEnvClient, Orchestrator, PodmanClient, Reaper,
+from sprout.harness_orchestrator import (AgentEnvClient, Orchestrator, PodmanClient, Reaper,
                                          ResourceLedger, RunSpec, parse_duration)
 from sprout.harness.core.journal import journal_events, read_journal, volatile_reason
 from sprout.harness_sandbox.backends import default_podman_store

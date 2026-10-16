@@ -18,7 +18,7 @@ import httpx
 from sprout.harness.agents.mini_swe.history import actor_tools_at, load_prefix, reference_at
 from sprout.harness.core.journal import read_journal
 from sprout.harness_gateway.auth import bearer_headers
-from sprout.harness.orchestrator.rollout import endpoint
+from sprout.harness_orchestrator.rollout import endpoint
 from sprout.methods.branching import extract_json, render_transcript
 from sprout.methods.prompts import DEFAULT_PROMPTS, Prompts
 

@@ -4,7 +4,7 @@ Two lookups, deliberately separate:
 
 - ``RoutingTable`` maps the model name an agent asks for to an upstream
   (base URL + credential + optional rename). The orchestrator builds one route
-  per run from the rollout contract (``harness.orchestrator.run``): whatever
+  per run from the rollout contract (``harness_orchestrator.run``): whatever
   name the agent asks for, the request goes to the contract's endpoint as the
   contract's model, with the contract's credential.
 - ``SlotToken`` maps the credential an agent presents to an ``agent_id`` and a

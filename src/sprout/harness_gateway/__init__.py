@@ -8,7 +8,7 @@ mini-swe-agent's model traffic reaches the provider through here, which buys:
    exact token counts, independent of what the agent reports.
 3. **Budget hard-stop** -- refuse requests once a run is over budget.
 4. **Rollout policy** -- a run's sampling parameters, turn limit and deadline,
-   applied to every request (``harness.orchestrator.rollout``).
+   applied to every request (``harness_orchestrator.rollout``).
 
 Not a policy engine for tools: tool calls are governed on the ToolAccess path.
 The agent is wired with ``OPENAI_BASE_URL`` and a per-slot ``OPENAI_API_KEY``.

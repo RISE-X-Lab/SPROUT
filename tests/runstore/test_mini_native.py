@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from sprout.harness.orchestrator.run import Orchestrator
+from sprout.harness_orchestrator.run import Orchestrator
 from sprout.harness.agents.mini_swe.history import read_entries, training_messages
 from tests.harness.test_mini_swe import FilesystemSession, model_server, owned_filesystem, reply, spec, pytestmark
 from sprout.runstore.messages import export_messages, mark_hint

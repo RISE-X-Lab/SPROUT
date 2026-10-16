@@ -10,7 +10,7 @@ import pytest
 from sprout.harness.agents.mini_swe.history import validate_assistant_turn
 from sprout.harness.core.journal import read_journal
 from sprout.harness.agents.mini_swe.tools import mini_tool_primer, mini_tool_schema
-from sprout.harness.orchestrator.run import Orchestrator
+from sprout.harness_orchestrator.run import Orchestrator
 from tests.harness.test_assistant_turn import assistant_turn
 from tests.harness.test_mini_swe import FilesystemSession, model_server, owned_filesystem, pytestmark, reply, spec
 from tests.runstore.test_mini_native import parent_run

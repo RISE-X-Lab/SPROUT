@@ -82,7 +82,7 @@ def podman_reclaimed(claims: dict, backend: dict) -> bool:
     store its rootfs was made in; one that does not (the grader's) is looked
     for in the store the job's backend names.
     """
-    from sprout.harness.orchestrator.reap import PodmanClient
+    from sprout.harness_orchestrator.reap import PodmanClient
 
     section = backend.get("podman") or {}
     default = snapshot_store(backend) or default_podman_store()
@@ -318,7 +318,7 @@ class Worker:
             effective = apply_branch_budget(effective, request.get("branch_budget"))
             rollout_contract = effective.get("extra", {}).get("rollout_contract")
             if job["kind"] == "rollout" and rollout_contract is not None:
-                from sprout.harness.orchestrator.rollout import remaining_timeout
+                from sprout.harness_orchestrator.rollout import remaining_timeout
 
                 # Queue time belongs to the group deadline too. Bound child
                 # startup/provisioning, not only the agent's model requests.

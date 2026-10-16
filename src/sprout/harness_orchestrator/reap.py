@@ -2,7 +2,7 @@
 
 Two independent sources, because either alone misses cases:
 
-- the **ledger** (harness/orchestrator/resources.py) knows what each run
+- the **ledger** (harness_orchestrator/resources.py) knows what each run
   allocated and on which backend, so it can attribute an orphan to a dead pid.
   It cannot see sandboxes created before the ledger existed, or by other tools.
 - the **backends** know everything that exists. They have no owner field, so age
@@ -43,7 +43,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 
 from sprout_sandbox.podman import BtrfsStore, MANAGED_LABEL, SOCKET_MOUNT, STORE_LABEL, default_podman_bin
-from sprout.harness.orchestrator.resources import ResourceLedger
+from sprout.harness_orchestrator.resources import ResourceLedger
 from sprout.harness_sandbox.backends import default_aenv_server_url
 
 _DURATION = re.compile(r"^(\d+(?:\.\d+)?)\s*([smhd])$")

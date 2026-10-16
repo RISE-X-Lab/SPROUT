@@ -30,7 +30,7 @@ import sys
 import time
 from pathlib import Path
 
-from sprout.harness.orchestrator.reap import AgentEnvClient
+from sprout.harness_orchestrator.reap import AgentEnvClient
 from sprout.harness_sandbox.backends import resolve_microvm_endpoint
 from sprout.harness_sandbox.templates import TemplateBuilder
 from sprout_sandbox import MicroVMPool, PodmanPool

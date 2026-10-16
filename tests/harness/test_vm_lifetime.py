@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from sprout.harness_sandbox.backends import BackendError
-from sprout.harness.orchestrator.run import Orchestrator, RunSpec
+from sprout.harness_orchestrator.run import Orchestrator, RunSpec
 
 
 @pytest.fixture

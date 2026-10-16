@@ -40,7 +40,7 @@ from sprout.harness.agents.mini_swe.slot import MiniSweSlot
 from sprout.harness.core.events import SANDBOX_CREATED
 from sprout.harness.core.journal import JournalWriter, new_run_id, read_journal
 from sprout.harness.core.slot import SlotResult, TaskSpec
-from sprout.harness.orchestrator.resources import ResourceLedger
+from sprout.harness_orchestrator.resources import ResourceLedger
 from sprout.harness_sandbox.backends import backend_name, snapshot_store
 
 
@@ -212,7 +212,7 @@ class Orchestrator:
                 from sprout.harness.core.control import GRADABLE_STOP_REASONS, RunControl
                 control = RunControl()
                 if extra.get("rollout_contract") is not None:
-                    from sprout.harness.orchestrator.rollout import RolloutControls
+                    from sprout.harness_orchestrator.rollout import RolloutControls
 
                     rollout_controls = RolloutControls(extra["rollout_contract"], journal, control)
                     rollout_controls.start()

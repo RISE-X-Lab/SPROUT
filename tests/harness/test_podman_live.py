@@ -32,8 +32,8 @@ from tests.conftest import default_podman_bin, podman_store_in_use, sandbox_netw
 
 import sprout.harness.cli as cli
 from sprout.harness_checkpoint.checkpointer import Checkpointer
-from sprout.harness.orchestrator.reap import PodmanClient, Reaper
-from sprout.harness.orchestrator.resources import ResourceLedger
+from sprout.harness_orchestrator.reap import PodmanClient, Reaper
+from sprout.harness_orchestrator.resources import ResourceLedger
 from sprout.harness_sandbox.session import SandboxSession, checked, shell
 from sprout_sandbox import PodmanPool
 from sprout_sandbox.podman import mount_problem

@@ -3,8 +3,8 @@ import time
 
 from sprout.harness.core.control import RunControl
 from sprout.harness.core.slot import TaskSpec
-from sprout.harness.orchestrator.rollout import RolloutControls
-from sprout.harness.orchestrator.run import Orchestrator, RunOutcome
+from sprout.harness_orchestrator.rollout import RolloutControls
+from sprout.harness_orchestrator.run import Orchestrator, RunOutcome
 from sprout.runstore.child import execute
 
 

@@ -21,9 +21,9 @@ arrives, this is the package it goes in, and `run.py`'s sequence is already what
 child needs.
 """
 
-from sprout.harness.orchestrator.reap import AgentEnvClient, PodmanClient, Reaper, parse_duration
-from sprout.harness.orchestrator.resources import Resource, ResourceLedger
-from sprout.harness.orchestrator.run import Orchestrator, RunOutcome, RunSpec
+from sprout.harness_orchestrator.reap import AgentEnvClient, PodmanClient, Reaper, parse_duration
+from sprout.harness_orchestrator.resources import Resource, ResourceLedger
+from sprout.harness_orchestrator.run import Orchestrator, RunOutcome, RunSpec
 
 __all__ = [
     "Orchestrator", "RunSpec", "RunOutcome",

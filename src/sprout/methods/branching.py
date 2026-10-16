@@ -24,7 +24,7 @@ from sprout.harness.agents.mini_swe.history import (
 )
 from sprout.harness_checkpoint.rollback import Checkpoint, load_checkpoints
 from sprout.harness.core.journal import read_journal
-from sprout.harness.orchestrator.run import RunOutcome
+from sprout.harness_orchestrator.run import RunOutcome
 from sprout.methods.branch_plan import (
     PromptRejected, ReviewerPlanError, ReviewResponseTruncated, TurnRejected, extract_branch_plan,
     review_with_feedback,
