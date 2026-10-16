@@ -88,6 +88,11 @@ jobs:
         working-directory: runtime
         run: go generate ./... && go build -o sprout-runtime .
 
+      # The pre-commit gates (gate/README.md), here too because a hook can be skipped.
+      # After the install and the build: the gates run ruff, mypy and the runtime.
+      - name: Gates
+        run: ./gate/run.sh
+
       # The client the harness uses behind AgentENV's proxy, pointed straight at
       # that bare runtime (which ignores the routing headers): the one place the
       # Python parse meets a live Go response rather than a canned one.

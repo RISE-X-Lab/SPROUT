@@ -1,0 +1,4 @@
+#!/bin/sh
+# Every commit passes the gates first. Enabled per clone with
+#     git config core.hooksPath gate/hooks
+exec gate/run.sh

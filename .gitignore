@@ -10,6 +10,9 @@ Cargo.lock
 *.swo
 .claude
 .pytest_cache
+.mypy_cache/
+# Plots and throwaway scripts (CLAUDE.md)
+/scratch/
 # OS
 .DS_Store
 Thumbs.db

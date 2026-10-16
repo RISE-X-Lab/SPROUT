@@ -22,7 +22,7 @@ harbor = ["harbor==0.22.0"]
 # The Run Store queue and the RL driver.
 runstore = ["psycopg2-binary>=2.9,<3", "fastapi>=0.110,<1", "uvicorn>=0.29,<1"]
 rl = ["fastapi>=0.110,<1", "uvicorn>=0.29,<1"]
-dev = ["pytest>=8", "pyflakes"]
+dev = ["pytest>=8", "ruff", "mypy", "types-PyYAML", "types-jsonschema", "types-psycopg2"]
 # Regenerating the logo and architecture figures (ops/figures/gen_logo.py).
 docs = ["fonttools>=4", "uharfbuzz>=0.39"]
 
@@ -37,6 +37,28 @@ packages = ["src/sprout", "src/sprout_sandbox"]
 # directory to read it from (src/sprout/harness_tools/schema.py).
 [tool.hatch.build.targets.wheel.force-include]
 "runtime/schema/tools.json" = "sprout/harness_tools/tools.json"
+
+# Lint and format for every Python file (gate/pending/lint.py runs both).
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+# `%` formatting stays: a rewrite to f-strings changes what a tuple argument prints.
+ignore = ["UP031"]
+
+# Every function in src/ fully typed (gate/checks/type_hints.py runs this); unreachable
+# reports a None check on a value whose type cannot be None.
+[tool.mypy]
+files = ["src/sprout", "src/sprout_sandbox"]
+strict = true
+warn_unreachable = true
+
+# Harbor ships no type information; its imports are Any.
+[[tool.mypy.overrides]]
+module = ["harbor.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 pythonpath = ["src", "."]

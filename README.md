@@ -171,6 +171,9 @@ in git; `go generate` downloads it before a build:
 cd runtime && go generate ./... && go build -o sprout-runtime .
 ```
 
+A new tool also goes into `gate/checks/runtime_tools.py`, which fails a commit that serves
+any other.
+
 ## Layout
 
 ```
@@ -191,6 +194,7 @@ cd runtime && go generate ./... && go build -o sprout-runtime .
 ├── src/sprout/services/              # the host's long-running pieces: db, LiteLLM proxy, Run Store, RL driver
 ├── src/sprout_sandbox/               # the sandbox clients: AgentENV microVMs and rootless podman
 ├── runtime/                          # the Go binary inside every sandbox: shell, text_editor, grep, web, over JSON-RPC
+├── gate/                             # checks every commit must pass (pre-commit hook and CI)
 └── tests/  docs/  examples/  ops/
 ```
 
