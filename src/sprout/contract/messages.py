@@ -1,4 +1,8 @@
-"""The training-message format: the hint markers, the cleanup every exported message gets, and what counts as a truncated result."""
+"""The training-message format.
+
+It covers the hint markers, the cleanup every exported message gets, and what counts as a
+truncated result.
+"""
 
 from __future__ import annotations
 

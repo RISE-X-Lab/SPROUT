@@ -1,4 +1,7 @@
-"""mini-swe-agent's native history: its format, how to read a prefix of it, and what a valid inserted turn is."""
+"""mini-swe-agent's native history.
+
+It covers the format, how to read a prefix of a history, and what a valid inserted turn is.
+"""
 
 from __future__ import annotations
 
