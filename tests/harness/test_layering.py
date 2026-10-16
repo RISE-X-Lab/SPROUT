@@ -47,14 +47,14 @@ def package_dirs(package: str) -> list[Path]:
     if package in ("examples", "ops"):
         return [REPO / package]
     root = REPO / "src" / "sprout"
-    # The harness layer is harness/ and its parts, one harness_<part>/ package each.
-    return [root / package] + (sorted(root.glob("harness_*")) if package == "harness" else [])
+    # A layer is <layer>/ and its parts, one <layer>_<part>/ package each.
+    return [root / package, *sorted(root.glob(f"{package}_*"))]
 
 
 def _layer(module: str) -> str:
     parts = module.split(".")
-    layer = parts[1] if parts[0] == "sprout" and len(parts) > 1 else parts[0]
-    return "harness" if layer.startswith("harness_") else layer
+    name = parts[1] if parts[0] == "sprout" and len(parts) > 1 else parts[0]
+    return next((layer for layer in ALLOWED if name == layer or name.startswith(layer + "_")), name)
 
 
 def _imports(path: Path) -> set[str]:
