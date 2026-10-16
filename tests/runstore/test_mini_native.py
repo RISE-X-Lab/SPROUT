@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from sprout.worker.run.runner import Orchestrator
+from sprout.worker.run.runner import Runner
 from sprout.contract.mini_history import read_entries, training_messages
 from tests.harness.test_mini_swe import FilesystemSession, model_server, owned_filesystem, reply, spec, pytestmark
 from sprout.worker.jobs.export import export_messages
@@ -15,11 +15,11 @@ from tests.runstore.test_store import store  # noqa: F401  (fixture)
 
 def parent_run(tmp_path, monkeypatch):
     memory = FilesystemSession(tmp_path / "sandbox")
-    monkeypatch.setattr(Orchestrator, "_wire_sandbox", lambda *args: owned_filesystem(memory))
+    monkeypatch.setattr(Runner, "_wire_sandbox", lambda *args: owned_filesystem(memory))
     with model_server([reply("echo early > answer", "cat answer"),
                        reply("echo late > answer"),
                        reply("echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT")]) as (url, _):
-        outcome = Orchestrator().run(spec(tmp_path, url))
+        outcome = Runner().run(spec(tmp_path, url))
     assert outcome.status == "completed", outcome.error
     path = tmp_path / "native-home" / f"{outcome.native_session_id}.jsonl"
     points = index_native(outcome.journal_path, path, "mini-swe-agent", outcome.native_session_id)
@@ -37,12 +37,12 @@ def test_exact_branch_restores_closed_prefix_without_parent_suffix(tmp_path, mon
     child = FilesystemSession(child_dir / "sandbox")
     for name, data in memory.snapshots[cut.snapshot_id].items():
         (child.root / name).write_bytes(data)
-    monkeypatch.setattr(Orchestrator, "_wire_sandbox", lambda *args: owned_filesystem(child))
+    monkeypatch.setattr(Runner, "_wire_sandbox", lambda *args: owned_filesystem(child))
     with model_server([reply("cat answer"), reply("echo child > answer"),
                        reply("echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT")]) as (url, requests):
         run_spec = spec(child_dir, url, prompt=mark_hint("private branch direction"))
         run_spec.extra.update(extra)
-        outcome = Orchestrator().run(run_spec)
+        outcome = Runner().run(run_spec)
     assert outcome.status == "completed", outcome.error
     assert "private branch direction" in json.dumps(requests[0]["messages"])
     assert "echo late" not in json.dumps(requests)
@@ -70,12 +70,12 @@ def test_branch_cannot_change_inherited_workspace(tmp_path, monkeypatch):
     extra = materialize(points[0].native, child_dir / "cwd",
                         child_dir / "restoration", child_dir / "native-home")
     child = FilesystemSession(child_dir / "sandbox")
-    monkeypatch.setattr(Orchestrator, "_wire_sandbox", lambda *args: owned_filesystem(child))
+    monkeypatch.setattr(Runner, "_wire_sandbox", lambda *args: owned_filesystem(child))
     with model_server([]) as (url, requests):
         run_spec = spec(child_dir, url, prompt=mark_hint("continue"))
         run_spec.extra.update(extra)
         run_spec.extra["mini"] = {"environment": {"cwd": "/another-repository"}}
-        outcome = Orchestrator().run(run_spec)
+        outcome = Runner().run(run_spec)
     assert "differs from its inherited workspace" in outcome.error
     assert requests == []
 
@@ -144,10 +144,10 @@ def test_timeout_between_actions_grades_the_matching_closed_prefix(tmp_path, mon
         return output
     monkeypatch.setattr(ToolEnvironment, "execute", stop_after_partial)
     memory = FilesystemSession(tmp_path / "sandbox")
-    monkeypatch.setattr(Orchestrator, "_wire_sandbox", lambda *args: owned_filesystem(memory))
+    monkeypatch.setattr(Runner, "_wire_sandbox", lambda *args: owned_filesystem(memory))
     with model_server([reply("echo good > answer"),
                        reply("echo partial > answer", "echo never > answer")]) as (url, requests):
-        outcome = Orchestrator().run(spec(tmp_path, url))
+        outcome = Runner().run(spec(tmp_path, url))
     assert len(requests) == 2 and outcome.stop_reason == "timeout"
     disk_at_stop = memory.snapshot().id
     result = complete_message_result(

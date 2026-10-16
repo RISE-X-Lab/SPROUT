@@ -18,7 +18,7 @@ import pytest
 
 from sprout.worker.agents.mini_swe.history import available_branch_points
 from sprout.contract.mini_history import materialize
-from sprout.worker.run.runner import Orchestrator
+from sprout.worker.run.runner import Runner
 from sprout.worker.jobs.review import transport as review_transport
 from sprout.worker.jobs.review.transport import RequestStopped, ReviewTransport
 from sprout.worker.jobs.review import job as review_module
@@ -310,13 +310,13 @@ def test_leak_terms_judge_a_turn_against_the_hint_free_history_at_its_own_point(
     branch = root / "job-2" / "attempt-2"
     extra = materialize(points[0].native, branch / "cwd", branch / "restoration", branch / "native-home")
     memory = FilesystemSession(branch / "sandbox")
-    monkeypatch.setattr(Orchestrator, "_wire_sandbox", lambda *args: owned_filesystem(memory))
+    monkeypatch.setattr(Runner, "_wire_sandbox", lambda *args: owned_filesystem(memory))
     hint = "Start from tests/test_hidden.py."
     with model_server([reply("cat answer"), reply("cat tests/test_hidden.py"),
                        reply("echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT")]) as (url, requests):
         branch_spec = run_spec(branch, url, prompt=mark_hint(hint))
         branch_spec.extra.update(extra)
-        outcome = Orchestrator().run(branch_spec)
+        outcome = Runner().run(branch_spec)
     assert outcome.status == "completed", outcome.error
     assert hint in json.dumps(requests[0]["messages"]), "the actor was given the hint"
     spec = review_spec(root, candidates=1)

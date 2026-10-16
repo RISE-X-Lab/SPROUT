@@ -14,7 +14,7 @@ import pytest
 from sprout.contract.continuation import render_branch_note, render_reasoning
 from sprout.contract.mini_history import read_entries, read_prefix, training_messages
 from sprout.worker.run.journal import read_journal
-from sprout.worker.run.runner import Orchestrator
+from sprout.worker.run.runner import Runner
 from sprout.worker.jobs import rollout as child
 from sprout.contract.messages import clean_messages, mark_hint
 from sprout.runstore.specs import JobSpec
@@ -50,7 +50,7 @@ def run_branch(tmp_path, monkeypatch, continuation, replies):
     sandbox = restore_files(memory, cut.snapshot_id, tmp_path / "sandbox")
     # The child wraps the session's re-board; a filesystem sandbox never re-boards.
     sandbox.swap_sandbox = lambda snapshot: False
-    monkeypatch.setattr(Orchestrator, "_wire_sandbox", lambda *args: owned_filesystem(sandbox))
+    monkeypatch.setattr(Runner, "_wire_sandbox", lambda *args: owned_filesystem(sandbox))
     directory = tmp_path / "attempt"
     directory.mkdir()
     with model_server(replies) as (url, requests):

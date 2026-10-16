@@ -6,7 +6,7 @@ import pytest
 
 from sprout.worker.run.control import RunControl
 from sprout.worker.agents.slot import SlotResult
-from sprout.worker.run.runner import Orchestrator, RunOutcome
+from sprout.worker.run.runner import Runner, RunOutcome
 from sprout.worker.jobs.rollout import execute
 from sprout.worker.jobs.export import complete_message_result
 from sprout.contract.messages import is_truncated_result
@@ -38,8 +38,8 @@ def test_child_captures_final_state_and_exports_native_identity_on_cutoff(tmp_pa
     )
     owned = SimpleNamespace(session=session, sandbox_id="vm", keep=False,
                             destroy=lambda: order.append("destroy"))
-    monkeypatch.setattr(Orchestrator, "_wire_sandbox", lambda *args: owned)
-    monkeypatch.setattr(Orchestrator, "_wire_gateway", lambda *args: None)
+    monkeypatch.setattr(Runner, "_wire_sandbox", lambda *args: owned)
+    monkeypatch.setattr(Runner, "_wire_gateway", lambda *args: None)
     # The stand-in sandbox has no shell for mini's workspace probe.
     monkeypatch.setattr("sprout.worker.agents.mini_swe.sandbox.resolve_workspace", lambda session, extra, journal: extra)
 

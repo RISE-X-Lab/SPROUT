@@ -24,10 +24,10 @@ child needs.
 from sprout.contract.run_spec import RunSpec
 from sprout.worker.run.reap import AgentEnvClient, PodmanClient, Reaper, parse_duration
 from sprout.worker.run.resources import Resource, ResourceLedger
-from sprout.worker.run.runner import Orchestrator, RunOutcome
+from sprout.worker.run.runner import Runner, RunOutcome
 
 __all__ = [
-    "Orchestrator",
+    "Runner",
     "RunSpec",
     "RunOutcome",
     "ResourceLedger",

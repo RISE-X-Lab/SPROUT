@@ -15,10 +15,10 @@ from sprout.contract.run_spec import RunSpec
 from sprout.eval.harbor.environment import SandboxEnvironment
 from sprout.worker.checkpoint.rollback import uncaptured_turns
 from sprout.worker.run.atif import export_file
-from sprout.worker.run.runner import Orchestrator, OwnedSandbox
+from sprout.worker.run.runner import Runner, OwnedSandbox
 
 
-class AgentENVOrchestrator(Orchestrator):
+class AgentENVOrchestrator(Runner):
     def __init__(self, environment: SandboxEnvironment, model_env: dict, **kwargs):
         super().__init__(**kwargs)
         self.environment = environment

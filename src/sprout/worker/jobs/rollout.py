@@ -18,7 +18,7 @@ from sprout.runstore.config import referenced_env, resolve
 from sprout.runstore.payload import receive_payload
 from sprout.worker.files import write_json
 from sprout.worker.run.resources import ResourceLedger
-from sprout.worker.run.runner import Orchestrator
+from sprout.worker.run.runner import Runner
 from sprout.worker.sandbox.session import SandboxSession
 
 
@@ -110,7 +110,7 @@ def execute(request: dict, directory: Path) -> dict:
     def progress(kind: str, payload: dict) -> None:
         write_json(directory / "progress.json", {"phase": kind, **payload})
 
-    class TrackedOrchestrator(Orchestrator):
+    class TrackedOrchestrator(Runner):
         def _wire_gateway(self, run_spec, journal, task, run_id):
             task.env.update({name: "" for name in hidden_env})
             task.env.update(agent_env)

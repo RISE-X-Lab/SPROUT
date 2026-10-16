@@ -41,7 +41,7 @@ from sprout.contract.backend import default_podman_store
 from sprout.contract.storage import volatile_reason
 from sprout.worker.run import (
     AgentEnvClient,
-    Orchestrator,
+    Runner,
     PodmanClient,
     Reaper,
     ResourceLedger,
@@ -133,7 +133,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
         raise SystemExit("refusing: %s (pass --volatile-ok to override)" % reason)
 
     ledger = ResourceLedger()
-    outcome = Orchestrator(ledger=ledger, on_event=report).run(spec)
+    outcome = Runner(ledger=ledger, on_event=report).run(spec)
 
     print("run_id      %s" % outcome.run_id)
     print("journal     %s" % outcome.journal_path)

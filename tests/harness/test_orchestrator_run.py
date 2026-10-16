@@ -1,4 +1,4 @@
-"""Orchestrator: the sequence of one run, and what it guarantees.
+"""Runner: the sequence of one run, and what it guarantees.
 
 These pin the two things the sequence exists for -- **ordering** (each step must
 happen before the one that depends on it, and "too late" is silently wrong rather
@@ -21,11 +21,11 @@ import pytest
 from sprout.worker.run import events as E
 from sprout.worker.run.journal import read_journal
 from sprout.worker.agents.slot import AgentSlot, SlotResult
-from sprout.worker.run import Orchestrator, RunSpec
+from sprout.worker.run import Runner, RunSpec
 
 #: The real sandbox wiring, for the tests that exercise it directly; every other
 #: test gets a fake sandbox from the autouse fixture below.
-REAL_WIRE_SANDBOX = Orchestrator._wire_sandbox
+REAL_WIRE_SANDBOX = Runner._wire_sandbox
 
 
 # --- fakes -----------------------------------------------------------------
@@ -97,7 +97,7 @@ def fake_sandbox(monkeypatch):
             claim.sandbox(provisioned.sandbox_id, keep=run_spec.keep_sandbox)
         return provisioned
 
-    monkeypatch.setattr(Orchestrator, "_wire_sandbox", wire)
+    monkeypatch.setattr(Runner, "_wire_sandbox", wire)
     return made
 
 
@@ -182,7 +182,7 @@ def test_the_workspace_is_resolved_on_the_owned_sandbox_for_every_run(tmp_path, 
     """mini starts in a probed working directory: the probe runs on the sandbox
     this run owns, and what it resolves is what the slot receives."""
     fake_sandbox.session = FakeSession()
-    Orchestrator(out_dir=tmp_path).run(spec(tmp_path))
+    Runner(out_dir=tmp_path).run(spec(tmp_path))
     assert fake_workspace == [fake_sandbox[0].session]
     assert RecordingSlot.calls[0]["extra"]["mini_workspace"] == WORKSPACE
 
@@ -192,14 +192,14 @@ def test_the_journal_names_the_sandbox_its_backend_and_a_podman_runs_store(tmp_p
     subvolume names, which AgentENV would 404 and count as deleted. They are
     subvolumes of the store, so a podman run's record names that too; sweep then
     needs nothing but the journal."""
-    Orchestrator(out_dir=tmp_path).run(spec(tmp_path, sandbox_image="img", backend={"backend": "microvm"}))
+    Runner(out_dir=tmp_path).run(spec(tmp_path, sandbox_image="img", backend={"backend": "microvm"}))
     [created] = [r for r in read_journal(tmp_path / "j.jsonl") if r["type"] == E.SANDBOX_CREATED]
     assert (created["sandbox_id"], created["backend"], created["image"]) == ("sb-1", "microvm", "img")
     assert "store" not in created, "an AgentENV run's snapshots are records, not files"
 
     podman = {"backend": "podman", "podman": {"store": str(tmp_path / "store"),
                                               "runtime_bin": "runtime/sprout-runtime"}}
-    Orchestrator(out_dir=tmp_path).run(spec(tmp_path, journal_path=tmp_path / "p.jsonl", backend=podman))
+    Runner(out_dir=tmp_path).run(spec(tmp_path, journal_path=tmp_path / "p.jsonl", backend=podman))
     [created] = [r for r in read_journal(tmp_path / "p.jsonl") if r["type"] == E.SANDBOX_CREATED]
     assert (created["backend"], created["store"]) == ("podman", str(tmp_path / "store"))
 
@@ -217,8 +217,8 @@ def test_a_bad_spec_is_refused_before_a_sandbox_or_the_agent_exists(tmp_path, mo
 
     session = _FakeSession()
     monkeypatch.setattr(session_module, "SandboxSession", lambda **kw: session)
-    monkeypatch.setattr(Orchestrator, "_wire_sandbox", REAL_WIRE_SANDBOX)
-    outcome = Orchestrator(out_dir=tmp_path).run(spec(tmp_path, **bad))
+    monkeypatch.setattr(Runner, "_wire_sandbox", REAL_WIRE_SANDBOX)
+    outcome = Runner(out_dir=tmp_path).run(spec(tmp_path, **bad))
     assert not outcome.ok and message in outcome.error
     assert session.created is None and RecordingSlot.calls == []
 
@@ -229,7 +229,7 @@ def test_each_closed_turn_is_paired_and_the_run_ends_with_one_disk_snapshot(tmp_
                                                                               memory, memory_id):
     """...and a full (memory) snapshot follows the disk one only when the run asks."""
     fake_sandbox.session = FakeSession()
-    outcome = Orchestrator(out_dir=tmp_path).run(spec(tmp_path, final_memory_snapshot=memory))
+    outcome = Runner(out_dir=tmp_path).run(spec(tmp_path, final_memory_snapshot=memory))
 
     records = list(read_journal(tmp_path / "j.jsonl"))
     marks = [r for r in records if r["type"] == E.CHECKPOINT_CAPTURED]
@@ -247,7 +247,7 @@ def test_each_closed_turn_is_paired_and_the_run_ends_with_one_disk_snapshot(tmp_
 def test_the_sandbox_is_destroyed_after_the_run_unless_kept(tmp_path, fake_sandbox, keep):
     """Grading and post-hoc extraction need the sandbox alive after the agent
     stops; a run that is not kept leaves nothing behind."""
-    Orchestrator(out_dir=tmp_path).run(spec(tmp_path, sandbox_image="img", keep_sandbox=keep))
+    Runner(out_dir=tmp_path).run(spec(tmp_path, sandbox_image="img", keep_sandbox=keep))
     assert fake_sandbox[0].destroyed is (not keep)
 
 
@@ -255,11 +255,11 @@ def test_everything_is_released_when_the_slot_raises(tmp_path, monkeypatch):
     """A crashing agent must not strand a sandbox or a gateway."""
     provisioned = FakeProvisioned()
     gateway = FakeGateway()
-    monkeypatch.setattr(Orchestrator, "_wire_sandbox", lambda self, run_spec, claim: provisioned)
+    monkeypatch.setattr(Runner, "_wire_sandbox", lambda self, run_spec, claim: provisioned)
     monkeypatch.setattr("sprout.worker.gateway.GatewayServer", lambda *a, **k: gateway)
     RecordingSlot.raises = RuntimeError("agent exploded")
 
-    outcome = Orchestrator(out_dir=tmp_path).run(
+    outcome = Runner(out_dir=tmp_path).run(
         spec(tmp_path, sandbox_image="img", extra=controlled()))
 
     assert not outcome.ok and "agent exploded" in outcome.error
@@ -275,10 +275,10 @@ def test_a_failing_teardown_step_does_not_block_the_others(tmp_path, monkeypatch
 
     gateway = FakeGateway()
     stubborn = Stubborn()
-    monkeypatch.setattr(Orchestrator, "_wire_sandbox", lambda self, run_spec, claim: stubborn)
+    monkeypatch.setattr(Runner, "_wire_sandbox", lambda self, run_spec, claim: stubborn)
     monkeypatch.setattr("sprout.worker.gateway.GatewayServer", lambda *a, **k: gateway)
 
-    outcome = Orchestrator(out_dir=tmp_path).run(
+    outcome = Runner(out_dir=tmp_path).run(
         spec(tmp_path, sandbox_image="img", extra=controlled()))
     assert outcome.ok                 # the run itself succeeded
     assert gateway.stopped            # stopped before the sandbox failed to die
@@ -335,11 +335,11 @@ def test_a_reboard_moves_the_claim_and_the_record_to_the_replacement(tmp_path, m
     from sprout.worker.run import ResourceLedger
 
     session = ReboardingSession()
-    monkeypatch.setattr(Orchestrator, "_wire_sandbox", REAL_WIRE_SANDBOX)
+    monkeypatch.setattr(Runner, "_wire_sandbox", REAL_WIRE_SANDBOX)
     monkeypatch.setattr(session_module, "SandboxSession", lambda **kw: session)
     monkeypatch.setattr("sprout.worker.run.runner.MiniSweSlot", ThreeTurns)
     ledger = ResourceLedger(tmp_path / "ledger.jsonl")
-    outcome = Orchestrator(out_dir=tmp_path, ledger=ledger).run(
+    outcome = Runner(out_dir=tmp_path, ledger=ledger).run(
         spec(tmp_path, run_id="r1", sandbox_image="img", backend={"backend": "microvm"}))
 
     assert outcome.ok, outcome.error
@@ -394,12 +394,12 @@ def _own(monkeypatch, session, **spec_kwargs):
     """Drive the real sandbox wiring with a fake session, returning (orchestrator, owned)."""
     import sprout.worker.sandbox.session as session_module
 
-    from sprout.worker.run.runner import Orchestrator
+    from sprout.worker.run.runner import Runner
     from sprout.contract.run_spec import RunSpec
 
     monkeypatch.setattr(session_module, "SandboxSession", lambda **kw: session)
     spec = RunSpec(prompt="x", sandbox_image="img", **spec_kwargs)
-    orch = Orchestrator()
+    orch = Runner()
     return orch, REAL_WIRE_SANDBOX(orch, spec, None), spec
 
 
@@ -418,11 +418,11 @@ def test_one_run_start_to_finish_on_the_sandbox_it_owns(tmp_path, monkeypatch):
 
     session = _FakeSession()
     monkeypatch.setattr(session_module, "SandboxSession", lambda **kw: session)
-    monkeypatch.setattr(Orchestrator, "_wire_sandbox", REAL_WIRE_SANDBOX)
+    monkeypatch.setattr(Runner, "_wire_sandbox", REAL_WIRE_SANDBOX)
     ledger = ResourceLedger(tmp_path / "ledger.jsonl")
     podman = {"backend": "podman", "podman": {"store": str(tmp_path / "store"),
                                               "runtime_bin": "runtime/sprout-runtime"}}
-    outcome = Orchestrator(out_dir=tmp_path, ledger=ledger).run(
+    outcome = Runner(out_dir=tmp_path, ledger=ledger).run(
         spec(tmp_path, run_id="r1", sandbox_image="img", backend=podman))
 
     assert session.created == "img" and session.destroyed
@@ -449,7 +449,7 @@ def test_the_ledger_claim_names_the_backend(monkeypatch, tmp_path):
     import sprout.worker.sandbox.session as session_module
 
     from sprout.worker.run import ResourceLedger
-    from sprout.worker.run.runner import Orchestrator
+    from sprout.worker.run.runner import Runner
     from sprout.contract.run_spec import RunSpec
 
     session = _FakeSession()
@@ -457,7 +457,7 @@ def test_the_ledger_claim_names_the_backend(monkeypatch, tmp_path):
     ledger = ResourceLedger(tmp_path / "ledger.jsonl")
     podman = {"backend": "podman", "podman": {"runtime_bin": "runtime/sprout-runtime"}}
     with ledger.run("r1") as claim:
-        REAL_WIRE_SANDBOX(Orchestrator(), RunSpec(prompt="x", sandbox_image="img", backend=podman), claim)
+        REAL_WIRE_SANDBOX(Runner(), RunSpec(prompt="x", sandbox_image="img", backend=podman), claim)
     [entry] = [e for e in ledger.entries() if e.get("event") == "claim"]
     assert (entry["id"], entry["backend"]) == ("sb-owned", "podman")
 
@@ -497,7 +497,7 @@ def test_a_forked_runs_journal_opens_with_its_origin(tmp_path, origin):
     holding -- including nothing, for a run killed immediately -- it says where
     the run came from. A run with no origin says nothing at all: `inspect` reads
     the event as "this is a branch" and goes looking for a parent journal."""
-    Orchestrator(out_dir=tmp_path).run(spec(tmp_path, origin=origin))
+    Runner(out_dir=tmp_path).run(spec(tmp_path, origin=origin))
     records = list(read_journal(tmp_path / "j.jsonl"))
     assert [i for i, r in enumerate(records) if r["type"] == "fork.origin"] == ([0] if origin else [])
     if origin:
@@ -544,7 +544,7 @@ def test_the_pipeline_is_limits_then_the_tracker_then_declared_rules(tmp_path):
     limits = object()
     spec = RunSpec(prompt="x", interceptors=[{"name": "shell_context", "cwd": "/app", "user": "root"}])
     with JournalWriter(tmp_path / "j.jsonl") as journal:
-        tools = Orchestrator()._tool_access(
+        tools = Runner()._tool_access(
             spec, journal, OwnedSandbox(session=_FakeSession(), sandbox_id="sb"), None,
             rollout_controls=limits)
     first, tracker, declared = tools.pipeline.interceptors
@@ -563,7 +563,7 @@ def test_a_failed_final_snapshot_keeps_the_sandbox_on_the_record(tmp_path, fake_
 
     fake_sandbox.session = NoSnapshotSession()
     ledger = ResourceLedger(tmp_path / "ledger.jsonl")
-    outcome = Orchestrator(out_dir=tmp_path, ledger=ledger).run(spec(tmp_path))
+    outcome = Runner(out_dir=tmp_path, ledger=ledger).run(spec(tmp_path))
     assert outcome.status == "error" and "Final snapshot failed" in outcome.error
     provisioned = fake_sandbox[0]
     assert provisioned.keep is True and not provisioned.destroyed

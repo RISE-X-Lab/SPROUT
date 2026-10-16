@@ -4,7 +4,7 @@ A standalone RL scheduling entry point. It listens on **127.0.0.1:11001** by def
 and talks HTTP to the Run Store at **127.0.0.1:18110**. The driver only maps
 groups/samples to jobs, submits them, polls them and aggregates the results; the agent,
 tools, sandboxes, checkpoints and grader all run in the Run Store's separate workers /
-Orchestrator. Sandboxes are rootless podman containers on this host by default (btrfs
+Runner. Sandboxes are rootless podman containers on this host by default (btrfs
 store); a worker profile whose `backend` is `microvm` uses AgentENV microVMs instead.
 The driver starts no Run Store, worker, model or training, and shutting it down does not
 stop jobs already submitted.
@@ -13,7 +13,7 @@ stop jobs already submitted.
 Miles POST /rollout-groups
     → rl_driver :11001   sample allocation + RunSpec translation, SQLite ledger
     → Run Store :18110   PostgreSQL jobs / attempts / events / recovery points
-    → workers → Orchestrator → mini-swe-agent + Sprout tools (ToolAccess)
+    → workers → Runner → mini-swe-agent + Sprout tools (ToolAccess)
                           └→ inference gateway → the requested model_endpoint
     → final snapshot → graded by tasks[task_id].grade (a separately restored sandbox)
     → GET /rollout-groups/{id}: hint-stripped messages + reward

@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from sprout.contract.backend import BackendError
-from sprout.worker.run.runner import Orchestrator
+from sprout.worker.run.runner import Runner
 from sprout.contract.run_spec import RunSpec
 
 
@@ -42,7 +42,7 @@ def test_owned_rollout_passes_longer_lifetime_without_changing_budget(
     before = deepcopy(backend)
     spec = RunSpec(prompt="fixture", sandbox_image="ready-template", backend=backend,
                    timeout_s=budget, sandbox_resources={"cpu": 2, "memory_mb": 12288})
-    Orchestrator()._wire_sandbox(spec, None)
+    Runner()._wire_sandbox(spec, None)
     effective = recorded_session["constructor"]["backend"]
     assert effective["microvm"]["sandbox_ttl"] == expected
     assert effective["microvm"]["allow_internet"] is False
@@ -56,11 +56,11 @@ def test_an_empty_backend_is_podman_which_takes_no_lease(recorded_session):
     """A bare RunSpec names no backend; that is podman, whose containers live
     until they are removed, so no lease is added -- only a named microVM gets one."""
     spec = RunSpec(prompt="fixture", sandbox_image="image", backend={}, timeout_s=1800)
-    Orchestrator()._wire_sandbox(spec, None)
+    Runner()._wire_sandbox(spec, None)
     assert recorded_session["constructor"]["backend"] == {}
     assert spec.backend == {}
     spec = RunSpec(prompt="fixture", sandbox_image="image", backend={"backend": "microvm"}, timeout_s=1800)
-    Orchestrator()._wire_sandbox(spec, None)
+    Runner()._wire_sandbox(spec, None)
     assert recorded_session["constructor"]["backend"] == {"backend": "microvm", "microvm": {"sandbox_ttl": 2400}}
 
 
@@ -68,7 +68,7 @@ def test_an_empty_backend_is_podman_which_takes_no_lease(recorded_session):
 def test_invalid_vm_budget_is_rejected_before_allocation(recorded_session, budget):
     spec = RunSpec(prompt="fixture", sandbox_image="image", timeout_s=budget, backend={"backend": "microvm"})
     with pytest.raises(BackendError, match="operation budget"):
-        Orchestrator()._wire_sandbox(spec, None)
+        Runner()._wire_sandbox(spec, None)
     assert recorded_session == {}
 
 
@@ -82,7 +82,7 @@ def test_longer_vm_lifetime_reaches_agentenv_request(recorded_session):
 
     spec = RunSpec(prompt="fixture", sandbox_image="ready-template", timeout_s=1800,
                    backend={"backend": "microvm", "microvm": {"server_url": "http://fixture"}})
-    Orchestrator()._wire_sandbox(spec, None)
+    Runner()._wire_sandbox(spec, None)
     requests = []
 
     def respond(request):

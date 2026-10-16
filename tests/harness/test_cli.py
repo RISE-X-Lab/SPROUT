@@ -40,7 +40,7 @@ def test_podman_is_the_default_and_takes_the_default_store(monkeypatch, tmp_path
             return SimpleNamespace(run_id="r", journal_path="j", status="completed", native_session_id=None,
                                    usage=None, checkpoints=0, error=None, final_text="", ok=True)
 
-    monkeypatch.setattr(cli, "Orchestrator", Recording)
+    monkeypatch.setattr(cli, "Runner", Recording)
     assert cli.main([*RUN, "--runtime-bin", "runtime/sprout-runtime"]) == 0
     assert handed[0].backend == {"backend": "podman", "podman": {"store": str(tmp_path / "store"),
                                                                  "runtime_bin": "runtime/sprout-runtime"}}

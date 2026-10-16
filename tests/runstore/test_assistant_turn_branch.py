@@ -4,7 +4,7 @@ import json
 import pytest
 
 from sprout.worker.run.journal import read_journal
-from sprout.worker.run.runner import Orchestrator
+from sprout.worker.run.runner import Runner
 from sprout.contract.mini_history import read_entries, training_messages
 from tests.harness.test_assistant_turn import assistant_turn
 from tests.harness.test_mini_swe import FilesystemSession, model_server, owned_filesystem, pytestmark, reply, spec
@@ -29,13 +29,13 @@ def test_assistant_turn_executes_before_actor_and_resumes_without_reexecution(tm
     child_dir = tmp_path / "child"
     extra = materialize(cut.native, child_dir / "cwd", child_dir / "restoration", child_dir / "native-home")
     child = restore_files(parent_memory, cut.snapshot_id, child_dir / "sandbox")
-    monkeypatch.setattr(Orchestrator, "_wire_sandbox", lambda *args: owned_filesystem(child))
+    monkeypatch.setattr(Runner, "_wire_sandbox", lambda *args: owned_filesystem(child))
     injected = assistant_turn("printf once >> injected-count; printf revised > answer; cat answer")
     original = deepcopy(injected)
     with model_server([reply("cat answer"), reply("echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT")]) as (url, requests):
         run_spec = spec(child_dir, url, prompt="USER_HINT_MUST_NOT_BE_APPENDED")
         run_spec.extra.update(extra, assistant_turn=injected)
-        outcome = Orchestrator().run(run_spec)
+        outcome = Runner().run(run_spec)
     assert outcome.status == "completed", outcome.error
     assert injected == original
     assert len(requests) == 2 and outcome.usage["input_tokens"] == 22
@@ -73,11 +73,11 @@ def test_assistant_turn_executes_before_actor_and_resumes_without_reexecution(tm
     grand_extra = materialize(points[0].native, grand_dir / "cwd",
                               grand_dir / "restoration", grand_dir / "native-home")
     grand = restore_files(child, points[0].snapshot_id, grand_dir / "sandbox")
-    monkeypatch.setattr(Orchestrator, "_wire_sandbox", lambda *args: owned_filesystem(grand))
+    monkeypatch.setattr(Runner, "_wire_sandbox", lambda *args: owned_filesystem(grand))
     with model_server([reply("echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT")]) as (url, requests):
         run_spec = spec(grand_dir, url, prompt="Continue.")
         run_spec.extra.update(grand_extra)
-        grand_outcome = Orchestrator().run(run_spec)
+        grand_outcome = Runner().run(run_spec)
     assert grand_outcome.status == "completed", grand_outcome.error
     assert (grand.root / "injected-count").read_text() == "once"
     assert not any(e["type"] == "branch.assistant_turn" for e in read_journal(grand_outcome.journal_path))
@@ -89,7 +89,7 @@ def test_injection_requires_history_and_cannot_reuse_parent_call_id(tmp_path, mo
     for label, history in [("no-prefix", None), ("duplicate-id", points[0].native)]:
         child_dir = tmp_path / label
         child = restore_files(memory, points[0].snapshot_id, child_dir / "sandbox")
-        monkeypatch.setattr(Orchestrator, "_wire_sandbox", lambda *args: owned_filesystem(child))
+        monkeypatch.setattr(Runner, "_wire_sandbox", lambda *args: owned_filesystem(child))
         injected = assistant_turn("touch must-not-exist")
         with model_server([]) as (url, requests):
             run_spec = spec(child_dir, url)
@@ -99,7 +99,7 @@ def test_injection_requires_history_and_cannot_reuse_parent_call_id(tmp_path, mo
                 messages = training_messages(read_entries(read_prefix(history)))
                 injected["tool_calls"][0]["id"] = next(m["tool_calls"][0]["id"] for m in messages if m.get("tool_calls"))
             run_spec.extra["assistant_turn"] = injected
-            outcome = Orchestrator().run(run_spec)
+            outcome = Runner().run(run_spec)
         assert outcome.status == "error"
         assert ("prefix" if history is None else "unique across history") in outcome.error
         assert requests == [] and not (child.root / "must-not-exist").exists()
@@ -113,7 +113,7 @@ def test_multiple_reviewer_calls_keep_real_errors_and_only_close_complete_turns(
     memory, _, points = parent_run(tmp_path / "parent", monkeypatch)
     child_dir = tmp_path / "child"
     child = restore_files(memory, points[0].snapshot_id, child_dir / "sandbox")
-    monkeypatch.setattr(Orchestrator, "_wire_sandbox", lambda *args: owned_filesystem(child))
+    monkeypatch.setattr(Runner, "_wire_sandbox", lambda *args: owned_filesystem(child))
     execute = ToolEnvironment.execute
 
     def checked_execute(env, action, cwd=""):
@@ -131,7 +131,7 @@ def test_multiple_reviewer_calls_keep_real_errors_and_only_close_complete_turns(
         run_spec.extra.update(materialize(points[0].native, child_dir / "cwd",
                               child_dir / "restoration", child_dir / "native-home"),
                               assistant_turn=turn)
-        outcome = Orchestrator().run(run_spec)
+        outcome = Runner().run(run_spec)
     events = read_journal(outcome.journal_path)
     started = [e for e in events if e["type"] == "tool.started"]
     if interrupt:

@@ -17,7 +17,7 @@ import pytest
 
 from sprout.worker.run.journal import read_journal
 from sprout.worker.tools.result import CommandOutcome, ToolResult
-from sprout.worker.run.runner import Orchestrator, OwnedSandbox
+from sprout.worker.run.runner import Runner, OwnedSandbox
 from sprout.contract.run_spec import RunSpec
 from sprout.worker.checkpoint.rollback import branch_checkpoints
 from sprout.contract.mini_history import read_entries, training_messages
@@ -146,11 +146,11 @@ def spec(tmp_path, url, **changes):
 
 def test_upstream_loop_executes_then_captures_and_records_submission(tmp_path, monkeypatch):
     memory = FilesystemSession(tmp_path / "sandbox")
-    monkeypatch.setattr(Orchestrator, "_wire_sandbox", lambda *args: owned_filesystem(memory))
+    monkeypatch.setattr(Runner, "_wire_sandbox", lambda *args: owned_filesystem(memory))
     with model_server([reply("printf first > answer", "cat answer"),
                        reply("printf second > answer"),
                        reply("echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT")]) as (url, requests):
-        outcome = Orchestrator(out_dir=tmp_path).run(spec(tmp_path, url))
+        outcome = Runner(out_dir=tmp_path).run(spec(tmp_path, url))
     assert outcome.status == "completed", outcome.error
     assert memory.destroyed and (memory.root / "answer").read_text() == "second"
     # One snapshot per closed turn, taken when the next turn starts; the last
@@ -195,11 +195,11 @@ CONTEXT_REFUSAL = (400, {"object": "error", "type": "BadRequestError", "code": 4
 def test_budget_or_context_exhaustion_ends_the_rollout_as_gradable(
         tmp_path, monkeypatch, max_turns, replies, stop_reason, failed_requests):
     memory = FilesystemSession(tmp_path / "sandbox")
-    monkeypatch.setattr(Orchestrator, "_wire_sandbox", lambda *args: owned_filesystem(memory))
+    monkeypatch.setattr(Runner, "_wire_sandbox", lambda *args: owned_filesystem(memory))
     with model_server(replies) as (url, requests):
         run_spec = spec(tmp_path, url)
         run_spec.extra["rollout_contract"]["max_turns"] = max_turns
-        outcome = Orchestrator(out_dir=tmp_path).run(run_spec)
+        outcome = Runner(out_dir=tmp_path).run(run_spec)
     # One request per reply: no extra request past the budget, a refusal never retried.
     assert outcome.stop_reason == stop_reason and len(requests) == len(replies)
     assert outcome.status == "timeout", "A budget- or context-limited workspace must remain gradable"
@@ -216,20 +216,20 @@ def test_budget_or_context_exhaustion_ends_the_rollout_as_gradable(
 
 def test_any_other_bad_request_is_still_an_error(tmp_path, monkeypatch):
     memory = FilesystemSession(tmp_path / "sandbox")
-    monkeypatch.setattr(Orchestrator, "_wire_sandbox", lambda *args: owned_filesystem(memory))
+    monkeypatch.setattr(Runner, "_wire_sandbox", lambda *args: owned_filesystem(memory))
     refusal = (400, {"error": {"message": "budget exhausted for this run", "type": "invalid_request_error"}})
     with model_server([reply("echo fix > answer"), refusal]) as (url, requests):
-        outcome = Orchestrator(out_dir=tmp_path).run(spec(tmp_path, url))
+        outcome = Runner(out_dir=tmp_path).run(spec(tmp_path, url))
     assert outcome.status == "error" and outcome.stop_reason is None
 
 
 def test_invalid_configured_directory_fails_before_model_or_agent_tool(tmp_path, monkeypatch):
     memory = FilesystemSession(tmp_path / "sandbox")
-    monkeypatch.setattr(Orchestrator, "_wire_sandbox", lambda *args: owned_filesystem(memory))
+    monkeypatch.setattr(Runner, "_wire_sandbox", lambda *args: owned_filesystem(memory))
     with model_server([]) as (url, requests):
         run_spec = spec(tmp_path, url)
         run_spec.extra["mini"] = {"environment": {"cwd": "/missing-workspace"}}
-        outcome = Orchestrator().run(run_spec)
+        outcome = Runner().run(run_spec)
     assert "chdir /missing-workspace" in outcome.error
     assert requests == []
     assert not any(event["type"] == "tool.started" for event in read_journal(outcome.journal_path))
@@ -237,12 +237,12 @@ def test_invalid_configured_directory_fails_before_model_or_agent_tool(tmp_path,
 
 def test_without_turn_checkpoints_the_final_snapshot_is_still_taken(tmp_path, monkeypatch):
     memory = FilesystemSession(tmp_path / "sandbox")
-    monkeypatch.setattr(Orchestrator, "_wire_sandbox", lambda *args: owned_filesystem(memory))
+    monkeypatch.setattr(Runner, "_wire_sandbox", lambda *args: owned_filesystem(memory))
     with model_server([reply("echo fixed > answer"), reply("echo more >> answer")]) as (url, requests):
         run_spec = spec(tmp_path, url)
         run_spec.extra["rollout_contract"]["max_turns"] = 2
         run_spec.checkpoint_enabled = False
-        outcome = Orchestrator(out_dir=tmp_path).run(run_spec)
+        outcome = Runner(out_dir=tmp_path).run(run_spec)
     assert outcome.status == "timeout", outcome.error
     captures = [r for r in read_journal(outcome.journal_path) if r["type"] == "checkpoint.captured"]
     assert len(captures) == 1 and captures[0]["final"] and captures[0]["disk_only"]
@@ -275,9 +275,9 @@ class UncertainSession(FilesystemSession):
 def test_uncertain_execution_stops_mini_before_another_model_request(
         tmp_path, monkeypatch, failure_kind, running, exit_code):
     memory = UncertainSession(tmp_path / "sandbox", failure_kind, running, exit_code)
-    monkeypatch.setattr(Orchestrator, "_wire_sandbox", lambda *args: owned_filesystem(memory))
+    monkeypatch.setattr(Runner, "_wire_sandbox", lambda *args: owned_filesystem(memory))
     with model_server([reply("echo unsettled"), reply("echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT")]) as (url, requests):
-        outcome = Orchestrator(out_dir=tmp_path).run(spec(tmp_path, url))
+        outcome = Runner(out_dir=tmp_path).run(spec(tmp_path, url))
     assert outcome.status == "error" and "execution uncertain" in outcome.error
     # The run stops at the uncertain call: no second model request, no second call.
     assert len(requests) == 1 and memory.calls == 1
@@ -312,10 +312,10 @@ class SettledTimeoutSession(FilesystemSession):
 def test_settled_failure_reaches_the_next_query_and_leaves_exact_gradable_state(
         tmp_path, monkeypatch, command, returncode, output, exception_info, files):
     memory = SettledTimeoutSession(tmp_path / "sandbox")
-    monkeypatch.setattr(Orchestrator, "_wire_sandbox", lambda *args: owned_filesystem(memory))
+    monkeypatch.setattr(Runner, "_wire_sandbox", lambda *args: owned_filesystem(memory))
     with model_server([reply(command),
                        reply("echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT")]) as (url, requests):
-        outcome = Orchestrator(out_dir=tmp_path).run(spec(tmp_path, url))
+        outcome = Runner(out_dir=tmp_path).run(spec(tmp_path, url))
     assert outcome.status == "completed", outcome.error
     observed = json.loads(requests[1]["messages"][-1]["content"])
     assert observed["returncode"] == returncode and observed.get("exception_info") == exception_info

@@ -54,7 +54,7 @@ class OwnedSandbox:
     keep: bool = False
     #: Recorded at creation, NOT read from the session on demand. Teardown runs
     #: before the outcome is assembled, and a destroyed session answers "unknown".
-    #: A re-board moves it to the replacement (``Orchestrator._follow_reboards``).
+    #: A re-board moves it to the replacement (``Runner._follow_reboards``).
     sandbox_id: str = ""
 
     def destroy(self) -> None:
@@ -88,7 +88,7 @@ class RunOutcome:
         return self.status == "completed"
 
 
-class Orchestrator:
+class Runner:
     """Runs one task at a time; ``batch`` puts many of these in flight.
 
     Deliberately not a registry of live agents: nothing here needs to ask "what

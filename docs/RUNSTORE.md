@@ -2,7 +2,7 @@
 
 Authenticated HTTP control plane on PostgreSQL. A worker manager claims jobs
 (`FOR UPDATE SKIP LOCKED`) and runs each attempt in a child process: a
-`rollout` through `worker.run.runner.Orchestrator`, slot `mini-swe-agent`
+`rollout` through `worker.run.runner.Runner`, slot `mini-swe-agent`
 only; a `grade` in a fresh sandbox; a `review` (hindsight over finished
 attempts, below) against the model endpoint alone. `rl_driver` submits its
 Miles rollouts here.

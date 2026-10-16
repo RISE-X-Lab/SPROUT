@@ -10,7 +10,7 @@ import pytest
 from sprout.contract.mini_history import validate_assistant_turn
 from sprout.worker.run.journal import read_journal
 from sprout.worker.agents.mini_swe.tools import mini_tool_primer, mini_tool_schema
-from sprout.worker.run.runner import Orchestrator
+from sprout.worker.run.runner import Runner
 from tests.harness.test_assistant_turn import assistant_turn
 from tests.harness.test_mini_swe import FilesystemSession, model_server, owned_filesystem, pytestmark, reply, spec
 from tests.runstore.test_mini_native import parent_run
@@ -38,9 +38,9 @@ def test_actor_primer_and_actual_request_share_one_tool_contract(tmp_path, monke
     assert "timeout (seconds)" not in prompt
 
     memory = FilesystemSession(tmp_path / "sandbox")
-    monkeypatch.setattr(Orchestrator, "_wire_sandbox", lambda *args: owned_filesystem(memory))
+    monkeypatch.setattr(Runner, "_wire_sandbox", lambda *args: owned_filesystem(memory))
     with model_server([reply("pwd"), reply("echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT")]) as (url, requests):
-        outcome = Orchestrator().run(spec(tmp_path, url, prompt=prompt))
+        outcome = Runner().run(spec(tmp_path, url, prompt=prompt))
     assert outcome.status == "completed", outcome.error
     first = requests[0]
     assert first["tools"] == schema

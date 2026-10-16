@@ -9,7 +9,7 @@ from sprout.worker.run.journal import read_journal
 from sprout.worker.tools.result import ToolResult
 from sprout.worker.agents.slot import SlotResult
 from sprout.worker.tools.pipeline import CallContext
-from sprout.worker.run.runner import Orchestrator
+from sprout.worker.run.runner import Runner
 from sprout.contract.run_spec import RunSpec
 from sprout.worker.run.rollout import RolloutControls
 from sprout.contract.messages import export_tools
@@ -31,7 +31,7 @@ def test_orchestrator_mounts_real_endpoint_sampling_and_turn_limit(tmp_path, ups
     session = SimpleNamespace(sandbox_id="test-sandbox", supports_snapshot=lambda: False)
     owned = SimpleNamespace(session=session, sandbox_id="test-sandbox", keep=False,
                             destroy=lambda: destroyed.append(True))
-    monkeypatch.setattr(Orchestrator, "_wire_sandbox", lambda *args: owned)
+    monkeypatch.setattr(Runner, "_wire_sandbox", lambda *args: owned)
     # The stand-in sandbox has no shell for mini's workspace probe.
     monkeypatch.setattr("sprout.worker.agents.mini_swe.sandbox.resolve_workspace",
                         lambda session, extra, journal: extra)
@@ -59,7 +59,7 @@ def test_orchestrator_mounts_real_endpoint_sampling_and_turn_limit(tmp_path, ups
 
     monkeypatch.setattr("sprout.worker.run.runner.MiniSweSlot", Slot)
     path = tmp_path / "journal.jsonl"
-    result = Orchestrator().run(RunSpec(prompt="task", slot="mini-swe-agent", journal_path=path,
+    result = Runner().run(RunSpec(prompt="task", slot="mini-swe-agent", journal_path=path,
                                        extra={"rollout_contract": contract(upstream.base_url + "/v1")}))
     assert result.status == "error" and "budget" in result.error
     assert result.stop_reason == "max_turns_reached"
@@ -94,7 +94,7 @@ def test_controls_reject_malformed_contract(changes, match):
 
 def test_expired_group_never_allocates_a_sandbox(tmp_path, monkeypatch):
     monkeypatch.setattr("sprout.worker.run.runner.MiniSweSlot", lambda: SimpleNamespace())
-    monkeypatch.setattr(Orchestrator, "_wire_sandbox", lambda *args: pytest.fail("Expired group allocated a VM"))
-    result = Orchestrator().run(RunSpec(prompt="task", journal_path=tmp_path / "journal",
+    monkeypatch.setattr(Runner, "_wire_sandbox", lambda *args: pytest.fail("Expired group allocated a VM"))
+    result = Runner().run(RunSpec(prompt="task", journal_path=tmp_path / "journal",
                                        extra={"rollout_contract": contract("http://model", deadline_at=time.time() - 1)}))
     assert "expired before execution" in result.error
