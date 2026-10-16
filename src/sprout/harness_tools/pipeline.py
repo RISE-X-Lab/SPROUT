@@ -46,9 +46,11 @@ Executor = Callable[[str, dict], ToolResult]
 #  Call context and verdicts
 # --------------------------------------------------------------------------- #
 
+
 @dataclass(frozen=True)
 class CallContext:
     """One tool call travelling through the pipeline."""
+
     agent_id: str
     sandbox_id: str
     tool_name: str
@@ -75,6 +77,7 @@ class Reject:
     Forces ``success=False``, which is the point: the model must see that its
     call did not happen.
     """
+
     message: str
 
 
@@ -89,6 +92,7 @@ class Rewrite:
     to a shell command is invisible to the interceptors above -- they still see
     what the agent asked for.
     """
+
     new_args: dict
 
 
@@ -99,6 +103,7 @@ _VERDICT_TYPES = (Continue, Reject, Rewrite)
 # --------------------------------------------------------------------------- #
 #  Interceptor base class
 # --------------------------------------------------------------------------- #
+
 
 class ToolInterceptor:
     """One interceptor on the tool-call path. Subclass and override ``before``."""
@@ -121,6 +126,7 @@ class ToolInterceptor:
 # --------------------------------------------------------------------------- #
 #  Pipeline
 # --------------------------------------------------------------------------- #
+
 
 class ToolPipeline:
     """Ordered interceptor chain in front of one executor. Order is semantics."""
@@ -160,8 +166,9 @@ class ToolPipeline:
         except Exception as exc:
             if interceptor.fail_mode == "closed":
                 return Reject(f"interceptor {interceptor.name} failed closed: {exc}")
-            logger.warning("interceptor %s before() failed open (%s); continuing",
-                           interceptor.name, exc, exc_info=True)
+            logger.warning(
+                "interceptor %s before() failed open (%s); continuing", interceptor.name, exc, exc_info=True
+            )
             return Continue()
 
     @staticmethod
@@ -171,11 +178,9 @@ class ToolPipeline:
         try:
             return inner(ctx.tool_name, ctx.args)
         except Exception as exc:
-            logger.warning("inner executor failed for %s: %s",
-                           ctx.tool_name, exc, exc_info=True)
+            logger.warning("inner executor failed for %s: %s", ctx.tool_name, exc, exc_info=True)
             return ToolResult(success=False, output="", error=str(exc))
 
 
 def _rejection(interceptor: ToolInterceptor, message: str) -> ToolResult:
-    return ToolResult(success=False, output=message,
-                      error=f"rejected by {interceptor.name}")
+    return ToolResult(success=False, output=message, error=f"rejected by {interceptor.name}")

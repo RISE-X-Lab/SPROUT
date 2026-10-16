@@ -26,8 +26,9 @@ SOURCE_SCHEMA = Path(__file__).resolve().parents[3] / "runtime" / "schema" / "to
 #: Its name as package data of this package, where a wheel carries it.
 PACKAGED_SCHEMA = "tools.json"
 
-RUNTIME_SCHEMA = (SOURCE_SCHEMA if SOURCE_SCHEMA.is_file()
-                  else resources.files(__package__).joinpath(PACKAGED_SCHEMA))
+RUNTIME_SCHEMA = (
+    SOURCE_SCHEMA if SOURCE_SCHEMA.is_file() else resources.files(__package__).joinpath(PACKAGED_SCHEMA)
+)
 
 
 def runtime_tools() -> list[dict]:

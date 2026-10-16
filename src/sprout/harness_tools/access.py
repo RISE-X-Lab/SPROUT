@@ -50,9 +50,17 @@ class _Turn:
 
 
 class ToolAccess:
-    def __init__(self, session: Any, journal: Any, *, tools: Optional[list] = None,
-                 pipeline: Optional[ToolPipeline] = None, control: Any = None,
-                 checkpointer: Any = None, agent_id: str = "agent") -> None:
+    def __init__(
+        self,
+        session: Any,
+        journal: Any,
+        *,
+        tools: Optional[list] = None,
+        pipeline: Optional[ToolPipeline] = None,
+        control: Any = None,
+        checkpointer: Any = None,
+        agent_id: str = "agent",
+    ) -> None:
         self.session = session
         self.journal = journal
         self.pipeline = pipeline or ToolPipeline([])
@@ -90,13 +98,21 @@ class ToolAccess:
             self._begin_turn(turn_id)
             message = self._check(name, args)
             if message is not None:
-                self.journal.emit("tool.rejected", call_id=call_id, turn_id=turn_id, name=name,
-                                  executed=False, source="schema", feedback=message)
+                self.journal.emit(
+                    "tool.rejected",
+                    call_id=call_id,
+                    turn_id=turn_id,
+                    name=name,
+                    executed=False,
+                    source="schema",
+                    feedback=message,
+                )
                 return ToolResult(success=False, output="", error=message)
             tool, routed = name, dict(args)
             self._calls.add(call_id)
-            started = self.journal.emit("tool.started", call_id=call_id, turn_id=turn_id,
-                                        name=tool, args=routed)
+            started = self.journal.emit(
+                "tool.started", call_id=call_id, turn_id=turn_id, name=tool, args=routed
+            )
             self._turn.call_ids.append(call_id)
             self._turn.steps.append(started["step"])
             failure: list = []
@@ -104,26 +120,34 @@ class ToolAccess:
             def execute(runtime_tool: str, runtime_args: dict) -> ToolResult:
                 timeout = float(runtime_args.get("timeout") or 300) + TRANSPORT_MARGIN_S
                 try:
-                    return _settled(runtime_tool,
-                                    self.session.call(runtime_tool, runtime_args, timeout=timeout))
+                    return _settled(
+                        runtime_tool, self.session.call(runtime_tool, runtime_args, timeout=timeout)
+                    )
                 except Exception as error:
                     failure.append(error)
                     raise
 
-            ctx = CallContext(agent_id=self.agent_id, sandbox_id=self.session.sandbox_id,
-                              tool_name=tool, args=dict(routed))
+            ctx = CallContext(
+                agent_id=self.agent_id, sandbox_id=self.session.sandbox_id, tool_name=tool, args=dict(routed)
+            )
             result = self.pipeline.execute(ctx, execute)
-            self.journal.emit("tool.finished", call_id=call_id, turn_id=turn_id, name=tool,
-                              status="ok" if result.success else "error",
-                              output=result.output or result.error or "",
-                              outcome=asdict(result.outcome) if result.outcome else None)
+            self.journal.emit(
+                "tool.finished",
+                call_id=call_id,
+                turn_id=turn_id,
+                name=tool,
+                status="ok" if result.success else "error",
+                output=result.output or result.error or "",
+                outcome=asdict(result.outcome) if result.outcome else None,
+            )
             detail = _uncertainty(failure, result)
             if detail is not None:
                 self._uncertain = {"call_id": call_id, "step": started["step"], **detail}
                 self.journal.emit("execution.uncertain", **self._uncertain)
                 if self.control is not None:
-                    self.control.request_stop("execution uncertain at step %s (call %s)"
-                                              % (started["step"], call_id))
+                    self.control.request_stop(
+                        "execution uncertain at step %s (call %s)" % (started["step"], call_id)
+                    )
                 raise ToolInfraError("tool execution did not settle: %s" % detail)
             return result
 
@@ -134,8 +158,11 @@ class ToolAccess:
             return "unknown tool: %s" % name
         extra = sorted(set(args) - accepted)
         if extra:
-            return "%s does not take %s; it accepts %s" % (name, ", ".join(extra),
-                                                             ", ".join(sorted(accepted)))
+            return "%s does not take %s; it accepts %s" % (
+                name,
+                ", ".join(extra),
+                ", ".join(sorted(accepted)),
+            )
         return None
 
     def close_turn(self, turn_id: str) -> None:
@@ -161,13 +188,18 @@ class ToolAccess:
                 return None
             snapshot = self.session.snapshot(disk_only=True)
             turn = self._turn
-            record = {"step": turn.steps[-1] if turn and turn.steps else 0,
-                      "turn_id": turn.turn_id if turn else None,
-                      "turn_closed": bool(turn and turn.closed),
-                      "snapshot_id": getattr(snapshot, "id", None), "session_ckpt": self.session_ref,
-                      "captured": snapshot is not None, "reason": "captured" if snapshot else "failed",
-                      "disk_only": True, "final": True,
-                      "delta_empty": getattr(snapshot, "delta_empty", None)}
+            record = {
+                "step": turn.steps[-1] if turn and turn.steps else 0,
+                "turn_id": turn.turn_id if turn else None,
+                "turn_closed": bool(turn and turn.closed),
+                "snapshot_id": getattr(snapshot, "id", None),
+                "session_ckpt": self.session_ref,
+                "captured": snapshot is not None,
+                "reason": "captured" if snapshot else "failed",
+                "disk_only": True,
+                "final": True,
+                "delta_empty": getattr(snapshot, "delta_empty", None),
+            }
             if self._uncertain is not None:
                 record["uncertain"] = True
             self.journal.emit(CHECKPOINT_CAPTURED, **record)
@@ -176,9 +208,14 @@ class ToolAccess:
             if memory:
                 full = self.session.snapshot(disk_only=False)
                 record["memory_snapshot_id"] = getattr(full, "id", None)
-                self.journal.emit(SNAPSHOT_MEMORY, step=record["step"], turn_id=record["turn_id"],
-                                  snapshot_id=record["memory_snapshot_id"], captured=full is not None,
-                                  after=record["snapshot_id"])
+                self.journal.emit(
+                    SNAPSHOT_MEMORY,
+                    step=record["step"],
+                    turn_id=record["turn_id"],
+                    snapshot_id=record["memory_snapshot_id"],
+                    captured=full is not None,
+                    after=record["snapshot_id"],
+                )
             return record
 
     # --- per-turn checkpoints --------------------------------------------------
@@ -196,12 +233,20 @@ class ToolAccess:
         record = self.checkpointer.after_step(step)
         if record is None:
             return
-        self.journal.emit(CHECKPOINT_CAPTURED, step=step, turn_id=turn.turn_id,
-                          turn_closed=turn.closed, call_ids=list(turn.call_ids),
-                          snapshot_id=record.snapshot_id, session_ckpt=self.session_ref,
-                          captured=record.captured, reason=record.reason,
-                          disk_only=record.disk_only, delta_empty=record.delta_empty,
-                          reboarded=record.reboarded)
+        self.journal.emit(
+            CHECKPOINT_CAPTURED,
+            step=step,
+            turn_id=turn.turn_id,
+            turn_closed=turn.closed,
+            call_ids=list(turn.call_ids),
+            snapshot_id=record.snapshot_id,
+            session_ckpt=self.session_ref,
+            captured=record.captured,
+            reason=record.reason,
+            disk_only=record.disk_only,
+            delta_empty=record.delta_empty,
+            reboarded=record.reboarded,
+        )
 
 
 def _settled(tool: str, result: ToolResult) -> ToolResult:
@@ -209,19 +254,26 @@ def _settled(tool: str, result: ToolResult) -> ToolResult:
     stdout. Decode that one documented variant so every settled command has an
     outcome."""
     if tool == "shell" and result.success and result.outcome is None:
-        result.outcome = CommandOutcome(exit_code=0, stdout=result.output,
-                                        stdout_bytes=len(result.output.encode("utf-8")))
+        result.outcome = CommandOutcome(
+            exit_code=0, stdout=result.output, stdout_bytes=len(result.output.encode("utf-8"))
+        )
     return result
 
 
 def _uncertainty(failure: list, result: ToolResult) -> Optional[dict]:
     if failure:
         error = failure[0]
-        return {"kind": "transport_exception", "exception": type(error).__name__,
-                "message": str(error)[:1000]}
+        return {
+            "kind": "transport_exception",
+            "exception": type(error).__name__,
+            "message": str(error)[:1000],
+        }
     outcome = result.outcome
     if outcome is not None and (outcome.running or (outcome.timed_out and outcome.exit_code is None)):
-        return {"kind": "runtime_timeout" if outcome.timed_out else "runtime_still_running",
-                "running": outcome.running, "timed_out": outcome.timed_out,
-                "exit_code": outcome.exit_code}
+        return {
+            "kind": "runtime_timeout" if outcome.timed_out else "runtime_still_running",
+            "running": outcome.running,
+            "timed_out": outcome.timed_out,
+            "exit_code": outcome.exit_code,
+        }
     return None

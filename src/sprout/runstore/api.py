@@ -9,8 +9,14 @@ from sprout.harness_agents.mini_swe.continuation import Continuation, prepare
 from sprout.harness_agents.mini_swe.history import load_prefix
 from sprout.runstore.index import Index
 from sprout.runstore.config import merge
-from sprout.runstore.specs import (BRANCH_OVERRIDES, JobSpec, defaults_key, digest, validate_branch_budget,
-                                   validate_continuation)
+from sprout.runstore.specs import (
+    BRANCH_OVERRIDES,
+    JobSpec,
+    defaults_key,
+    digest,
+    validate_branch_budget,
+    validate_continuation,
+)
 from sprout.runstore.store import Conflict, Store
 
 
@@ -85,8 +91,13 @@ def create_app(store: Store, token: str, *, index: Index | None = None, profiles
     @app.get("/v1/jobs/{job_id}/result")
     def get_result(job_id: str):
         job = store.get(job_id)
-        return {"job_id": job_id, "state": job["state"], "result": job["result"],
-                "error": job["error"], "ready": job["state"] in {"succeeded", "failed", "cancelled"}}
+        return {
+            "job_id": job_id,
+            "state": job["state"],
+            "result": job["result"],
+            "error": job["error"],
+            "ready": job["state"] in {"succeeded", "failed", "cancelled"},
+        }
 
     @app.get("/v1/jobs/{job_id}/attempts")
     def attempts(job_id: str):
@@ -110,8 +121,9 @@ def create_app(store: Store, token: str, *, index: Index | None = None, profiles
 
     @app.get("/v1/jobs/{job_id}/recovery-points")
     def recovery_points(job_id: str, attempt_id: str | None = None):
-        return [{**point, "available": index.valid(point)}
-                for point in index.points(selected(job_id, attempt_id))]
+        return [
+            {**point, "available": index.valid(point)} for point in index.points(selected(job_id, attempt_id))
+        ]
 
     @app.post("/v1/jobs/{job_id}/branch", status_code=202)
     def branch(job_id: str, body: dict, idempotency_key: str = Header(default="")):
@@ -123,14 +135,21 @@ def create_app(store: Store, token: str, *, index: Index | None = None, profiles
             raise ValueError("Branch point does not belong to this rollout")
         overrides = body.get("overrides", {})
         if not isinstance(overrides, dict) or set(overrides) - BRANCH_OVERRIDES:
-            raise ValueError("A branch can change only %s; what the actor is given next is its continuation"
-                             % ", ".join(sorted(BRANCH_OVERRIDES)))
+            raise ValueError(
+                "A branch can change only %s; what the actor is given next is its continuation"
+                % ", ".join(sorted(BRANCH_OVERRIDES))
+            )
         continuation = Continuation.from_dict(body.get("continuation"))
         budget = validate_branch_budget(body["budget"]) if "budget" in body else None
         if budget is not None and parent.spec.get("extra", {}).get("rollout_contract") is None:
             raise ValueError("A branch budget bounds a rollout contract; the parent run has none")
-        request = replace(parent, spec={**parent.spec, **overrides}, parent_point=point["id"],
-                          continuation=continuation.to_dict(), branch_budget=budget)
+        request = replace(
+            parent,
+            spec={**parent.spec, **overrides},
+            parent_point=point["id"],
+            continuation=continuation.to_dict(),
+            branch_budget=budget,
+        )
         return submit(request.validate(), idempotency_key)
 
     @app.post("/v1/jobs/{job_id}/cancel")

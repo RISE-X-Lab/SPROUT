@@ -20,7 +20,9 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=18110)
     parser.add_argument("--once", action="store_true")
     parser.add_argument("--job-id")
-    parser.add_argument("--concurrency", type=int, default=1, help="Maximum concurrent attempts per worker (default: 1)")
+    parser.add_argument(
+        "--concurrency", type=int, default=1, help="Maximum concurrent attempts per worker (default: 1)"
+    )
     args = parser.parse_args()
     if args.concurrency < 1:
         parser.error("--concurrency must be positive")
@@ -36,8 +38,11 @@ def main() -> None:
         from sprout.runstore.api import create_app
 
         index = Index(store, snapshot_validator(store, config))
-        uvicorn.run(create_app(store, os.environ["SPROUT_RUNSTORE_TOKEN"], index=index,
-                              profiles=config["profiles"]), host=args.host, port=args.port)
+        uvicorn.run(
+            create_app(store, os.environ["SPROUT_RUNSTORE_TOKEN"], index=index, profiles=config["profiles"]),
+            host=args.host,
+            port=args.port,
+        )
     else:
         from sprout.runstore.worker import Worker
 

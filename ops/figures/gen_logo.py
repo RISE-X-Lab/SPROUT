@@ -25,10 +25,8 @@ TAGLINE = "branch an agent rollout from any step"
 
 # Plant outline, leaf, leaf highlight, stem, soil, soil outline, wordmark, tagline
 THEMES = {
-    "logo": ("#1f4a33", "#6cd07a", "#c4f2a6", "#4bb85e", "#a8683a", "#5a3a1f",
-             "#1f4a33", "#6b7a72"),
-    "logo-dark": ("#173727", "#74d982", "#cdf5b0", "#55c268", "#b47340", "#4a2f19",
-                  "#eef7f1", "#9fb3a8"),
+    "logo": ("#1f4a33", "#6cd07a", "#c4f2a6", "#4bb85e", "#a8683a", "#5a3a1f", "#1f4a33", "#6b7a72"),
+    "logo-dark": ("#173727", "#74d982", "#cdf5b0", "#55c268", "#b47340", "#4a2f19", "#eef7f1", "#9fb3a8"),
 }
 
 

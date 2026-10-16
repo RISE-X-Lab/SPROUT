@@ -22,8 +22,9 @@ HOME_PATH = re.compile(r"(?<![\w.-])/(?:home|Users)/[A-Za-z0-9._-]+")
 
 
 def main() -> int:
-    tracked = subprocess.run(["git", "ls-files", "-z"], cwd=REPO, check=True,
-                             capture_output=True, text=True).stdout.split("\0")
+    tracked = subprocess.run(
+        ["git", "ls-files", "-z"], cwd=REPO, check=True, capture_output=True, text=True
+    ).stdout.split("\0")
     failed = False
     for name in filter(None, tracked):
         path = REPO / name
@@ -35,8 +36,7 @@ def main() -> int:
         for n, line in enumerate(data.decode("utf-8", "replace").splitlines(), 1):
             for match in HOME_PATH.finditer(line):
                 failed = True
-                print(f"{name}:{n}: {match.group()} -- use a placeholder under /path/to/",
-                      file=sys.stderr)
+                print(f"{name}:{n}: {match.group()} -- use a placeholder under /path/to/", file=sys.stderr)
     return 1 if failed else 0
 
 

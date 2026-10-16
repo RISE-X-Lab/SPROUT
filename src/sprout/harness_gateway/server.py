@@ -49,7 +49,7 @@ _STRIP_RESPONSE_HEADERS = {
     "transfer-encoding",
 }
 
-GATEWAY_EVENT = "gateway.request"   # wire-level tap event type
+GATEWAY_EVENT = "gateway.request"  # wire-level tap event type
 
 
 class GatewayServer:
@@ -155,8 +155,11 @@ def _make_handler(gateway: GatewayServer):
                 # Terminal, like the budget refusal below: a streamed response
                 # would be relayed before its usage could be metered, so the
                 # gateway does not offer it, and a retry cannot change that.
-                self._error(400, "this gateway does not relay streamed responses; "
-                                 "send stream=false", "invalid_request_error")
+                self._error(
+                    400,
+                    "this gateway does not relay streamed responses; send stream=false",
+                    "invalid_request_error",
+                )
                 return
 
             if token.over_budget():
@@ -174,8 +177,7 @@ def _make_handler(gateway: GatewayServer):
                 self._error(
                     400,
                     "run budget exhausted: spent $%.4f of $%.4f -- this will "
-                    "not succeed on retry"
-                    % (token.spent_usd, token.budget_usd),
+                    "not succeed on retry" % (token.spent_usd, token.budget_usd),
                     "invalid_request_error",
                 )
                 return
@@ -213,9 +215,7 @@ def _make_handler(gateway: GatewayServer):
         # --- forwarding -------------------------------------------------
         def _upstream_headers(self, route) -> dict:
             headers = {
-                key: value
-                for key, value in self.headers.items()
-                if key.lower() not in _STRIP_REQUEST_HEADERS
+                key: value for key, value in self.headers.items() if key.lower() not in _STRIP_REQUEST_HEADERS
             }
             key = route.resolve_key()
             if key:
@@ -229,9 +229,13 @@ def _make_handler(gateway: GatewayServer):
             from sprout.harness_core.control import post
 
             url = route.base_url.rstrip("/") + CHAT_PATH
-            upstream = post(url, content=body, headers=self._upstream_headers(route),
-                            timeout_s=gateway.timeout_s,
-                            control=getattr(gateway.request_policy, "control", None))
+            upstream = post(
+                url,
+                content=body,
+                headers=self._upstream_headers(route),
+                timeout_s=gateway.timeout_s,
+                control=getattr(gateway.request_policy, "control", None),
+            )
             content = upstream.content
             self.send_response(upstream.status_code)
             for key, value in upstream.headers.items():
@@ -242,15 +246,25 @@ def _make_handler(gateway: GatewayServer):
             self.end_headers()
             self.wfile.write(content)
             usage, model = _usage_from_response(upstream)
-            self._tap(token, requested_model, model, route, upstream.status_code, usage,
-                      _upstream_error(upstream) if upstream.status_code >= 400 else None)
+            self._tap(
+                token,
+                requested_model,
+                model,
+                route,
+                upstream.status_code,
+                usage,
+                _upstream_error(upstream) if upstream.status_code >= 400 else None,
+            )
 
         def _tap(self, token, requested_model, upstream_model, route, status, usage, error=None):
             cost = usage.cost_usd or route.price(usage)
             gateway.table.charge(token, cost)
-            if (token.budget_usd is not None and cost == 0.0
-                    and (usage.input_tokens or usage.output_tokens)
-                    and not gateway._warned_unpriced):
+            if (
+                token.budget_usd is not None
+                and cost == 0.0
+                and (usage.input_tokens or usage.output_tokens)
+                and not gateway._warned_unpriced
+            ):
                 # A budget over a route with no pricing can never bind: the
                 # provider reports tokens, nobody converts them to dollars,
                 # spent stays 0 forever. Once per gateway, because once is a
@@ -260,8 +274,7 @@ def _make_handler(gateway: GatewayServer):
                     status="budget_unenforceable",
                     agent_id=token.agent_id,
                     base_url=route.base_url,
-                    reason="route has no pricing and the provider reported no cost; "
-                           "budget_usd cannot bind",
+                    reason="route has no pricing and the provider reported no cost; budget_usd cannot bind",
                 )
             gateway.record(
                 agent_id=token.agent_id,
@@ -300,7 +313,7 @@ def _upstream_error(response) -> dict:
         for secret in secrets:
             if secret:
                 text = text.replace(secret, "[redacted]")
-        result[key] = text[:2000 if key == "message" else 200]
+        result[key] = text[: 2000 if key == "message" else 200]
     return result
 
 

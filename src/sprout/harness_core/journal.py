@@ -39,8 +39,10 @@ def volatile_reason(path: Union[str, Path]) -> Optional[str]:
     resolved = Path(path).resolve()
     for root in VOLATILE_ROOTS:
         if resolved == Path(root) or str(resolved).startswith(root + "/"):
-            return ("%s is under %s, which the OS empties on reboot -- a journal "
-                    "is the only record a run leaves" % (resolved, root))
+            return (
+                "%s is under %s, which the OS empties on reboot -- a journal "
+                "is the only record a run leaves" % (resolved, root)
+            )
     return None
 
 

@@ -20,8 +20,10 @@ REPO = Path(__file__).resolve().parents[2]
 
 def main() -> int:
     if importlib.util.find_spec("mypy") is None:
-        print(f"type_hints: mypy is not installed for {sys.executable}; "
-              f"pip install -e '.[dev]'", file=sys.stderr)
+        print(
+            f"type_hints: mypy is not installed for {sys.executable}; pip install -e '.[dev]'",
+            file=sys.stderr,
+        )
         return 2
     return subprocess.run([sys.executable, "-m", "mypy"], cwd=REPO).returncode
 

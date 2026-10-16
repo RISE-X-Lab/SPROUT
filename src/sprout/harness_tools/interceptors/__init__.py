@@ -20,16 +20,16 @@ def build_interceptors(specs) -> list:
     built = []
     for spec in specs or ():
         if not isinstance(spec, dict) or not isinstance(spec.get("name"), str):
-            raise ValueError("an interceptor is declared as {\"name\": ..., **kwargs}")
+            raise ValueError('an interceptor is declared as {"name": ..., **kwargs}')
         kwargs = {key: value for key, value in spec.items() if key != "name"}
         try:
             factory = INTERCEPTORS[spec["name"]]
         except KeyError:
-            raise ValueError("unknown interceptor %r; known: %s"
-                             % (spec["name"], ", ".join(sorted(INTERCEPTORS)))) from None
+            raise ValueError(
+                "unknown interceptor %r; known: %s" % (spec["name"], ", ".join(sorted(INTERCEPTORS)))
+            ) from None
         built.append(factory(**kwargs))
     return built
 
 
-__all__ = ["MutationTracker", "ShellContext", "shell_command",
-           "INTERCEPTORS", "build_interceptors"]
+__all__ = ["MutationTracker", "ShellContext", "shell_command", "INTERCEPTORS", "build_interceptors"]

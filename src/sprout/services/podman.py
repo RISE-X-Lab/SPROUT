@@ -59,8 +59,10 @@ class Podman:
 
     def _require(self) -> str:
         if not self.executable:
-            raise StartError("no podman at %s (ops/setup_podman.sh installs one under ~/.local/opt/podman; "
-                             "$SPROUT_PODMAN_BIN names another)" % podman_bin_for(self.environ))
+            raise StartError(
+                "no podman at %s (ops/setup_podman.sh installs one under ~/.local/opt/podman; "
+                "$SPROUT_PODMAN_BIN names another)" % podman_bin_for(self.environ)
+            )
         return self.executable
 
     def inspect(self, container: str) -> ContainerState:
@@ -68,9 +70,20 @@ class Podman:
         if not self.executable:
             return ContainerState("absent", None)
         try:
-            done = subprocess.run([self.executable, "inspect", "--type", "container",
-                                   "--format", "{{.State.Status}} {{.State.Pid}}", container],
-                                  capture_output=True, text=True, timeout=30)
+            done = subprocess.run(
+                [
+                    self.executable,
+                    "inspect",
+                    "--type",
+                    "container",
+                    "--format",
+                    "{{.State.Status}} {{.State.Pid}}",
+                    container,
+                ],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
         except (OSError, subprocess.TimeoutExpired):
             return ContainerState("absent", None)
         fields = done.stdout.split()
@@ -98,12 +111,12 @@ class Podman:
         for volume in service.volumes:
             mount = expand(volume, ctx)
             host_side = mount.split(":", 1)[0]
-            if host_side.startswith("/"):              # a bind mount, not a named volume
+            if host_side.startswith("/"):  # a bind mount, not a named volume
                 Path(host_side).mkdir(parents=True, exist_ok=True)
             argv += ["-v", mount]
         env = expand_all(service.env, ctx)
         for name in env:
-            argv += ["-e", name]          # the value comes from the environment below
+            argv += ["-e", name]  # the value comes from the environment below
         argv.append(service.image)
         self._run(argv, {**self.environ, **env}, "run")
 
@@ -125,5 +138,7 @@ class Podman:
     def _run(self, argv: list[str], env: Mapping[str, str], verb: str) -> None:
         status = run_logged(argv, env, self.log_path, self.cwd)
         if status != 0:
-            raise StartError("podman %s failed (exit %d); last lines of %s:\n%s"
-                             % (verb, status, self.log_path, tail(self.log_path)))
+            raise StartError(
+                "podman %s failed (exit %d); last lines of %s:\n%s"
+                % (verb, status, self.log_path, tail(self.log_path))
+            )

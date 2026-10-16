@@ -55,8 +55,7 @@ class SandboxSession:
     call, so a call site cannot forget it and an agent cannot act as another.
     """
 
-    def __init__(self, timeout: float = 300.0,
-                 quiet: bool = False, backend: "dict | None" = None):
+    def __init__(self, timeout: float = 300.0, quiet: bool = False, backend: "dict | None" = None):
         self.timeout = timeout
         self.quiet = quiet
         #: Where sandboxes come from (``harness_sandbox/backends.py``): a
@@ -126,8 +125,9 @@ class SandboxSession:
                 if not task.done():
                     task.cancel()
                     try:
-                        loop.run_until_complete(asyncio.wait(
-                            {task}, timeout=getattr(self, "_cancel_grace_seconds", 5.0)))
+                        loop.run_until_complete(
+                            asyncio.wait({task}, timeout=getattr(self, "_cancel_grace_seconds", 5.0))
+                        )
                     except BaseException as cleanup_error:
                         self._warn("Interrupted operation cleanup failed: %s" % cleanup_error)
                 if task.done():
@@ -161,11 +161,9 @@ class SandboxSession:
         """``resources``: e.g. ``{"cpu": 4, "memory_mb": 16384}``. A task that
         declares its needs must get them: running a build-heavy task in the
         backend's default (2 CPUs, 1 GB) OOMs it rather than failing loudly."""
-        return self._drive(
-            self._create_async(image, resources))
+        return self._drive(self._create_async(image, resources))
 
-    async def _create_async(self, image: str,
-                            resources: "Optional[dict]" = None) -> bool:
+    async def _create_async(self, image: str, resources: "Optional[dict]" = None) -> bool:
         self.create_error = ""
         try:
             self._pool = build_pool(self.backend)
@@ -189,10 +187,10 @@ class SandboxSession:
             backend_section = self.backend.get(backend_name(self.backend), {}) or {}
             shaped = builder is None and (
                 spawn_takes_shape(self.backend)
-                or bool(backend_section.get("from_image") or self.backend.get("from_image")))
+                or bool(backend_section.get("from_image") or self.backend.get("from_image"))
+            )
             if shaped and self._pool.supports_cold_start():
-                self._sandbox = await self._pool.spawn_from_image(
-                    image, resources=resources)
+                self._sandbox = await self._pool.spawn_from_image(image, resources=resources)
             else:
                 # No resources here on purpose: a microVM template or snapshot
                 # has its shape baked in (only a cold start can choose one), and
@@ -257,8 +255,7 @@ class SandboxSession:
             self.transfer_error = "no sandbox, or its backend cannot upload"
             return False
         try:
-            self._drive(
-                self._pool.upload_file(self._sandbox, source, destination))
+            self._drive(self._pool.upload_file(self._sandbox, source, destination))
             return True
         except Exception as e:  # noqa: BLE001
             self.transfer_error = "%s: %s" % (type(e).__name__, e)
@@ -272,8 +269,7 @@ class SandboxSession:
             self.transfer_error = "no sandbox, or its backend cannot download"
             return False
         try:
-            self._drive(self._pool.download_file(
-                self._sandbox, source, destination, timeout=timeout))
+            self._drive(self._pool.download_file(self._sandbox, source, destination, timeout=timeout))
             return True
         except Exception as error:
             self.transfer_error = "%s: %s" % (type(error).__name__, error)
@@ -296,7 +292,8 @@ class SandboxSession:
         toggle = getattr(self._pool, "set_network", None)
         if not callable(toggle):
             raise NotImplementedError(
-                "backend %r cannot change a running sandbox's network" % backend_name(self.backend))
+                "backend %r cannot change a running sandbox's network" % backend_name(self.backend)
+            )
         self._drive(toggle(self._sandbox, bool(allow)))
 
     # --- checkpoints -------------------------------------------------------
@@ -313,8 +310,7 @@ class SandboxSession:
         """Whether this session's backend can publish snapshots."""
         return bool(self._pool) and self._pool.supports_snapshot()
 
-    def snapshot(self, name: "str | None" = None,
-                 disk_only: bool = True) -> Optional["Snapshot"]:
+    def snapshot(self, name: "str | None" = None, disk_only: bool = True) -> Optional["Snapshot"]:
         """Checkpoint the live sandbox; it keeps running.
 
         Defaults to ``disk_only``: a rollout replays by restoring the disk and
@@ -326,9 +322,7 @@ class SandboxSession:
         if not self._sandbox or not self.supports_snapshot():
             return None
         try:
-            return self._drive(
-                self._pool.snapshot(self._sandbox, name=name,
-                                    disk_only=disk_only))
+            return self._drive(self._pool.snapshot(self._sandbox, name=name, disk_only=disk_only))
         except Exception as e:  # noqa: BLE001
             self._warn("snapshot failed: %s" % e)
             return None
@@ -343,14 +337,12 @@ class SandboxSession:
         if not self.supports_snapshot() or not callable(getattr(self._pool, "squash", None)):
             return snapshot
         try:
-            return self._drive(
-                self._pool.squash(snapshot, name=name))
+            return self._drive(self._pool.squash(snapshot, name=name))
         except Exception as e:  # noqa: BLE001
             self._warn("squash failed: %s" % e)
             return snapshot
 
-    async def _reachable(self, sandbox, attempts: int = 8,
-                         delay: float = 0.5) -> bool:
+    async def _reachable(self, sandbox, attempts: int = 8, delay: float = 0.5) -> bool:
         """Whether a sandbox's runtime answers a trivial call.
 
         Retried briefly: a freshly booted sandbox may still be starting its
@@ -381,9 +373,7 @@ class SandboxSession:
         snapshot_id = getattr(snapshot, "id", snapshot)
         previous = self._sandbox
         try:
-            replacement = self._drive(
-                self._pool.spawn(image=snapshot_id,
-                                 agent_id=previous.agent_id))
+            replacement = self._drive(self._pool.spawn(image=snapshot_id, agent_id=previous.agent_id))
         except Exception as e:  # noqa: BLE001
             self._warn("re-board failed, keeping sandbox: %s" % e)
             return False
@@ -394,11 +384,12 @@ class SandboxSession:
         # would turn every later tool call into a transport error and kill the
         # episode. Keeping the old sandbox instead costs only a deeper layer chain.
         if not self._drive(self._reachable(replacement)):
-            self._warn("re-board target has no runtime; keeping sandbox (does "
-                       "the template declare a startup command?)")
+            self._warn(
+                "re-board target has no runtime; keeping sandbox (does "
+                "the template declare a startup command?)"
+            )
             try:
-                self._drive(
-                    self._pool.destroy(replacement))
+                self._drive(self._pool.destroy(replacement))
             except Exception:  # noqa: BLE001
                 pass
             return False
@@ -422,11 +413,8 @@ class SandboxSession:
         return True
 
     # --- the tool seam -----------------------------------------------------
-    def execute(self, tool_name: str, args: dict,
-                timeout: float = 300.0) -> ToolResult:
-        """Run a tool as the owner itself (resets, extraction, tests).
-
-        """
+    def execute(self, tool_name: str, args: dict, timeout: float = 300.0) -> ToolResult:
+        """Run a tool as the owner itself (resets, extraction, tests)."""
         return self._run(tool_name, args, timeout, OWNER_AGENT_ID)
 
     def call(self, tool_name: str, args: dict, timeout: float = 300.0) -> ToolResult:
@@ -437,27 +425,24 @@ class SandboxSession:
             raise RuntimeError("No active sandbox")
         return self._drive(self._execute_async(tool_name, dict(args), timeout, OWNER_AGENT_ID))
 
-    def _run(self, tool_name: str, args: dict, timeout: float,
-             agent_id: str) -> ToolResult:
+    def _run(self, tool_name: str, args: dict, timeout: float, agent_id: str) -> ToolResult:
         if not self._sandbox:
             return ToolResult(success=False, output="", error="No active sandbox")
         try:
-            return self._drive(
-                self._execute_async(tool_name, args, timeout, agent_id)
-            )
+            return self._drive(self._execute_async(tool_name, args, timeout, agent_id))
         except Exception as e:  # noqa: BLE001
             return ToolResult(success=False, output="", error=str(e))
 
-    async def _execute_async(self, tool_name: str, args: dict, timeout: float,
-                             agent_id: str = OWNER_AGENT_ID) -> ToolResult:
+    async def _execute_async(
+        self, tool_name: str, args: dict, timeout: float, agent_id: str = OWNER_AGENT_ID
+    ) -> ToolResult:
         if "timeout" not in args and tool_name == "shell":
             args["timeout"] = int(timeout)
         # The channel's identity is the only one that counts: an agent_id that
         # arrived in the arguments (a model naming itself) is dropped rather
         # than sent on as a tool argument.
         call_args = {k: v for k, v in args.items() if k != "agent_id"}
-        sdk_result: SdkToolResult = await self._sandbox.backend.call(
-            tool_name, call_args, agent_id)
+        sdk_result: SdkToolResult = await self._sandbox.backend.call(tool_name, call_args, agent_id)
         return ToolResult.from_sdk(sdk_result)
 
 
@@ -483,11 +468,19 @@ def shell_outcome(session: Any, command: str, timeout: int = 120) -> tuple[str, 
         payload = None
     if isinstance(payload, dict) and "stdout" in payload:
         code, timed_out = payload.get("exit_code"), bool(payload.get("timed_out"))
-        if (payload.get("running") or payload.get("stdout_truncated") or payload.get("stderr_truncated")
-                or (code is None and not timed_out)):
+        if (
+            payload.get("running")
+            or payload.get("stdout_truncated")
+            or payload.get("stderr_truncated")
+            or (code is None and not timed_out)
+        ):
             raise RuntimeError("Sandbox command incomplete or truncated")
-        return (str(payload["stdout"]), str(payload.get("stderr") or ""),
-                None if code is None else int(code), timed_out)
+        return (
+            str(payload["stdout"]),
+            str(payload.get("stderr") or ""),
+            None if code is None else int(code),
+            timed_out,
+        )
     if not result.success:
         raise RuntimeError(result.error or result.output or "Sandbox tool execution failed")
     return result.output, "", 0, False

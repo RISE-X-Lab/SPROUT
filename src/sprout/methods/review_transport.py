@@ -49,12 +49,21 @@ class ReviewTransport:
     Chat Completions endpoint gets the same requests it always did.
     """
 
-    def __init__(self, directory: str | Path, *, model: str, model_endpoint: str,
-                 api_key_env: str, max_output_tokens: int,
-                 timeout_s: float = 1800, reasoning_effort: str | None = None,
-                 temperature: float | None = None, stop: threading.Event | None = None,
-                 json_directive: str = DEFAULT_PROMPTS.transport_json_directive,
-                 supports_json_schema: bool = False):
+    def __init__(
+        self,
+        directory: str | Path,
+        *,
+        model: str,
+        model_endpoint: str,
+        api_key_env: str,
+        max_output_tokens: int,
+        timeout_s: float = 1800,
+        reasoning_effort: str | None = None,
+        temperature: float | None = None,
+        stop: threading.Event | None = None,
+        json_directive: str = DEFAULT_PROMPTS.transport_json_directive,
+        supports_json_schema: bool = False,
+    ):
         self.directory = Path(directory)
         self.directory.mkdir(parents=True, exist_ok=True)
         self.model = model
@@ -112,22 +121,31 @@ class ReviewTransport:
         reason = None
         for attempt, max_tokens in enumerate(budgets):
             try:
-                return self._request_through_outages(model, prompt, key, max_tokens, receipts, reason,
-                                                     response_format=response_format)
+                return self._request_through_outages(
+                    model, prompt, key, max_tokens, receipts, reason, response_format=response_format
+                )
             except httpx.TimeoutException:
                 if attempt == len(budgets) - 1:
                     raise
                 reason = "timeout"
         raise AssertionError("unreachable")
 
-    def _request_through_outages(self, model: str, prompt: str, key: str, max_tokens: int,
-                                 receipts: list[int], reason: str | None,
-                                 response_format: dict | None = None) -> str:
+    def _request_through_outages(
+        self,
+        model: str,
+        prompt: str,
+        key: str,
+        max_tokens: int,
+        receipts: list[int],
+        reason: str | None,
+        response_format: dict | None = None,
+    ) -> str:
         """``_request``, repeated after a transient gateway reply; the last error propagates."""
         for delay in (*TRANSIENT_DELAYS_S, None):
             try:
-                return self._request(model, prompt, key, max_tokens, receipts, reason,
-                                     response_format=response_format)
+                return self._request(
+                    model, prompt, key, max_tokens, receipts, reason, response_format=response_format
+                )
             except httpx.HTTPStatusError as error:
                 if delay is None or error.response.status_code not in TRANSIENT_STATUSES:
                     raise
@@ -141,11 +159,19 @@ class ReviewTransport:
             if self.stop is None:
                 time.sleep(delay)
             else:
-                self.stop.wait(delay)   # the next try sees the stop
+                self.stop.wait(delay)  # the next try sees the stop
         raise AssertionError("unreachable")
 
-    def _request(self, model: str, prompt: str, key: str, max_tokens: int, receipts: list[int],
-                 reason: str | None = None, response_format: dict | None = None) -> str:
+    def _request(
+        self,
+        model: str,
+        prompt: str,
+        key: str,
+        max_tokens: int,
+        receipts: list[int],
+        reason: str | None = None,
+        response_format: dict | None = None,
+    ) -> str:
         """One try, in a receipt of its own; ``receipts`` are the call's earlier tries, the last of
         which this one repeats (for ``reason``), and gain this one's number. Once ``stop``
         is set it raises ``RequestStopped`` instead, with no receipt and no request."""
@@ -158,8 +184,13 @@ class ReviewTransport:
         receipts.append(number)
         receipt = self.directory / f"review-{number:03d}.json"
         started_at = time.time()
-        request = {"model": model, "prompt": prompt, "max_tokens": max_tokens,
-                   "reasoning_effort": self.reasoning_effort, "temperature": self.temperature}
+        request = {
+            "model": model,
+            "prompt": prompt,
+            "max_tokens": max_tokens,
+            "reasoning_effort": self.reasoning_effort,
+            "temperature": self.temperature,
+        }
         if response_format is not None:
             request["response_format"] = response_format
         record = {"request": request, "started_at": started_at, "timeout_s": self.timeout_s}
@@ -185,11 +216,16 @@ class ReviewTransport:
             receipt.write_text(json.dumps(record, indent=2))
         return text
 
-    def _complete(self, model: str, prompt: str, key: str, max_tokens: int,
-                  response_format: dict | None = None) -> dict:
+    def _complete(
+        self, model: str, prompt: str, key: str, max_tokens: int, response_format: dict | None = None
+    ) -> dict:
         """One Chat Completions request; the response body."""
-        payload = {"model": model, "messages": [{"role": "user", "content": prompt}],
-                   "max_tokens": max_tokens, "stream": False}
+        payload = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": max_tokens,
+            "stream": False,
+        }
         if self.reasoning_effort is not None:
             payload["reasoning_effort"] = self.reasoning_effort
         if self.temperature is not None:
@@ -197,8 +233,10 @@ class ReviewTransport:
         if response_format is not None:
             payload["response_format"] = response_format
         response = httpx.post(
-            self.model_endpoint + "/v1/chat/completions", json=payload,
-            headers=bearer_headers(key), timeout=httpx.Timeout(self.timeout_s, connect=10),
+            self.model_endpoint + "/v1/chat/completions",
+            json=payload,
+            headers=bearer_headers(key),
+            timeout=httpx.Timeout(self.timeout_s, connect=10),
         )
         try:
             response.raise_for_status()
@@ -206,8 +244,10 @@ class ReviewTransport:
             if error.response.status_code == 400:
                 # The request itself was refused -- a prompt past the model's
                 # context, in practice. The caller may retry with a smaller one.
-                raise PromptRejected("model endpoint refused the request (HTTP 400 Bad Request): %s"
-                                     % error.response.text[:500]) from error
+                raise PromptRejected(
+                    "model endpoint refused the request (HTTP 400 Bad Request): %s"
+                    % error.response.text[:500]
+                ) from error
             raise
         return response.json()
 

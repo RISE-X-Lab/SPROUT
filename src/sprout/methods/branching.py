@@ -19,14 +19,22 @@ import re
 from typing import Callable, List, Optional, Tuple
 
 from sprout.harness_agents.mini_swe.history import (
-    actor_tools_at, conversation_restore, load_prefix, reference_at, training_messages,
+    actor_tools_at,
+    conversation_restore,
+    load_prefix,
+    reference_at,
+    training_messages,
     validate_assistant_turn,
 )
 from sprout.harness_checkpoint.rollback import Checkpoint, load_checkpoints
 from sprout.harness_core.journal import read_journal
 from sprout.harness_orchestrator.run import RunOutcome
 from sprout.methods.branch_plan import (
-    PromptRejected, ReviewerPlanError, ReviewResponseTruncated, TurnRejected, extract_branch_plan,
+    PromptRejected,
+    ReviewerPlanError,
+    ReviewResponseTruncated,
+    TurnRejected,
+    extract_branch_plan,
     review_with_feedback,
 )
 from sprout.methods import structured_review
@@ -58,8 +66,7 @@ MAX_ROLLOUTS = 128
 
 
 def require_mini_parent(journal) -> None:
-    slots = {e["slot"] for e in read_journal(journal)
-             if e.get("type") == "run.started" and e.get("slot")}
+    slots = {e["slot"] for e in read_journal(journal) if e.get("type") == "run.started" and e.get("slot")}
     if slots != {"mini-swe-agent"}:
         raise ValueError("This branch mode accepts only mini-swe-agent parent trajectories")
 
@@ -77,8 +84,9 @@ def reviewer_context(journal, checkpoints: dict) -> dict:
     if not checkpoints:
         return {"messages": [], "prefix_message_counts": {}}
     prefix = selected_prefix(journal, checkpoints[max(checkpoints)])
-    closed = {e["turn_id"]: e["step"] for e in read_journal(journal)
-              if e.get("type") == "model.turn.completed"}
+    closed = {
+        e["turn_id"]: e["step"] for e in read_journal(journal) if e.get("type") == "model.turn.completed"
+    }
     count, cuts = 0, {}
     for entry in prefix:
         if entry["type"] == "mini.message" and entry["message"].get("role") != "exit":
@@ -90,8 +98,12 @@ def reviewer_context(journal, checkpoints: dict) -> dict:
     if set(cuts) != {str(step) for step in checkpoints}:
         raise ValueError("Reviewer mini history does not cover every eligible checkpoint")
     workspace = next((e.get("workspace") for e in prefix if e["type"] == "mini.session"), None)
-    return {"messages": training_messages(prefix), "prefix_message_counts": cuts,
-            "tools": actor_tools_at(journal, max(checkpoints)), "workspace": workspace}
+    return {
+        "messages": training_messages(prefix),
+        "prefix_message_counts": cuts,
+        "tools": actor_tools_at(journal, max(checkpoints)),
+        "workspace": workspace,
+    }
 
 
 #: What the reviewer is told when ``turn_check`` refuses a turn. It names the
@@ -136,7 +148,7 @@ def extract_json(text: str) -> dict:
         start, end = text.find("{"), text.rfind("}")
         if start < 0 or end <= start:
             raise ValueError("analyst returned no JSON: %r" % text[:200])
-        candidate = text[start:end + 1]
+        candidate = text[start : end + 1]
     # strict=False: long hints arrive with literal newlines inside strings --
     # invalid JSON, harmless intent.
     return json.loads(candidate, strict=False)
@@ -160,8 +172,9 @@ MESSAGE_CHARS = 2000
 ELISION = "\n...[middle elided]...\n"
 
 
-def render_transcript(journal_path, token_budget: int = 100_000, char_budget: Optional[int] = None
-                      ) -> "tuple[str, int, int]":
+def render_transcript(
+    journal_path, token_budget: int = 100_000, char_budget: Optional[int] = None
+) -> "tuple[str, int, int]":
     """One line per tool step, numbered by the checkpoint step they map to.
 
     ``char_budget`` is an exact bound on the rendering (the analyst's request
@@ -190,13 +203,11 @@ def render_transcript(journal_path, token_budget: int = 100_000, char_budget: Op
             lines.append("[%d] %s(%s)" % (step, record.get("name") or "?", _clip(args, ARG_CHARS)))
         elif kind == "tool.finished" and lines:
             out = str(record.get("output") or "")
-            lines[-1] += "  -> %s" % (_clip(out, RESULT_CHARS)
-                                      or record.get("status") or "")
+            lines[-1] += "  -> %s" % (_clip(out, RESULT_CHARS) or record.get("status") or "")
         elif kind == "agent.message":
             text = str(record.get("text") or "").replace("\n", " ")
             if text.strip():
-                lines.append("    (agent said: %s)"
-                             % _clip(text, MESSAGE_CHARS))
+                lines.append("    (agent said: %s)" % _clip(text, MESSAGE_CHARS))
     body = "\n".join(lines)
     budget = int(token_budget * CHARS_PER_TOKEN)
     if char_budget is not None:
@@ -226,8 +237,7 @@ def _clip(text: str, limit: int, *, keep_newlines: bool = False) -> str:
         return text
     head = limit * 2 // 3
     tail = limit - head
-    return "%s …[%d chars elided]… %s" % (text[:head], len(text) - limit,
-                                          text[-tail:])
+    return "%s …[%d chars elided]… %s" % (text[:head], len(text) - limit, text[-tail:])
 
 
 @dataclass
@@ -249,8 +259,11 @@ class Attempt:
     def verdict_text(self) -> str:
         """The grading verdict as the analysts see it."""
         return "%s\n\nPatch (%d lines):\n%s\n\nVerifier output:\n%s" % (
-            self.grade.summary(), self.grade.patch.count("\n"),
-            self.grade.patch[:40000], self.grade.detail[:20000])
+            self.grade.summary(),
+            self.grade.patch.count("\n"),
+            self.grade.patch[:40000],
+            self.grade.detail[:20000],
+        )
 
 
 @dataclass(frozen=True)
@@ -268,10 +281,16 @@ class BranchChoice:
     turn_check: Optional[dict] = None
 
 
-def prepare_branches(plan: dict, *, limit: int, round_no: int,
-                     attempts: dict, checkpoints: dict,
-                     count_mode: str = "adaptive",
-                     guidance_mode: str = DEFAULT_GUIDANCE) -> List[BranchChoice]:
+def prepare_branches(
+    plan: dict,
+    *,
+    limit: int,
+    round_no: int,
+    attempts: dict,
+    checkpoints: dict,
+    count_mode: str = "adaptive",
+    guidance_mode: str = DEFAULT_GUIDANCE,
+) -> List[BranchChoice]:
     """Resolve each selected point exactly before any continuation starts."""
     if count_mode not in BRANCH_COUNT_MODES:
         raise ValueError("unknown branch count mode: %r" % count_mode)
@@ -281,8 +300,9 @@ def prepare_branches(plan: dict, *, limit: int, round_no: int,
     if not isinstance(branches, list):
         raise ReviewerPlanError("reviewer must return a branches list")
     if count_mode == "fixed" and len(branches) != limit:
-        raise ReviewerPlanError("fixed branch count requires exactly %d branches; reviewer returned %d" %
-                         (limit, len(branches)))
+        raise ReviewerPlanError(
+            "fixed branch count requires exactly %d branches; reviewer returned %d" % (limit, len(branches))
+        )
     if len(branches) > limit:
         raise ReviewerPlanError("reviewer returned %d branches above limit %d" % (len(branches), limit))
     choices = []
@@ -295,7 +315,9 @@ def prepare_branches(plan: dict, *, limit: int, round_no: int,
             raise ReviewerPlanError("branch %d names an unknown base %r" % (index, base_name))
         step = branch.get("branch_step")
         if type(step) is not int or step not in checkpoints.get(base_name, {}):
-            raise ReviewerPlanError("branch %d has no eligible checkpoint at %s:%r" % (index, base_name, step))
+            raise ReviewerPlanError(
+                "branch %d has no eligible checkpoint at %s:%r" % (index, base_name, step)
+            )
         base = attempts[base_name]
         assistant_turn = None
         if guidance_mode == "none":
@@ -311,14 +333,17 @@ def prepare_branches(plan: dict, *, limit: int, round_no: int,
             try:
                 assistant_turn = validate_assistant_turn(
                     branch.get("assistant_turn"),
-                    history=[e["message"] for e in native if e["type"] == "mini.message"], tools=tools)
+                    history=[e["message"] for e in native if e["type"] == "mini.message"],
+                    tools=tools,
+                )
             except ValueError as error:
                 raise ReviewerPlanError(f"branch {index} ({base_name}@{step}): {error}") from error
             for call_no, call in enumerate(assistant_turn["tool_calls"], 1):
                 if SUBMISSION_MARKER in call["function"]["arguments"]:
                     raise ReviewerPlanError(
                         f"branch {index} ({base_name}@{step}): a reviewer-authored turn never submits; "
-                        f"command {call_no} contains {SUBMISSION_MARKER}")
+                        f"command {call_no} contains {SUBMISSION_MARKER}"
+                    )
             hint = ""
         else:
             if "assistant_turn" in branch:
@@ -329,14 +354,22 @@ def prepare_branches(plan: dict, *, limit: int, round_no: int,
         key = (base_name, step)
         if key not in cuts:
             cuts[key] = conversation_restore(
-                base.outcome.journal_path, step, checkpoints[base_name][step].session_ckpt)
+                base.outcome.journal_path, step, checkpoints[base_name][step].session_ckpt
+            )
         cut = cuts[key]
         if cut is None:
-            raise ValueError("branch %d has no native conversation cut at %s:%d" %
-                             (index, base_name, step))
-        choices.append(BranchChoice(
-            branch_run_name(round_no, index, branch.get("name")), base,
-            checkpoints[base_name][step], cut, hint, str(branch.get("why") or ""), assistant_turn))
+            raise ValueError("branch %d has no native conversation cut at %s:%d" % (index, base_name, step))
+        choices.append(
+            BranchChoice(
+                branch_run_name(round_no, index, branch.get("name")),
+                base,
+                checkpoints[base_name][step],
+                cut,
+                hint,
+                str(branch.get("why") or ""),
+                assistant_turn,
+            )
+        )
     return choices
 
 
@@ -352,9 +385,15 @@ def outcome_from_journal(journal: Path, run_id: str = "parent") -> RunOutcome:
         elif kind == "run.result":
             final_text = record.get("text") or ""
     pairs = sum(1 for c in load_checkpoints(journal) if c.snapshot_id)
-    return RunOutcome(run_id=run_id, journal_path=Path(journal), status=status,
-                      final_text=final_text, usage=usage, checkpoints=pairs,
-                      error=error)
+    return RunOutcome(
+        run_id=run_id,
+        journal_path=Path(journal),
+        status=status,
+        final_text=final_text,
+        usage=usage,
+        checkpoints=pairs,
+        error=error,
+    )
 
 
 # --- the size of a request -----------------------------------------------------
@@ -379,6 +418,7 @@ class Window:
     """Which native messages a windowed history keeps: ``before`` messages up to
     each analyst candidate's cut and ``after`` beyond it, plus the last ``tail``
     and the first ``head`` (the system and task prompts)."""
+
     before: int
     after: int
     tail: int
@@ -388,9 +428,9 @@ class Window:
 @dataclass(frozen=True)
 class Stage:
     name: str
-    parent: Optional[Window]     # None: the parent's history is kept whole
+    parent: Optional[Window]  # None: the parent's history is kept whole
     branches: Optional[Window]
-    clip: Optional[int]          # tool results, reasoning and arguments longer than this are clipped
+    clip: Optional[int]  # tool results, reasoning and arguments longer than this are clipped
 
 
 #: The reduction order of a reviewer request over budget, applied stage by stage
@@ -422,14 +462,22 @@ def omission_marker(first: int, last: int, total: int) -> dict:
     for reaches the end of the history."""
     count = last - first + 1
     if last < total:
-        where = ("positions %d-%d of the full history. prefix_message_counts count the full history "
-                 "and are still exact; the next message is position %d." % (first, last, last + 1))
+        where = (
+            "positions %d-%d of the full history. prefix_message_counts count the full history "
+            "and are still exact; the next message is position %d." % (first, last, last + 1)
+        )
     else:
-        where = ("positions %d-%d of the full history, through its end. prefix_message_counts count "
-                 "the full history and are still exact." % (first, last))
-    return {"role": "omitted", "omitted_messages": count, "positions": [first, last],
-            "content": "[%d message%s omitted here to fit this request: %s]" % (
-                count, "" if count == 1 else "s", where)}
+        where = (
+            "positions %d-%d of the full history, through its end. prefix_message_counts count "
+            "the full history and are still exact." % (first, last)
+        )
+    return {
+        "role": "omitted",
+        "omitted_messages": count,
+        "positions": [first, last],
+        "content": "[%d message%s omitted here to fit this request: %s]"
+        % (count, "" if count == 1 else "s", where),
+    }
 
 
 def window_messages(messages: List[dict], cuts: List[int], window: Window) -> Tuple[List[dict], int]:
@@ -473,8 +521,13 @@ def clip_messages(messages: List[dict], limit: int) -> Tuple[List[dict], int]:
             for call in copy["tool_calls"]:
                 arguments = call["function"]["arguments"]
                 if len(arguments) > limit:
-                    call = {**call, "function": {**call["function"],
-                                                 "arguments": _clip(arguments, limit, keep_newlines=True)}}
+                    call = {
+                        **call,
+                        "function": {
+                            **call["function"],
+                            "arguments": _clip(arguments, limit, keep_newlines=True),
+                        },
+                    }
                     clipped += 1
                 calls.append(call)
             copy["tool_calls"] = calls
@@ -491,8 +544,13 @@ def reduce_row(row: dict, window: Optional[Window], clip: Optional[int]) -> Tupl
     messages, counts = native["messages"], native.get("prefix_message_counts") or {}
     stats = {"messages": len(messages)}
     if window is not None:
-        cuts = sorted({counts[str(c["step"])] for c in row.get("branch_candidates") or []
-                       if str(c.get("step")) in counts})
+        cuts = sorted(
+            {
+                counts[str(c["step"])]
+                for c in row.get("branch_candidates") or []
+                if str(c.get("step")) in counts
+            }
+        )
         messages, stats["omitted"] = window_messages(messages, cuts, window)
         stats["retained"] = stats["messages"] - stats["omitted"]
     if clip:
@@ -500,21 +558,30 @@ def reduce_row(row: dict, window: Optional[Window], clip: Optional[int]) -> Tupl
     return {**row, "native_history": {**native, "messages": messages}}, stats
 
 
-def fit_review_prompt(template: str, *, problem: str, rows: List[dict], count_rule: str,
-                      budget: int) -> Tuple[str, dict]:
+def fit_review_prompt(
+    template: str, *, problem: str, rows: List[dict], count_rule: str, budget: int
+) -> Tuple[str, dict]:
     """The reviewer prompt within ``budget`` characters, with the record of how.
 
     Unchanged when it fits. Otherwise the ``STAGES`` are applied in order until
     it does; the last one is sent even when it does not fit, and the record says
     so (``within_budget``). The record is the plan file's ``prompt_budget``.
     """
+
     def render(reports):
-        return template.format(problem=problem, reports=json.dumps(reports, indent=1, ensure_ascii=False),
-                               count_rule=count_rule)
+        return template.format(
+            problem=problem, reports=json.dumps(reports, indent=1, ensure_ascii=False), count_rule=count_rule
+        )
 
     prompt = render(rows)
-    record = {"budget": budget, "chars_before": len(prompt), "chars_after": len(prompt),
-              "within_budget": len(prompt) <= budget, "stage": None, "attempts": {}}
+    record = {
+        "budget": budget,
+        "chars_before": len(prompt),
+        "chars_after": len(prompt),
+        "within_budget": len(prompt) <= budget,
+        "stage": None,
+        "attempts": {},
+    }
     for stage in STAGES:
         if record["within_budget"]:
             break
@@ -526,16 +593,24 @@ def fit_review_prompt(template: str, *, problem: str, rows: List[dict], count_ru
             if row_stats:
                 stats[row["name"]] = row_stats
         prompt = render(reduced)
-        record.update(chars_after=len(prompt), within_budget=len(prompt) <= budget,
-                      stage=stage.name, attempts=stats)
+        record.update(
+            chars_after=len(prompt), within_budget=len(prompt) <= budget, stage=stage.name, attempts=stats
+        )
     return prompt, record
 
 
 # --- analyst and reviewer -----------------------------------------------------
 
 
-def analyst_prompt(problem: str, attempt: Attempt, points: dict, width: int,
-                   token_budget: int, budget: int, prompts: Prompts = DEFAULT_PROMPTS) -> Tuple[str, int, dict]:
+def analyst_prompt(
+    problem: str,
+    attempt: Attempt,
+    points: dict,
+    width: int,
+    token_budget: int,
+    budget: int,
+    prompts: Prompts = DEFAULT_PROMPTS,
+) -> Tuple[str, int, dict]:
     """The analyst prompt within ``budget`` characters, the step count and the sizing.
 
     The transcript takes what the fixed parts (template, problem, verdict and
@@ -549,9 +624,14 @@ def analyst_prompt(problem: str, attempt: Attempt, points: dict, width: int,
 
     def render(transcript, verdict):
         return prompts.analyst_case.format(
-            problem=problem[:20000], verdict=verdict, transcript=transcript,
+            problem=problem[:20000],
+            verdict=verdict,
+            transcript=transcript,
             checkpoint_steps=json.dumps(sorted(s for s in points if s <= hi)),
-            candidate_limit=width, lo=lo, hi=hi)
+            candidate_limit=width,
+            lo=lo,
+            hi=hi,
+        )
 
     reserve = len(prompts.analyst_feedback.format(error="x" * 500))
     minimum = budget // 4
@@ -562,13 +642,32 @@ def analyst_prompt(problem: str, attempt: Attempt, points: dict, width: int,
         room = budget - reserve - len(render("", verdict))
     transcript, _, _ = render_transcript(journal, token_budget=token_budget, char_budget=max(0, room))
     prompt = render(transcript, verdict)
-    return prompt, hi, {"budget": budget, "chars": len(prompt), "transcript_chars": len(transcript),
-                        "verdict_chars": len(verdict), "within_budget": len(prompt) + reserve <= budget}
+    return (
+        prompt,
+        hi,
+        {
+            "budget": budget,
+            "chars": len(prompt),
+            "transcript_chars": len(transcript),
+            "verdict_chars": len(verdict),
+            "within_budget": len(prompt) + reserve <= budget,
+        },
+    )
 
 
-def analyse(transport, model: str, problem: str, attempt: Attempt, points: dict,
-            width: int, token_budget: int, *, max_attempts: int = 3,
-            prompt_chars: int = DEFAULT_PROMPT_CHARS, prompts: Prompts = DEFAULT_PROMPTS) -> dict:
+def analyse(
+    transport,
+    model: str,
+    problem: str,
+    attempt: Attempt,
+    points: dict,
+    width: int,
+    token_budget: int,
+    *,
+    max_attempts: int = 3,
+    prompt_chars: int = DEFAULT_PROMPT_CHARS,
+    prompts: Prompts = DEFAULT_PROMPTS,
+) -> dict:
     """One failed attempt -> failure_reason, lesson, salvage, candidate steps.
 
     The report is validated against ``structured_review.ANALYST_SCHEMA``; an
@@ -583,25 +682,38 @@ def analyse(transport, model: str, problem: str, attempt: Attempt, points: dict,
     from jsonschema import Draft202012Validator, ValidationError
 
     structured = getattr(transport, "supports_json_schema", False) is True
-    overhead = (transport.json_overhead(structured_review.ANALYST_SCHEMA, "sprout_analysis")
-                if structured else 0)
+    overhead = (
+        transport.json_overhead(structured_review.ANALYST_SCHEMA, "sprout_analysis") if structured else 0
+    )
     budget, halvings = prompt_chars - overhead, 0
     prompt, hi, sizing = analyst_prompt(problem, attempt, points, width, token_budget, budget, prompts)
     if hi < 1:
-        return {"failure_reason": "no tool steps recorded", "steps": 0,
-                "lesson": "", "salvage": "nothing", "branch_candidates": []}
+        return {
+            "failure_reason": "no tool steps recorded",
+            "steps": 0,
+            "lesson": "",
+            "salvage": "nothing",
+            "branch_candidates": [],
+        }
     feedback, error, corrections = "", "", 0
     while corrections < max_attempts:
         try:
-            text = (transport.json(model, prompt + feedback, schema=structured_review.ANALYST_SCHEMA,
-                                   name="sprout_analysis") if structured else transport(model, prompt + feedback))
+            text = (
+                transport.json(
+                    model, prompt + feedback, schema=structured_review.ANALYST_SCHEMA, name="sprout_analysis"
+                )
+                if structured
+                else transport(model, prompt + feedback)
+            )
         except PromptRejected:
             if halvings >= PROMPT_HALVINGS:
                 raise
             # Halved, and in any case below what was just refused.
             halvings += 1
             budget = min(budget // 2, sizing["chars"] - 1)
-            prompt, hi, sizing = analyst_prompt(problem, attempt, points, width, token_budget, budget, prompts)
+            prompt, hi, sizing = analyst_prompt(
+                problem, attempt, points, width, token_budget, budget, prompts
+            )
             continue
         except ReviewResponseTruncated as exc:
             corrections += 1
@@ -617,20 +729,34 @@ def analyse(transport, model: str, problem: str, attempt: Attempt, points: dict,
             feedback = prompts.analyst_feedback.format(error=error)
             continue
         report["steps"] = hi
-        report["prompt_budget"] = {**sizing, "halvings": halvings,
-                                  **({"request_budget": prompt_chars, "structured_output_chars": overhead}
-                                     if structured else {})}
+        report["prompt_budget"] = {
+            **sizing,
+            "halvings": halvings,
+            **({"request_budget": prompt_chars, "structured_output_chars": overhead} if structured else {}),
+        }
         return report
     raise ValueError("analyst report invalid after %d attempts: %s" % (max_attempts, error))
 
 
-def review(transport, model: str, problem: str, attempts: List[Attempt], cases: dict,
-           *, round_no: int, width: int, plan_path: Path, guidance_mode: str = DEFAULT_GUIDANCE,
-           count_mode: str = "adaptive", reviewer_max_attempts: int = 3,
-           prompt_chars: int = DEFAULT_PROMPT_CHARS, prompts: Prompts = DEFAULT_PROMPTS,
-           eligible: Optional[dict] = None,
-           turn_check: Optional[Callable[[BranchChoice], Optional[dict]]] = None,
-           turn_resamples: int = 0) -> List[BranchChoice]:
+def review(
+    transport,
+    model: str,
+    problem: str,
+    attempts: List[Attempt],
+    cases: dict,
+    *,
+    round_no: int,
+    width: int,
+    plan_path: Path,
+    guidance_mode: str = DEFAULT_GUIDANCE,
+    count_mode: str = "adaptive",
+    reviewer_max_attempts: int = 3,
+    prompt_chars: int = DEFAULT_PROMPT_CHARS,
+    prompts: Prompts = DEFAULT_PROMPTS,
+    eligible: Optional[dict] = None,
+    turn_check: Optional[Callable[[BranchChoice], Optional[dict]]] = None,
+    turn_resamples: int = 0,
+) -> List[BranchChoice]:
     """The reviewer reads every analysis and picks branches; each is validated exactly.
 
     ``plan_path`` receives the whole exchange: eligible steps, every reviewer
@@ -661,58 +787,95 @@ def review(transport, model: str, problem: str, attempts: List[Attempt], cases: 
     from sprout.harness_agents.mini_swe.history import available_branch_points
 
     points = {a.name: available_branch_points(a.outcome.journal_path) for a in attempts}
-    points = {name: {step: pair for step, pair in pairs.items()
-                     if step <= cases.get(name, {}).get("steps", 0)
-                     and (eligible is None or step in eligible.get(name, ()))}
-              for name, pairs in points.items()}
-    record = {"reports": cases, "available_steps": {name: sorted(pairs) for name, pairs in points.items()},
-              "branch_limit": width, "branch_count_mode": count_mode,
-              "branch_guidance": guidance_mode, "reviewer_max_attempts": reviewer_max_attempts,
-              "prompts": {"path": str(prompts.path), "sha256": prompts.sha256}}
+    points = {
+        name: {
+            step: pair
+            for step, pair in pairs.items()
+            if step <= cases.get(name, {}).get("steps", 0)
+            and (eligible is None or step in eligible.get(name, ()))
+        }
+        for name, pairs in points.items()
+    }
+    record = {
+        "reports": cases,
+        "available_steps": {name: sorted(pairs) for name, pairs in points.items()},
+        "branch_limit": width,
+        "branch_count_mode": count_mode,
+        "branch_guidance": guidance_mode,
+        "reviewer_max_attempts": reviewer_max_attempts,
+        "prompts": {"path": str(prompts.path), "sha256": prompts.sha256},
+    }
 
     def persist(value):
         plan_path.parent.mkdir(parents=True, exist_ok=True)
         plan_path.write_text(json.dumps(value, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
     if not any(points.values()):
-        record.update(review=None, validation_error="no eligible snapshot/session pairs: no native "
-                                                    "conversation cut at a complete-turn boundary")
+        record.update(
+            review=None,
+            validation_error="no eligible snapshot/session pairs: no native "
+            "conversation cut at a complete-turn boundary",
+        )
         persist(record)
         return []
     reports = []
     for attempt in attempts:
         # The analyst's own sizing record is the controller's, not evidence.
         case = {key: value for key, value in cases.get(attempt.name, {}).items() if key != "prompt_budget"}
-        row = {**case, "name": attempt.name, "round": attempt.round_no,
-               "grade": attempt.grade.summary(), "available_steps": sorted(points[attempt.name])}
+        row = {
+            **case,
+            "name": attempt.name,
+            "round": attempt.round_no,
+            "grade": attempt.grade.summary(),
+            "available_steps": sorted(points[attempt.name]),
+        }
         if guidance_mode == "user-hint":
             row["hint_given"] = attempt.hint or None
         else:
-            row.update(assistant_turn_given=attempt.assistant_turn,
-                       native_history=reviewer_context(attempt.outcome.journal_path, points[attempt.name]))
+            row.update(
+                assistant_turn_given=attempt.assistant_turn,
+                native_history=reviewer_context(attempt.outcome.journal_path, points[attempt.name]),
+            )
         reports.append(row)
-    template = {"user-hint": prompts.reviewer_user_hint, "assistant-turn": prompts.reviewer_assistant_turn,
-                "none": prompts.reviewer_point}[guidance_mode]
+    template = {
+        "user-hint": prompts.reviewer_user_hint,
+        "assistant-turn": prompts.reviewer_assistant_turn,
+        "none": prompts.reviewer_point,
+    }[guidance_mode]
     # Hint reviews answer in JSON; the other modes in a labelled branch-plan fence,
     # and only assistant turns are checked against the wire schema -- built by
     # the controller from each branch's content and commands, with call ids
     # minted from the round.
-    structured = guidance_mode == "assistant-turn" and getattr(transport, "supports_json_schema", False) is True
+    structured = (
+        guidance_mode == "assistant-turn" and getattr(transport, "supports_json_schema", False) is True
+    )
     record["structured_review"] = structured
     schema = structured_review.flat_review_schema(width, count_mode) if structured else None
     overhead = transport.json_overhead(schema, "sprout_branches") if structured else 0
-    parse = {"user-hint": extract_json, "none": extract_branch_plan,
-             "assistant-turn": partial(structured_review.extract_assistant_turn_plan, round_no=round_no,
-                                       json_only=structured)}[guidance_mode]
+    parse = {
+        "user-hint": extract_json,
+        "none": extract_branch_plan,
+        "assistant-turn": partial(
+            structured_review.extract_assistant_turn_plan, round_no=round_no, json_only=structured
+        ),
+    }[guidance_mode]
     format_hint = prompts.reviewer_assistant_format_hint if guidance_mode == "assistant-turn" else ""
     budget = prompt_chars - overhead
     if structured:
-        record["structured_output"] = {"schema": schema, "request_budget": prompt_chars,
-                                        "overhead_chars": overhead}
+        record["structured_output"] = {
+            "schema": schema,
+            "request_budget": prompt_chars,
+            "overhead_chars": overhead,
+        }
 
     def fit():
-        prompt, sizing = fit_review_prompt(template, problem=problem[:20000], rows=reports,
-                                           count_rule=branch_count_rule(count_mode, width, prompts), budget=budget)
+        prompt, sizing = fit_review_prompt(
+            template,
+            problem=problem[:20000],
+            rows=reports,
+            count_rule=branch_count_rule(count_mode, width, prompts),
+            budget=budget,
+        )
         record["prompt_budget"] = {**sizing, "halvings": len(refused), "refused": refused}
         return prompt
 
@@ -736,9 +899,15 @@ def review(transport, model: str, problem: str, attempts: List[Attempt], cases: 
 
     def validate(plan):
         nonlocal rejections
-        choices = prepare_branches(plan, limit=width, round_no=round_no,
-                                   attempts={a.name: a for a in attempts}, checkpoints=points,
-                                   count_mode=count_mode, guidance_mode=guidance_mode)
+        choices = prepare_branches(
+            plan,
+            limit=width,
+            round_no=round_no,
+            attempts={a.name: a for a in attempts},
+            checkpoints=points,
+            count_mode=count_mode,
+            guidance_mode=guidance_mode,
+        )
         if turn_check is None:
             return choices
         checks = [turn_check(c) if c.assistant_turn is not None else None for c in choices]
@@ -754,20 +923,36 @@ def review(transport, model: str, problem: str, attempts: List[Attempt], cases: 
     if turn_check is not None:
         record["turn_resamples"] = turn_resamples
     result = review_with_feedback(
-        lambda text: (transport.json(model, text, schema=schema, name="sprout_branches")
-                      if structured else transport(model, text)), fit(), parse, validate,
-        max_attempts=reviewer_max_attempts, record=record, persist=persist, reduce=reduce,
-        format_hint=format_hint)
+        lambda text: (
+            transport.json(model, text, schema=schema, name="sprout_branches")
+            if structured
+            else transport(model, text)
+        ),
+        fit(),
+        parse,
+        validate,
+        max_attempts=reviewer_max_attempts,
+        record=record,
+        persist=persist,
+        reduce=reduce,
+        format_hint=format_hint,
+    )
     if result is None:
         return []
     plan, choices = result
     record["selected_branches"] = [
-        {"run_name": c.run_name, "base": c.base.name, "branch_step": c.checkpoint.step,
-         "snapshot_id": c.checkpoint.snapshot_id, "conversation_cut": c.cut,
-         "branch_guidance": guidance_mode,
-         **({"hint": c.hint} if c.hint else {}),
-         **({"assistant_turn": c.assistant_turn} if c.assistant_turn is not None else {}),
-         **({"turn_check": c.turn_check} if c.turn_check is not None else {})}
-        for c in choices]
+        {
+            "run_name": c.run_name,
+            "base": c.base.name,
+            "branch_step": c.checkpoint.step,
+            "snapshot_id": c.checkpoint.snapshot_id,
+            "conversation_cut": c.cut,
+            "branch_guidance": guidance_mode,
+            **({"hint": c.hint} if c.hint else {}),
+            **({"assistant_turn": c.assistant_turn} if c.assistant_turn is not None else {}),
+            **({"turn_check": c.turn_check} if c.turn_check is not None else {}),
+        }
+        for c in choices
+    ]
     persist(record)
     return choices

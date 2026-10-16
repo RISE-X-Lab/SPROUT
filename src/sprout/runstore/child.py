@@ -64,8 +64,9 @@ def execute(request: dict, directory: Path) -> dict:
     if request["kind"] == "grade":
         from sprout.runstore.grading import grade
 
-        return grade(spec, directory,
-                     session_factory=lambda **kwargs: TrackingSession(ledger=ledger, **kwargs))
+        return grade(
+            spec, directory, session_factory=lambda **kwargs: TrackingSession(ledger=ledger, **kwargs)
+        )
     slot = spec.get("slot", "mini-swe-agent")
     extra = dict(spec.get("extra", {}))
     extra["native_home"] = str(native_home)
@@ -89,11 +90,20 @@ def execute(request: dict, directory: Path) -> dict:
                 prompt = mark_hint(prompt)
             spec["prompt"] = prompt
         spec["sandbox_image"] = recovered["snapshot_id"]
-        spec["origin"] = {"point_id": recovered["id"], "snapshot_id": recovered["snapshot_id"],
-                          "tool_depth": recovered["tool_depth"], "message_step": recovered["message_step"],
-                          **continuation.origin()}
-    spec.update(cwd=str(cwd), run_id=request["attempt_id"], agent_id=request["attempt_id"],
-                journal_path=directory / "trajectory.jsonl", extra=extra)
+        spec["origin"] = {
+            "point_id": recovered["id"],
+            "snapshot_id": recovered["snapshot_id"],
+            "tool_depth": recovered["tool_depth"],
+            "message_step": recovered["message_step"],
+            **continuation.origin(),
+        }
+    spec.update(
+        cwd=str(cwd),
+        run_id=request["attempt_id"],
+        agent_id=request["attempt_id"],
+        journal_path=directory / "trajectory.jsonl",
+        extra=extra,
+    )
     ledger._append("allocation_started", run_id=request["attempt_id"], image=spec.get("sandbox_image"))
 
     def progress(kind: str, payload: dict) -> None:
@@ -131,8 +141,9 @@ def execute(request: dict, directory: Path) -> dict:
     if message_export:
         from sprout.runstore.messages import complete_message_result
 
-        result = complete_message_result(result, directory, slot, request.get("recovery"),
-                                         request.get("branch_point"))
+        result = complete_message_result(
+            result, directory, slot, request.get("recovery"), request.get("branch_point")
+        )
     return result
 
 
@@ -159,8 +170,11 @@ def main() -> int:
         # review failed, and what else did). Nothing may keep the outcome unwritten.
         with contextlib.suppress(Exception):
             traceback.print_exception(error)
-        result = {"status": "error", "failure_kind": "infrastructure",
-                  "error": f"{type(error).__name__}: {error}"}
+        result = {
+            "status": "error",
+            "failure_kind": "infrastructure",
+            "error": f"{type(error).__name__}: {error}",
+        }
     result.update(attempt_id=request["attempt_id"], elapsed_s=time.monotonic() - started)
     write_json(directory / "outcome.json", result)
     return 0

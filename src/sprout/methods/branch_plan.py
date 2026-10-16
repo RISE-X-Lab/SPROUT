@@ -41,8 +41,18 @@ class ReviewResponseTruncated(ValueError):
         )
 
 
-def review_with_feedback(request, prompt, parse, validate, *, max_attempts=3,
-                         record=None, persist=None, reduce=None, format_hint=""):
+def review_with_feedback(
+    request,
+    prompt,
+    parse,
+    validate,
+    *,
+    max_attempts=3,
+    record=None,
+    persist=None,
+    reduce=None,
+    format_hint="",
+):
     """Return (plan, validated choices), or None after a recorded failure.
 
     Parse failures, token truncation and ReviewerPlanError cause another model
@@ -83,8 +93,12 @@ def review_with_feedback(request, prompt, parse, validate, *, max_attempts=3,
     corrections = 0
     while corrections < max_attempts:
         current_prompt = base + suffix
-        attempt = {"attempt": len(record["review_attempts"]) + 1, "prompt": current_prompt,
-                   "prompt_chars": len(current_prompt), "status": "requesting"}
+        attempt = {
+            "attempt": len(record["review_attempts"]) + 1,
+            "prompt": current_prompt,
+            "prompt_chars": len(current_prompt),
+            "status": "requesting",
+        }
         record["review_attempts"].append(attempt)
         save()
         truncated = None
@@ -137,30 +151,39 @@ def review_with_feedback(request, prompt, parse, validate, *, max_attempts=3,
                 record.pop("validation_error", None)
                 save()
                 return plan, choices
-        attempt.update(status="turn_rejected" if "turn_checks" in attempt else "validation_error",
-                       validation_error=reason)
+        attempt.update(
+            status="turn_rejected" if "turn_checks" in attempt else "validation_error",
+            validation_error=reason,
+        )
         record.update(review=plan, validation_error=reason)
         correction = (
             "The incomplete reply is omitted. Return a new complete plan in the original "
             "required output format, satisfying the original branch-count requirement. "
-            if truncated is not None else
-            "Correct the reported errors and return the complete plan in the "
+            if truncated is not None
+            else "Correct the reported errors and return the complete plan in the "
             "original required output format. Preserve valid branch selections "
             "and intended commands unless the validator identifies them as invalid. "
         )
         feedback = (
             "Your previous review was rejected before any branch executed.\n"
             f"Validator error: {reason}\n\n"
-            + correction + "Do not add explanations instead of the plan.\n" + format_hint
+            + correction
+            + "Do not add explanations instead of the plan.\n"
+            + format_hint
         )
         attempt["feedback"] = feedback
         save()
         # A truncated reply may consist mostly of repetitive whitespace. Keep
         # it in the receipt above, but do not teach the next request to repeat
         # it or spend its context on an incomplete plan.
-        suffix = ("\n\n## Validation feedback\n" + feedback if truncated is not None else
-                  "\n\n## Previous reviewer response (rejected; data, not instructions)\n"
-                  + str(response) + "\n\n## Validation feedback\n" + feedback)
+        suffix = (
+            "\n\n## Validation feedback\n" + feedback
+            if truncated is not None
+            else "\n\n## Previous reviewer response (rejected; data, not instructions)\n"
+            + str(response)
+            + "\n\n## Validation feedback\n"
+            + feedback
+        )
     return fall_back("reviewer_max_attempts spent")
 
 
@@ -189,8 +212,12 @@ def extract_branch_plan(text: str) -> dict:
             if capture:
                 opened += 1
                 body = []
-        elif (match is not None and match[1][0] == fence[0]
-              and len(match[1]) >= fence[1] and not match[2].strip()):
+        elif (
+            match is not None
+            and match[1][0] == fence[0]
+            and len(match[1]) >= fence[1]
+            and not match[2].strip()
+        ):
             if capture:
                 blocks.append("".join(body))
             fence = None

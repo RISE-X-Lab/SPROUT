@@ -17,15 +17,20 @@ class RunStoreClient(Client):
         return response.json()
 
     def tools(self, job_id: str, *, attempt_id: str, after: int = 0) -> list[dict]:
-        response = self.http.get(f"/v1/jobs/{segment(job_id)}/tools", params={
-            "attempt_id": attempt_id, "after": after,
-        })
+        response = self.http.get(
+            f"/v1/jobs/{segment(job_id)}/tools",
+            params={
+                "attempt_id": attempt_id,
+                "after": after,
+            },
+        )
         response.raise_for_status()
         return response.json()
 
     def points(self, job_id: str, *, attempt_id: str) -> list[dict]:
-        response = self.http.get(f"/v1/jobs/{segment(job_id)}/recovery-points",
-                                 params={"attempt_id": attempt_id})
+        response = self.http.get(
+            f"/v1/jobs/{segment(job_id)}/recovery-points", params={"attempt_id": attempt_id}
+        )
         response.raise_for_status()
         return response.json()
 

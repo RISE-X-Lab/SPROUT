@@ -7,9 +7,10 @@ from sprout.harness_agents.mini_swe.history import load_prefix
 
 def _stdout(result, purpose):
     outcome = getattr(result, "outcome", None)
-    if not result.success or (outcome is not None and (
-        outcome.exit_code != 0 or outcome.running or outcome.timed_out or outcome.truncated
-    )):
+    if not result.success or (
+        outcome is not None
+        and (outcome.exit_code != 0 or outcome.running or outcome.timed_out or outcome.truncated)
+    ):
         detail = result.error or (getattr(outcome, "stderr", "") if outcome else "") or result.output
         raise ValueError(f"mini {purpose} failed: {detail or 'shell returned no diagnostic'}")
     text = outcome.stdout if outcome is not None else result.output
@@ -35,14 +36,29 @@ def resolve_workspace(session, extra, journal):
     if requested is not None:
         arguments["working_dir"] = requested
     cwd = _stdout(session.execute("shell", arguments, timeout=20), "working-directory probe")
-    repository = session.execute("shell", {
-        "command": "git rev-parse --show-toplevel", "working_dir": cwd, "timeout": 10,
-    }, timeout=20)
+    repository = session.execute(
+        "shell",
+        {
+            "command": "git rev-parse --show-toplevel",
+            "working_dir": cwd,
+            "timeout": 10,
+        },
+        timeout=20,
+    )
     repository_dir = _stdout(repository, "repository probe") if repository.success else None
     if requested is None and repository_dir is not None and cwd != repository_dir:
-        cwd = _stdout(session.execute("shell", {
-            "command": "pwd -P", "working_dir": repository_dir, "timeout": 10,
-        }, timeout=20), "repository working-directory probe")
+        cwd = _stdout(
+            session.execute(
+                "shell",
+                {
+                    "command": "pwd -P",
+                    "working_dir": repository_dir,
+                    "timeout": 10,
+                },
+                timeout=20,
+            ),
+            "repository working-directory probe",
+        )
     workspace = {"cwd": cwd, "repository_dir": repository_dir}
     if inherited is not None and workspace != inherited:
         raise ValueError("mini restored workspace differs from the parent's recorded workspace")

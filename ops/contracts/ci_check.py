@@ -95,7 +95,8 @@ def check_python_api(contract: dict, report: Report) -> None:
         expected = upstream["verified_versions"]["sdk"]
         (report.ok if installed == expected else report.fail)(
             f"{upstream['package']} == {expected}",
-            **({} if installed == expected else {"detail": f"installed: {installed}"}))
+            **({} if installed == expected else {"detail": f"installed: {installed}"}),
+        )
     module_name = spec.get("module")
     try:
         mod = importlib.import_module(module_name)
@@ -104,9 +105,7 @@ def check_python_api(contract: dict, report: Report) -> None:
         return
 
     for name in spec.get("exports") or []:
-        (report.ok if hasattr(mod, name) else report.fail)(
-            "%s exports %s" % (module_name, name)
-        )
+        (report.ok if hasattr(mod, name) else report.fail)("%s exports %s" % (module_name, name))
 
     client_spec = spec.get("client") or {}
     if client_spec:
@@ -172,10 +171,7 @@ def main(argv=None) -> int:
         check_classes(contract, report)
         check_normalizer_alignment(contract, report)
 
-    print(
-        "\n%d checks, %d failures, %d skipped"
-        % (report.checks, len(report.failures), len(report.skips))
-    )
+    print("\n%d checks, %d failures, %d skipped" % (report.checks, len(report.failures), len(report.skips)))
     if report.failures:
         print("\nAdapter drift detected. Update the adapter or the contract.")
         return 1

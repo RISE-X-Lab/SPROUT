@@ -31,12 +31,14 @@ class AgentENVOrchestrator(Orchestrator):
         self.cancelled.set()
         if self.environment.actor_control is not None:
             self.environment.actor_control.request_stop(
-                "Harbor cancelled the actor", stop_reason=self.cancel_stop_reason)
+                "Harbor cancelled the actor", stop_reason=self.cancel_stop_reason
+            )
 
     def _wire_sandbox(self, spec, claim):
         # Harbor owns this sandbox's lifetime; the orchestrator only borrows it.
-        return OwnedSandbox(session=self.environment.session, keep=True,
-                            sandbox_id=self.environment.session.sandbox_id)
+        return OwnedSandbox(
+            session=self.environment.session, keep=True, sandbox_id=self.environment.session.sandbox_id
+        )
 
     def _wire_gateway(self, spec, journal, task, run_id):
         task.env.update(self.model_env)
@@ -91,11 +93,14 @@ class AgentENVAgent(BaseAgent):
         orchestrator = AgentENVOrchestrator(environment, self.extra_env, out_dir=self.logs_dir)
         previous_listeners = list(environment.session.on_swap)
         pending = asyncio.create_task(asyncio.to_thread(orchestrator.run, spec))
-        context.metadata = {"environment_owner": "harbor", "backend": environment.type(),
-                            "checkpoint_mode": environment.checkpoint_mode,
-                            "checkpoint_capture_enabled": spec.checkpoint_enabled,
-                            "sandbox_id": environment.session.sandbox_id,
-                            "journal": str(journal)}
+        context.metadata = {
+            "environment_owner": "harbor",
+            "backend": environment.type(),
+            "checkpoint_mode": environment.checkpoint_mode,
+            "checkpoint_capture_enabled": spec.checkpoint_enabled,
+            "sandbox_id": environment.session.sandbox_id,
+            "journal": str(journal),
+        }
         harbor_deadline = False
         try:
             try:
@@ -113,8 +118,11 @@ class AgentENVAgent(BaseAgent):
             context.n_cache_tokens = result.usage.get("cached_input_tokens")
             context.n_output_tokens = result.usage.get("output_tokens")
             context.cost_usd = result.usage.get("cost_usd")
-            context.metadata.update(actor_status=result.status, checkpoints=result.checkpoints,
-                                    native_session_id=result.native_session_id)
+            context.metadata.update(
+                actor_status=result.status,
+                checkpoints=result.checkpoints,
+                native_session_id=result.native_session_id,
+            )
             (self.logs_dir / "execution.json").write_text(json.dumps(asdict(result), default=str, indent=2))
             # First: without the final snapshot the VM is the only copy of the
             # rollout, and Harbor's teardown must not destroy it.
@@ -139,4 +147,3 @@ class AgentENVAgent(BaseAgent):
             environment.session.on_swap[:] = previous_listeners
             if journal.exists():
                 (self.logs_dir / "trajectory.json").write_text(json.dumps(export_file(journal), indent=2))
-

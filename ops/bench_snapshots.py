@@ -101,8 +101,9 @@ async def run(args) -> list[dict]:
         delete = pool.delete_snapshot
     else:
         server_url, api_key = resolve_microvm_endpoint({})
-        template = TemplateBuilder(server_url=server_url, api_key=api_key,
-                                   runtime_bin=Path(args.runtime_bin)).template_for(args.image, RESOURCES)
+        template = TemplateBuilder(
+            server_url=server_url, api_key=api_key, runtime_bin=Path(args.runtime_bin)
+        ).template_for(args.image, RESOURCES)
         pool = MicroVMPool(server_url, api_key=api_key, sandbox_ttl=1800)
         sandbox = await pool.spawn(template)
         client = AgentEnvClient(server_url, api_key)
@@ -110,6 +111,7 @@ async def run(args) -> list[dict]:
         async def delete(snapshot_id: str) -> None:
             if not client.delete_snapshot(snapshot_id):
                 raise RuntimeError(f"could not delete snapshot {snapshot_id}")
+
     taken: list[str] = []
     try:
         await ready(sandbox)
@@ -126,7 +128,9 @@ def table(samples: list[dict], backend: str) -> str:
     rows = [f"| {backend} | step | n | median | min | max |", "|---|---|---|---|---|---|"]
     for step in dict.fromkeys(s["step"] for s in samples):
         x = [s["seconds"] * 1000 for s in samples if s["step"] == step]
-        rows.append(f"| | {step} | {len(x)} | {statistics.median(x):.0f} ms | {min(x):.0f} ms | {max(x):.0f} ms |")
+        rows.append(
+            f"| | {step} | {len(x)} | {statistics.median(x):.0f} ms | {min(x):.0f} ms | {max(x):.0f} ms |"
+        )
     return "\n".join(rows)
 
 
@@ -143,8 +147,9 @@ def main(argv=None) -> int:
         parser.error("--backend podman needs --store")
     samples = asyncio.run(run(args))
     if args.output:
-        args.output.write_text(json.dumps({"backend": args.backend, "image": args.image, "samples": samples},
-                                          indent=1))
+        args.output.write_text(
+            json.dumps({"backend": args.backend, "image": args.image, "samples": samples}, indent=1)
+        )
     print(table(samples, args.backend))
     return 0
 

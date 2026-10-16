@@ -1,4 +1,5 @@
 """The mini bash contract shared by actor prompts, requests and reviewers."""
+
 from copy import deepcopy
 import json
 import shlex
@@ -21,9 +22,13 @@ def validate_mini_tools(tools: list[dict]) -> list[dict]:
     if not isinstance(parameters, dict) or not isinstance(parameters.get("properties"), dict):
         raise ValueError("Recorded bash tool requires an object parameter schema")
     properties = parameters["properties"]
-    if (parameters.get("type") != "object" or set(properties) != {"command"}
-            or not isinstance(properties["command"], dict) or properties["command"].get("type") != "string"
-            or parameters.get("required") != ["command"]):
+    if (
+        parameters.get("type") != "object"
+        or set(properties) != {"command"}
+        or not isinstance(properties["command"], dict)
+        or properties["command"].get("type") != "string"
+        or parameters.get("required") != ["command"]
+    ):
         raise ValueError("Recorded bash tool must require exactly one string command")
     return deepcopy(tools)
 
@@ -31,12 +36,23 @@ def validate_mini_tools(tools: list[dict]) -> list[dict]:
 def mini_tool_schema(upstream: dict | None = None) -> list[dict]:
     # The pinned mini2.4.6 contract. Rendering a task must not import mini and
     # load its host-global .env before the slot establishes its isolated config.
-    tools = [{"type": "function", "function": {
-        "name": "bash", "description": "Execute a bash command",
-        "parameters": {"type": "object",
-                       "properties": {"command": {"type": "string", "description": "The bash command to execute"}},
-                       "required": ["command"], "additionalProperties": False},
-    }}]
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "bash",
+                "description": "Execute a bash command",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "command": {"type": "string", "description": "The bash command to execute"}
+                    },
+                    "required": ["command"],
+                    "additionalProperties": False,
+                },
+            },
+        }
+    ]
     if upstream is not None:
         actual = validate_mini_tools([upstream])
         # Our executor already rejects extra arguments. Advertise that limit.

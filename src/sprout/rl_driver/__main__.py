@@ -24,13 +24,28 @@ def main():
     args = parser.parse_args()
     try:
         config = json.loads(args.config.read_text())
-        allowed = {"runstore_url", "runstore_token_env", "driver_token_env", "ledger", "poll_interval_s", "miles"}
+        allowed = {
+            "runstore_url",
+            "runstore_token_env",
+            "driver_token_env",
+            "ledger",
+            "poll_interval_s",
+            "miles",
+        }
         if not isinstance(config, dict) or set(config) - allowed:
             raise ValueError(f"Config fields must be drawn from {sorted(allowed)}")
         url = config.get("runstore_url", "http://127.0.0.1:18110").rstrip("/")
         parsed = httpx.URL(url)
-        if parsed.scheme not in {"http", "https"} or not parsed.host or parsed.userinfo or parsed.query or parsed.fragment:
-            raise ValueError("runstore_url must be an HTTP(S) URL without embedded credentials/query/fragment")
+        if (
+            parsed.scheme not in {"http", "https"}
+            or not parsed.host
+            or parsed.userinfo
+            or parsed.query
+            or parsed.fragment
+        ):
+            raise ValueError(
+                "runstore_url must be an HTTP(S) URL without embedded credentials/query/fragment"
+            )
         token = os.environ[config.get("runstore_token_env", "SPROUT_RUNSTORE_TOKEN")]
         driver_token_env = config.get("driver_token_env", "SPROUT_RL_DRIVER_TOKEN")
         driver_token = os.environ[driver_token_env] if driver_token_env is not None else None
@@ -51,8 +66,11 @@ def main():
     try:
         driver = Driver(client, ledger)
         miles = MessageAdapter(driver, config["miles"]) if config.get("miles") is not None else None
-        uvicorn.run(create_app(driver, driver_token, poll_interval_s=interval, miles=miles),
-                    host=args.host, port=args.port)
+        uvicorn.run(
+            create_app(driver, driver_token, poll_interval_s=interval, miles=miles),
+            host=args.host,
+            port=args.port,
+        )
     finally:
         client.close()
 

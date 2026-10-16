@@ -19,15 +19,21 @@ from sprout.inspect import export, views
 from sprout.inspect.layout import KINDS, detect
 
 #: What detect() looks for, in its order.
-NOT_A_ROOT = ("not a run root: %s (looked for baseline/ or sprout/ with a readable manifest-*.json, one here, "
-              "gate.jsonl, summary.json with attempts, a trial's config.json + agent/, a task's *.task.json, "
-              "*.stage.json or baseline/attempt-*.stage.json, or a .jsonl journal)")
+NOT_A_ROOT = (
+    "not a run root: %s (looked for baseline/ or sprout/ with a readable manifest-*.json, one here, "
+    "gate.jsonl, summary.json with attempts, a trial's config.json + agent/, a task's *.task.json, "
+    "*.stage.json or baseline/attempt-*.stage.json, or a .jsonl journal)"
+)
 FORMAT_HELP = "text for a terminal (default); json is dataclasses.asdict of the same model"
 
 
 def _dump(model) -> str:
-    return json.dumps(asdict(model) if not isinstance(model, (dict, list)) else model,
-                      indent=2, ensure_ascii=False, default=str)
+    return json.dumps(
+        asdict(model) if not isinstance(model, (dict, list)) else model,
+        indent=2,
+        ensure_ascii=False,
+        default=str,
+    )
 
 
 def _write(text: str, output: str | None) -> None:
@@ -45,9 +51,11 @@ def _target(path: str, accepted: tuple[str, ...], command: str) -> tuple[Path, s
         print(NOT_A_ROOT % target, file=sys.stderr)
         return None
     if kind not in accepted:
-        print("%s: %s is a %s; this command reads %s (try `%s`)"
-              % (command, target, kind, ", ".join(accepted), views.SUGGESTED_COMMAND.get(kind, "list")),
-              file=sys.stderr)
+        print(
+            "%s: %s is a %s; this command reads %s (try `%s`)"
+            % (command, target, kind, ", ".join(accepted), views.SUGGESTED_COMMAND.get(kind, "list")),
+            file=sys.stderr,
+        )
         return None
     return target.resolve(), kind
 
@@ -70,8 +78,10 @@ def _cmd_task(args: argparse.Namespace) -> int:
         print("task: an experiment or method root needs the task name (ROOT TASK)", file=sys.stderr)
         return 2
     try:
-        tree = views.task_tree(root, kind, args.task, [Path(p).expanduser().resolve() for p in args.with_dirs or []])
-    except LookupError as exc:          # the name is in no manifest of this root
+        tree = views.task_tree(
+            root, kind, args.task, [Path(p).expanduser().resolve() for p in args.with_dirs or []]
+        )
+    except LookupError as exc:  # the name is in no manifest of this root
         print("task: %s" % exc, file=sys.stderr)
         return 2
     if args.format == "json":
@@ -108,7 +118,9 @@ def _cmd_snapshots(args: argparse.Namespace) -> int:
     if found is None:
         return 2
     report = views.snapshots_report(*found, store=args.store, task=args.task)
-    _write(_dump(views.snapshots_json(report)) if args.format == "json" else views.render_snapshots(report), None)
+    _write(
+        _dump(views.snapshots_json(report)) if args.format == "json" else views.render_snapshots(report), None
+    )
     return 0
 
 
@@ -123,8 +135,11 @@ def _cmd_list(args: argparse.Namespace) -> int:
 
 
 def main(argv=None) -> int:
-    parser = argparse.ArgumentParser(prog="python -m sprout.inspect", description=sprout.inspect.__doc__,
-                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        prog="python -m sprout.inspect",
+        description=sprout.inspect.__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
     runs = sub.add_parser("runs", help="progress and results of an experiment or method root")
@@ -133,25 +148,46 @@ def main(argv=None) -> int:
     runs.set_defaults(func=_cmd_runs)
 
     task = sub.add_parser("task", help="one task's fork tree: baseline attempts, rounds, branches")
-    task.add_argument("root", help="an experiment or method root (with TASK), a task directory or an "
-                                   "evaluate output")
+    task.add_argument(
+        "root", help="an experiment or method root (with TASK), a task directory or an evaluate output"
+    )
     task.add_argument("task", nargs="?", help="the task directory name")
-    task.add_argument("--with", dest="with_dirs", action="append", metavar="EVAL_DIR",
-                      help="attach an evaluate output that branched from this task's attempt-1 (repeatable)")
-    task.add_argument("--format", choices=("text", "mermaid", "json"), default="text",
-                      help="text is the tree (default), mermaid a graph LR with the branches hanging off their "
-                           "steps, json dataclasses.asdict of the same model")
+    task.add_argument(
+        "--with",
+        dest="with_dirs",
+        action="append",
+        metavar="EVAL_DIR",
+        help="attach an evaluate output that branched from this task's attempt-1 (repeatable)",
+    )
+    task.add_argument(
+        "--format",
+        choices=("text", "mermaid", "json"),
+        default="text",
+        help="text is the tree (default), mermaid a graph LR with the branches hanging off their "
+        "steps, json dataclasses.asdict of the same model",
+    )
     task.set_defaults(func=_cmd_task)
 
     exp = sub.add_parser("export", help="one trajectory as markdown or json, stitched onto its parent")
     exp.add_argument("journal", help="a journal (.jsonl) or a Harbor trial directory")
-    exp.add_argument("--format", choices=("md", "json"), default="md",
-                     help="md is markdown by turn (default); json the same segments, calls and boundaries")
-    exp.add_argument("--no-prefix", action="store_true",
-                     help="render the branch alone; the boundary block still says where it came from")
+    exp.add_argument(
+        "--format",
+        choices=("md", "json"),
+        default="md",
+        help="md is markdown by turn (default); json the same segments, calls and boundaries",
+    )
+    exp.add_argument(
+        "--no-prefix",
+        action="store_true",
+        help="render the branch alone; the boundary block still says where it came from",
+    )
     exp.add_argument("-o", "--output", help="write here instead of stdout")
-    exp.add_argument("--max-output-chars", type=int, default=1500,
-                     help="chars of each tool result to keep (head 2/3, tail 1/3); 0 = unlimited")
+    exp.add_argument(
+        "--max-output-chars",
+        type=int,
+        default=1500,
+        help="chars of each tool result to keep (head 2/3, tail 1/3); 0 = unlimited",
+    )
     exp.set_defaults(func=_cmd_export)
 
     snaps = sub.add_parser("snapshots", help="every snapshot the journals name, and whether the store has it")

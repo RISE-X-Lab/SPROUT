@@ -58,6 +58,7 @@ class RunControl:
             with self._lock:
                 if callback in self._callbacks:
                     self._callbacks.remove(callback)
+
         return unsubscribe
 
     def raise_if_stopped(self):
@@ -71,8 +72,9 @@ def post(url: str, *, timeout_s: float, control: RunControl | None = None, **kwa
             control.raise_if_stopped()
         loop = asyncio.get_running_loop()
         owner = asyncio.current_task()
-        unsubscribe = (control.subscribe(lambda: loop.call_soon_threadsafe(owner.cancel))
-                       if control else lambda: None)
+        unsubscribe = (
+            control.subscribe(lambda: loop.call_soon_threadsafe(owner.cancel)) if control else lambda: None
+        )
         try:
             async with httpx.AsyncClient(timeout=timeout_s) as client:
                 return await asyncio.wait_for(client.post(url, **kwargs), timeout_s)

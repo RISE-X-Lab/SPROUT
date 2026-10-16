@@ -59,10 +59,12 @@ REVIEW_TIMEOUT_S, REVIEW_ATTEMPTS = 30.0, 3
 
 #: The question asked of every candidate. Its data fields are the candidate,
 #: its context in the turn and its context in the hidden tests.
-QUESTION = ("`candidate` was written by a reviewer (`turn_context`) and also appears in the hidden tests "
-            "(`test_context`), which the coding agent never saw. Does `candidate` copy specific content from the "
-            "hidden tests: a test input or fixture, an expected output or value, an exact error or assertion "
-            "message, or a hidden test's name?")
+QUESTION = (
+    "`candidate` was written by a reviewer (`turn_context`) and also appears in the hidden tests "
+    "(`test_context`), which the coding agent never saw. Does `candidate` copy specific content from the "
+    "hidden tests: a test input or fixture, an expected output or value, an exact error or assertion "
+    "message, or a hidden test's name?"
+)
 CONTEXT_CHARS = 250
 #: Jev 1.13 takes 64k tokens per request and 32k for the state plus the
 #: longest question. A request is cut into batches of at most this many
@@ -73,8 +75,11 @@ MAX_STATEMENT_CHARS = 40_000
 #: One pattern per quote character, each run on its own: a shell command
 #: nests them (``python -c 'print(f("x"))'``), and a single alternation would
 #: consume the outer quotes and never see the inner string.
-_QUOTED = (re.compile(r'"((?:[^"\\\n]|\\.){3,200})"'), re.compile(r"'((?:[^'\\\n]|\\.){3,200})'"),
-           re.compile(r"`([^`\n]{3,200})`"))
+_QUOTED = (
+    re.compile(r'"((?:[^"\\\n]|\\.){3,200})"'),
+    re.compile(r"'((?:[^'\\\n]|\\.){3,200})'"),
+    re.compile(r"`([^`\n]{3,200})`"),
+)
 _ESCAPE = re.compile(r"\\([\"'\\])")
 #: A fixture written as one string with escaped line breaks ("A\r\nB\r\n")
 #: is several lines in a test file: each piece is a span of its own.
@@ -91,8 +96,9 @@ def _norm(text: str) -> str:
 
 def added_lines(test_patch: str) -> str:
     """The lines a patch adds, without their ``+``: what the hidden tests are."""
-    return "\n".join(line[1:] for line in test_patch.split("\n")
-                     if line.startswith("+") and not line.startswith("+++"))
+    return "\n".join(
+        line[1:] for line in test_patch.split("\n") if line.startswith("+") and not line.startswith("+++")
+    )
 
 
 @dataclass(frozen=True)
@@ -113,7 +119,7 @@ def _atoms(text: str) -> set[str]:
         for match in pattern.finditer(text):
             inner = match.group(1)
             found.add(inner)
-            found.add(_ESCAPE.sub(r"\1", inner))   # "f(\"x\")" inside a shell string is f("x") in the file
+            found.add(_ESCAPE.sub(r"\1", inner))  # "f(\"x\")" inside a shell string is f("x") in the file
             pieces = _ESCAPED_BREAK.split(inner)
             if len(pieces) > 1:
                 found.update(piece for piece in pieces if len(piece.strip()) >= 6)
@@ -135,9 +141,18 @@ def candidate_spans(turn: str, hidden: HiddenText, public: str) -> list[str]:
     one fact, one question.
     """
     hidden_n, public_n = _norm(hidden.text()), _norm(public)
-    found = sorted((atom for atom in _atoms(turn)
-                    if (n := _norm(atom)) and n in hidden_n and n not in public_n
-                    and _norm(atom.strip(_EDGES)) not in public_n), key=len, reverse=True)
+    found = sorted(
+        (
+            atom
+            for atom in _atoms(turn)
+            if (n := _norm(atom))
+            and n in hidden_n
+            and n not in public_n
+            and _norm(atom.strip(_EDGES)) not in public_n
+        ),
+        key=len,
+        reverse=True,
+    )
     kept: list[str] = []
     for atom in found:
         if not any(_norm(atom) in _norm(longer) for longer in kept):
@@ -171,9 +186,15 @@ class LeakJudgement:
 
     def as_dict(self, top: int = 8) -> dict:
         ranked = sorted(self.candidates, key=lambda c: -c[1])
-        return {"score": round(self.score, 4), "leak": self.leak, "threshold": self.threshold,
-                "model": self.model, "input_tokens": self.input_tokens, "candidate_count": len(self.candidates),
-                "top_candidates": [{"text": text[:300], "p": round(p, 4)} for text, p in ranked[:top]]}
+        return {
+            "score": round(self.score, 4),
+            "leak": self.leak,
+            "threshold": self.threshold,
+            "model": self.model,
+            "input_tokens": self.input_tokens,
+            "candidate_count": len(self.candidates),
+            "top_candidates": [{"text": text[:300], "p": round(p, 4)} for text, p in ranked[:top]],
+        }
 
 
 class JevError(RuntimeError):
@@ -201,8 +222,9 @@ def readable_turn(turn: dict) -> str:
     return "\n\n".join(parts)
 
 
-def requests_for(turn: dict | str, *, task_statement: str, hidden: HiddenText, visible: str,
-                 model: str = MODEL) -> list[tuple[list[str], dict]]:
+def requests_for(
+    turn: dict | str, *, task_statement: str, hidden: HiddenText, visible: str, model: str = MODEL
+) -> list[tuple[list[str], dict]]:
     """The Jev requests that judge ``turn``: ``(candidates, payload)`` per batch, none without candidates."""
     text = turn if isinstance(turn, str) else readable_turn(turn)
     spans = candidate_spans(text, hidden, task_statement + "\n" + visible)
@@ -210,16 +232,26 @@ def requests_for(turn: dict | str, *, task_statement: str, hidden: HiddenText, v
     state = {"task_statement": task_statement[:MAX_STATEMENT_CHARS]}
     batches = []
     for start in range(0, len(spans), BATCH):
-        batch = spans[start:start + BATCH]
-        questions = {f"c{n}": {"type": "noul", "instructions": {
-            "candidate": span, "turn_context": _window(text, span),
-            "test_context": _window(tests, span) or "(in the hidden tests' grading output)",
-            "question": QUESTION}} for n, span in enumerate(batch)}
+        batch = spans[start : start + BATCH]
+        questions = {
+            f"c{n}": {
+                "type": "noul",
+                "instructions": {
+                    "candidate": span,
+                    "turn_context": _window(text, span),
+                    "test_context": _window(tests, span) or "(in the hidden tests' grading output)",
+                    "question": QUESTION,
+                },
+            }
+            for n, span in enumerate(batch)
+        }
         batches.append((batch, {"state": state, "model": model, "questions": questions}))
     return batches
 
 
-def combine(batches: list[tuple[list[str], dict]], bodies: list[dict], threshold: float = THRESHOLD) -> LeakJudgement:
+def combine(
+    batches: list[tuple[list[str], dict]], bodies: list[dict], threshold: float = THRESHOLD
+) -> LeakJudgement:
     """One judgment from the answers to :func:`requests_for`'s batches."""
     scored: list[tuple[str, float]] = []
     model, tokens = None, 0
@@ -250,9 +282,13 @@ class JevLeakJudge:
         if self._owned and self.client is not None:
             self.client.close()
 
-    def judge(self, turn: dict | str, *, task_statement: str, hidden: HiddenText, visible: str) -> LeakJudgement:
+    def judge(
+        self, turn: dict | str, *, task_statement: str, hidden: HiddenText, visible: str
+    ) -> LeakJudgement:
         """Judge one turn (a message dict, or its text) against ``hidden``, ``visible`` being h_s."""
-        batches = requests_for(turn, task_statement=task_statement, hidden=hidden, visible=visible, model=self.model)
+        batches = requests_for(
+            turn, task_statement=task_statement, hidden=hidden, visible=visible, model=self.model
+        )
         return combine(batches, [self._post(payload) for _, payload in batches], self.threshold)
 
     def _post(self, payload: dict) -> dict:
@@ -260,10 +296,12 @@ class JevLeakJudge:
         reason = ""
         for attempt in range(self.max_attempts):
             try:
-                response = self.client.post(self.url, json=payload, headers={"Authorization": f"Bearer {self.key}"})
+                response = self.client.post(
+                    self.url, json=payload, headers={"Authorization": f"Bearer {self.key}"}
+                )
             except httpx.TransportError as error:
                 reason = f"{type(error).__name__}: {error}"
-                time.sleep(min(30, 2 ** attempt))
+                time.sleep(min(30, 2**attempt))
                 continue
             if response.status_code == 429 or response.status_code >= 500:
                 reason = f"HTTP {response.status_code}"
@@ -275,8 +313,15 @@ class JevLeakJudge:
         raise JevError(f"gave up after {self.max_attempts} attempts: {reason}")
 
 
-def check_turn(turn: dict, *, terms: frozenset[str] | None, visible: str, judge: JevLeakJudge | None = None,
-               task_statement: str = "", hidden: HiddenText | None = None) -> dict:
+def check_turn(
+    turn: dict,
+    *,
+    terms: frozenset[str] | None,
+    visible: str,
+    judge: JevLeakJudge | None = None,
+    task_statement: str = "",
+    hidden: HiddenText | None = None,
+) -> dict:
     """Both leak checks of one turn, as ``branching.review``'s ``turn_check`` reports them.
 
     ``leak_terms`` is ``methods.leak``'s (None without a vocabulary), ``jev``
@@ -290,7 +335,9 @@ def check_turn(turn: dict, *, terms: frozenset[str] | None, visible: str, judge:
     if judge is not None and hidden is not None:
         try:
             jev = judge.judge(turn, task_statement=task_statement, hidden=hidden, visible=visible).as_dict()
-        except Exception as error:   # an unreachable judge or a reply of the wrong shape: unchecked, never fatal
+        except (
+            Exception
+        ) as error:  # an unreachable judge or a reply of the wrong shape: unchecked, never fatal
             jev = {"error": f"{type(error).__name__}: {error}"[:500]}
     if found or (jev is not None and jev.get("leak") is True):
         leak = True
@@ -305,7 +352,7 @@ def _retry_after(response: httpx.Response, attempt: int) -> float:
     try:
         return min(60.0, float(response.headers["retry-after"]))
     except (KeyError, ValueError):
-        return float(min(30, 2 ** attempt))
+        return float(min(30, 2**attempt))
 
 
 def read_key_env(variable: str = KEY_ENV) -> str:
@@ -380,8 +427,11 @@ def sprout_branches(root: str, tasks_dir: str, *, resolved_only: bool = True) ->
         task_dir = Path(tasks_dir) / task
         statement = (task_dir / "instruction.md").read_text(errors="replace")
         test_patch, fail_to_pass = task_hidden_tests(task_dir)
-        graded = [(a.get("round") or 0, _trial_of(a["journal"])) for a in summary.get("attempts", [])
-                  if a.get("journal")]
+        graded = [
+            (a.get("round") or 0, _trial_of(a["journal"]))
+            for a in summary.get("attempts", [])
+            if a.get("journal")
+        ]
         for trial in sorted(glob.glob(f"{root}/tasks/{task}/sprout/trials/*")):
             match = _ROUND.search(os.path.basename(trial))
             resolved = _resolved(trial)
@@ -391,20 +441,37 @@ def sprout_branches(root: str, tasks_dir: str, *, resolved_only: bool = True) ->
             if not natives:
                 continue
             messages = (_load(natives[0]) or {}).get("messages") or []
-            at = next((i for i, m in enumerate(messages) if m.get("role") == "assistant" and any(
-                str(c.get("id", "")).startswith(REVIEWER_CALL) for c in m.get("tool_calls") or ())), None)
+            at = next(
+                (
+                    i
+                    for i, m in enumerate(messages)
+                    if m.get("role") == "assistant"
+                    and any(str(c.get("id", "")).startswith(REVIEWER_CALL) for c in m.get("tool_calls") or ())
+                ),
+                None,
+            )
             if at is None:
                 continue
             round_no = int(match.group(1))
             verdicts = "\n".join(_verifier_output(t) for r, t in graded if r < round_no)
-            yield Branch(os.path.basename(root.rstrip("/")), task, trial, round_no, resolved, messages[at],
-                         visible_text(messages[:at]), statement,
-                         HiddenText(test_patch, fail_to_pass, verdicts))
+            yield Branch(
+                os.path.basename(root.rstrip("/")),
+                task,
+                trial,
+                round_no,
+                resolved,
+                messages[at],
+                visible_text(messages[:at]),
+                statement,
+                HiddenText(test_patch, fail_to_pass, verdicts),
+            )
 
 
 def patch_files(test_patch: str) -> list[str]:
     """Every file a ``diff --git`` patch names, old and new side (a rename names both)."""
-    return sorted({name for pair in re.findall(r"^diff --git a/(\S+) b/(\S+)", test_patch, re.M) for name in pair})
+    return sorted(
+        {name for pair in re.findall(r"^diff --git a/(\S+) b/(\S+)", test_patch, re.M) for name in pair}
+    )
 
 
 #: Larger files under a task's tests/ are fixtures or binaries, not test code to quote.
@@ -412,7 +479,9 @@ MAX_TEST_FILE_BYTES = 1 << 20
 #: Harbor's own files under a task's tests/: every task has them, so their
 #: names say nothing about its tests (an agent writes a test.sh of its own).
 #: Their content is still hidden text; their names are not leak terms.
-HARNESS_FILES = frozenset({"test.sh", "run-tests.sh", "run_tests.sh", "verify.sh", "config.json", "Dockerfile"})
+HARNESS_FILES = frozenset(
+    {"test.sh", "run-tests.sh", "run_tests.sh", "verify.sh", "config.json", "Dockerfile"}
+)
 
 
 def _fail_to_pass(value) -> tuple[str, ...]:
@@ -451,14 +520,20 @@ def task_hidden_tests(task_dir: Path) -> tuple[str, tuple[str, ...]]:
         except UnicodeDecodeError:
             continue
         name = path.relative_to(tests.parent).as_posix()
-        header = f"+++ b/{name}\n" if path.name in HARNESS_FILES else f"diff --git a/{name} b/{name}\n+++ b/{name}\n"
+        header = (
+            f"+++ b/{name}\n"
+            if path.name in HARNESS_FILES
+            else f"diff --git a/{name} b/{name}\n+++ b/{name}\n"
+        )
         parts.append(header + "\n".join("+" + line for line in text.split("\n")))
     return "\n".join(parts), fail_to_pass
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="Judge the reviewer-inserted turns of sprout runs for copied "
-                                                 "hidden-test content, and mark which branches may enter RL.")
+    parser = argparse.ArgumentParser(
+        description="Judge the reviewer-inserted turns of sprout runs for copied "
+        "hidden-test content, and mark which branches may enter RL."
+    )
     parser.add_argument("roots", nargs="+", help="methods.evaluate / examples.qwen.run sprout run roots")
     parser.add_argument("--tasks-dir", required=True, help="the dataset's task directories")
     parser.add_argument("-o", "--output", required=True, help="JSONL, one line per branch")
@@ -466,9 +541,13 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--threshold", type=float, default=THRESHOLD)
     parser.add_argument("--model", default=MODEL)
     parser.add_argument("--all-branches", action="store_true", help="judge unresolved branches too")
-    parser.add_argument("--gate", choices=["both", "jev"], default="both",
-                        help="both (default): eligible only when neither Jev nor leak_terms flags the turn, the "
-                             "RL driver's rule for names; jev: leak_terms is recorded but does not gate")
+    parser.add_argument(
+        "--gate",
+        choices=["both", "jev"],
+        default="both",
+        help="both (default): eligible only when neither Jev nor leak_terms flags the turn, the "
+        "RL driver's rule for names; jev: leak_terms is recorded but does not gate",
+    )
     args = parser.parse_args(argv)
     judge = JevLeakJudge(read_key(args.key_file), model=args.model, threshold=args.threshold)
     counts = {"branches": 0, "leak": 0, "leak_terms": 0, "eligible": 0, "errors": 0}
@@ -476,18 +555,34 @@ def main(argv: list[str] | None = None) -> None:
         with open(args.output, "w") as out:
             for root in args.roots:
                 for branch in sprout_branches(root, args.tasks_dir, resolved_only=not args.all_branches):
-                    terms = leak_terms(branch.turn, hidden_terms(fail_to_pass=list(branch.hidden.fail_to_pass),
-                                                                test_patch_paths=patch_files(branch.hidden.test_patch)),
-                                       branch.visible)
-                    row = {"run": branch.run, "task": branch.task, "trial": branch.trial, "round": branch.round,
-                           "resolved": branch.resolved, "leak_terms": terms}
+                    terms = leak_terms(
+                        branch.turn,
+                        hidden_terms(
+                            fail_to_pass=list(branch.hidden.fail_to_pass),
+                            test_patch_paths=patch_files(branch.hidden.test_patch),
+                        ),
+                        branch.visible,
+                    )
+                    row = {
+                        "run": branch.run,
+                        "task": branch.task,
+                        "trial": branch.trial,
+                        "round": branch.round,
+                        "resolved": branch.resolved,
+                        "leak_terms": terms,
+                    }
                     try:
-                        verdict = judge.judge(branch.turn, task_statement=branch.task_statement,
-                                              hidden=branch.hidden, visible=branch.visible)
+                        verdict = judge.judge(
+                            branch.turn,
+                            task_statement=branch.task_statement,
+                            hidden=branch.hidden,
+                            visible=branch.visible,
+                        )
                         row["jev"] = verdict.as_dict()
                         # Fail closed: eligible only when the checks ran and found nothing.
-                        row["eligible"] = (branch.resolved and not verdict.leak
-                                           and (args.gate == "jev" or not terms))
+                        row["eligible"] = (
+                            branch.resolved and not verdict.leak and (args.gate == "jev" or not terms)
+                        )
                         counts["leak"] += verdict.leak
                     except JevError as error:
                         row["jev"], row["eligible"] = {"error": str(error)}, False

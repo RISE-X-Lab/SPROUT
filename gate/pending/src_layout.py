@@ -28,13 +28,14 @@ MAX_LINES = 500
 def nested(folder: PurePosixPath) -> bool:
     """Deeper than src/<root>/<package>/, and not one of ALLOWED_NESTED."""
     return len(folder.parts) > 2 and not any(
-        fnmatch(str(folder), p) and len(folder.parts) == p.count("/") + 1
-        for p in ALLOWED_NESTED)
+        fnmatch(str(folder), p) and len(folder.parts) == p.count("/") + 1 for p in ALLOWED_NESTED
+    )
 
 
 def main() -> int:
-    tracked = subprocess.run(["git", "ls-files", "-z", "--", SRC], cwd=REPO, check=True,
-                             capture_output=True, text=True).stdout.split("\0")
+    tracked = subprocess.run(
+        ["git", "ls-files", "-z", "--", SRC], cwd=REPO, check=True, capture_output=True, text=True
+    ).stdout.split("\0")
     problems = []
     files = Counter()
     for name in filter(None, tracked):

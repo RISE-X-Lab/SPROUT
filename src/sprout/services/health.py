@@ -23,7 +23,7 @@ import subprocess
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
-from http.client import HTTPException     # by name: `http` below is the probe
+from http.client import HTTPException  # by name: `http` below is the probe
 from pathlib import Path
 from typing import Iterable, Sequence
 
@@ -53,14 +53,16 @@ class Probe:
 
 # --- service probes -----------------------------------------------------------
 
-def http(url: str, headers: Iterable[tuple[str, str]] = (), timeout: float = HTTP_TIMEOUT_S,
-         expect: int = 200) -> Probe:
+
+def http(
+    url: str, headers: Iterable[tuple[str, str]] = (), timeout: float = HTTP_TIMEOUT_S, expect: int = 200
+) -> Probe:
     """GET ``url``; healthy is exactly ``expect`` (200). urllib, so no extra is needed."""
     try:
         request = urllib.request.Request(url, headers=dict(headers), method="GET")
         with urllib.request.urlopen(request, timeout=timeout) as response:
             status = response.status
-    except urllib.error.HTTPError as error:        # a reply, just not 200: 401 says "wrong token"
+    except urllib.error.HTTPError as error:  # a reply, just not 200: 401 says "wrong token"
         status = error.code
     except urllib.error.URLError as error:
         reason = error.reason
@@ -73,7 +75,7 @@ def http(url: str, headers: Iterable[tuple[str, str]] = (), timeout: float = HTT
         # that is not HTTP (PostgreSQL, say) raises BadStatusLine unwrapped,
         # with the offending line, CRLF included.
         return Probe(False, "not an HTTP reply: %s" % " ".join(str(error).split()))
-    except (OSError, ValueError) as error:         # ValueError: a URL urllib cannot parse
+    except (OSError, ValueError) as error:  # ValueError: a URL urllib cannot parse
         return Probe(False, str(error))
     return Probe(status == expect, "HTTP %d" % status)
 
@@ -91,8 +93,12 @@ def pg_isready(host: str, port: int, user: str = "", container: str = "", podman
         return _run_probe([tool, "-h", host, "-p", str(port), *user_flag])
     executable = podman if os.path.isabs(podman) else which(podman)
     if container and executable:
-        return _run_probe([executable, "exec", container, "pg_isready", *user_flag], prefix="in %s: " % container)
-    return Probe(False, "pg_isready is not installed (postgresql-client) and there is no container to run it in")
+        return _run_probe(
+            [executable, "exec", container, "pg_isready", *user_flag], prefix="in %s: " % container
+        )
+    return Probe(
+        False, "pg_isready is not installed (postgresql-client) and there is no container to run it in"
+    )
 
 
 def _run_probe(argv: Sequence[str], prefix: str = "") -> Probe:
@@ -119,17 +125,20 @@ def probe(health: Health, ctx: Context, *, alive: bool | None, alive_detail: str
         try:
             url = expand(health.url, ctx)
             headers = [(name, expand(value, ctx)) for name, value in health.headers]
-        except ExpandError as error:               # an unset {env:...} or a missing secret
+        except ExpandError as error:  # an unset {env:...} or a missing secret
             return Probe(False, str(error))
         return http(url, headers)
     if health.kind == "pg_isready":
-        return pg_isready(health.host, health.port or 0, health.user, health.container, podman_bin_for(ctx.environ))
+        return pg_isready(
+            health.host, health.port or 0, health.user, health.container, podman_bin_for(ctx.environ)
+        )
     if alive is None:
         return Probe(True, "not probed") if health.kind == "none" else Probe(False, "nothing to probe")
     return Probe(alive, alive_detail)
 
 
 # --- host checks --------------------------------------------------------------
+
 
 def which(name: str) -> str | None:
     """PATH, then ``~/.local/bin``: uv's installer puts it there, and a shell that
@@ -155,14 +164,19 @@ def podman_bin(executable: str) -> Probe:
     executable = os.path.expanduser(executable)
     found = executable if os.path.isabs(executable) else which(executable)
     if not found or not os.access(found, os.X_OK):
-        return Probe(False, "%s is not an executable podman (ops/setup_podman.sh installs one under "
-                            "~/.local/opt/podman; $SPROUT_PODMAN_BIN names another)" % executable)
+        return Probe(
+            False,
+            "%s is not an executable podman (ops/setup_podman.sh installs one under "
+            "~/.local/opt/podman; $SPROUT_PODMAN_BIN names another)" % executable,
+        )
     try:
         done = subprocess.run([found, "--version"], capture_output=True, text=True, timeout=TOOL_TIMEOUT_S)
     except (OSError, subprocess.TimeoutExpired) as error:
         return Probe(False, "%s --version: %s" % (found, error))
     if done.returncode != 0:
-        return Probe(False, "%s --version exited %d: %s" % (found, done.returncode, done.stderr.strip()[:120]))
+        return Probe(
+            False, "%s --version exited %d: %s" % (found, done.returncode, done.stderr.strip()[:120])
+        )
     return Probe(True, "%s (%s)" % (done.stdout.strip().replace("podman version ", "podman "), found))
 
 
@@ -170,26 +184,40 @@ def btrfs_store(path: Path) -> Probe:
     """What ``PodmanPool`` refuses, asked the same way (``findmnt --target``): the
     filesystem holding the store must be btrfs mounted with ``user_subvol_rm_allowed``."""
     if not path.is_dir():
-        return Probe(False, "%s does not exist; make it once as root: sudo ops/btrfs_store.sh %s "
-                            "/var/lib/sprout-btrfs-rootless.img 200G" % (path, path))
+        return Probe(
+            False,
+            "%s does not exist; make it once as root: sudo ops/btrfs_store.sh %s "
+            "/var/lib/sprout-btrfs-rootless.img 200G" % (path, path),
+        )
     tool = shutil.which("findmnt")
     if not tool:
         return Probe(False, "findmnt (util-linux) is not installed; it is how the store's mount is checked")
     try:
-        done = subprocess.run([tool, "-no", "FSTYPE,OPTIONS", "--target", str(path)],
-                              capture_output=True, text=True, timeout=TOOL_TIMEOUT_S)
+        done = subprocess.run(
+            [tool, "-no", "FSTYPE,OPTIONS", "--target", str(path)],
+            capture_output=True,
+            text=True,
+            timeout=TOOL_TIMEOUT_S,
+        )
     except (OSError, subprocess.TimeoutExpired) as error:
         return Probe(False, "findmnt: %s" % error)
     fields = done.stdout.split()
     if done.returncode != 0 or len(fields) < 2:
-        return Probe(False, "findmnt cannot tell what %s is mounted on: %s"
-                     % (path, done.stderr.strip() or "(no output)"))
+        return Probe(
+            False,
+            "findmnt cannot tell what %s is mounted on: %s" % (path, done.stderr.strip() or "(no output)"),
+        )
     fstype, options = fields[0], fields[1]
     if fstype != "btrfs":
-        return Probe(False, "%s is on %s, not btrfs (sudo ops/btrfs_store.sh <mount point> <image file> <size>)"
-                     % (path, fstype))
+        return Probe(
+            False,
+            "%s is on %s, not btrfs (sudo ops/btrfs_store.sh <mount point> <image file> <size>)"
+            % (path, fstype),
+        )
     if REQUIRED_MOUNT_OPTION not in options.split(","):
-        return Probe(False, "%s is btrfs but mounted without %s (%s)" % (path, REQUIRED_MOUNT_OPTION, options))
+        return Probe(
+            False, "%s is btrfs but mounted without %s (%s)" % (path, REQUIRED_MOUNT_OPTION, options)
+        )
     return Probe(True, "%s: btrfs, %s" % (path, REQUIRED_MOUNT_OPTION))
 
 
@@ -200,6 +228,10 @@ def keyring_quota(minimum: int = KEYRING_MINIMUM) -> Probe:
     except (OSError, ValueError):
         return Probe(False, "kernel.keys.maxkeys is not readable here (%s)" % path, warning=True)
     if value < minimum:
-        return Probe(False, "kernel.keys.maxkeys=%d < %d: rootless podman starts fail at ~180 concurrent "
-                            "containers; fix: %s" % (value, minimum, KEYRING_FIX), warning=True)
+        return Probe(
+            False,
+            "kernel.keys.maxkeys=%d < %d: rootless podman starts fail at ~180 concurrent "
+            "containers; fix: %s" % (value, minimum, KEYRING_FIX),
+            warning=True,
+        )
     return Probe(True, "kernel.keys.maxkeys=%d" % value)

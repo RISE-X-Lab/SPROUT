@@ -28,8 +28,11 @@ def continuation_of(context: dict) -> Continuation:
     ``user-hint`` branch hands it on.
     """
     guidance = context.get("branch_guidance")
-    return Continuation(guidance, assistant_turn=context.get("assistant_turn"),
-                        hint=context.get("hint") if guidance == "user-hint" else None)
+    return Continuation(
+        guidance,
+        assistant_turn=context.get("assistant_turn"),
+        hint=context.get("hint") if guidance == "user-hint" else None,
+    )
 
 
 def read_branch_context(path: str | Path) -> dict:
@@ -50,7 +53,9 @@ def read_branch_context(path: str | Path) -> dict:
     if not isinstance(context.get("conversation_cut"), str) or not context["conversation_cut"]:
         raise ValueError("A branch needs the exact native cut")
     parent = Path(context.get("parent_journal", ""))
-    if not parent.is_file() or hashlib.sha256(parent.read_bytes()).hexdigest() != context.get("parent_journal_sha256"):
+    if not parent.is_file() or hashlib.sha256(parent.read_bytes()).hexdigest() != context.get(
+        "parent_journal_sha256"
+    ):
         raise ValueError("Parent journal is missing or changed")
     if not Path(context.get("task_dir", "")).is_dir():
         raise ValueError("A branch needs the Harbor task directory it belongs to")
@@ -101,11 +106,13 @@ class SnapshotRestore:
         await super().start(force_build=force_build)
         if not self.restores_snapshot:
             return
-        receipt = {"snapshot_id": self.branch_context["snapshot_id"],
-                   "sandbox_id": self.session.sandbox_id,
-                   "base_image": self.branch_context["base_image"],
-                   "branch_context": str(self.branch_context_path),
-                   "checkpoint_mode": self.checkpoint_mode}
+        receipt = {
+            "snapshot_id": self.branch_context["snapshot_id"],
+            "sandbox_id": self.session.sandbox_id,
+            "base_image": self.branch_context["base_image"],
+            "branch_context": str(self.branch_context_path),
+            "checkpoint_mode": self.checkpoint_mode,
+        }
         (self.trial_paths.trial_dir / "restored-state.json").write_text(json.dumps(receipt, indent=2))
 
 
@@ -136,30 +143,42 @@ class BranchMini(AgentENVMini):
 
     def _make_spec(self, prompt, workspace, journal, environment):
         context = self.branch_context
-        if not isinstance(environment, SnapshotRestore) or environment.branch_context_path != self.branch_context_path:
+        if (
+            not isinstance(environment, SnapshotRestore)
+            or environment.branch_context_path != self.branch_context_path
+        ):
             raise ValueError("Agent and environment must use the same branch context")
         parent = Path(context["parent_journal"])
         if hashlib.sha256(parent.read_bytes()).hexdigest() != context["parent_journal_sha256"]:
             raise ValueError("Parent journal changed after branch selection")
         point = available_branch_points(parent).get(context["step"])
-        if (point is None or point.snapshot_id != context["snapshot_id"]
-                or point.session_ckpt != context["native_session_id"]):
+        if (
+            point is None
+            or point.snapshot_id != context["snapshot_id"]
+            or point.session_ckpt != context["native_session_id"]
+        ):
             raise ValueError("Branch snapshot/session does not match the parent journal")
         reference = reference_at(parent, context["step"], context["native_session_id"])
         if reference is None or reference.get("cut") != context["conversation_cut"]:
             raise ValueError("Branch native prefix does not match the selected cut")
         continuation = continuation_of(context)
         tools = actor_tools_at(parent, context["step"]) if continuation.guidance == "assistant-turn" else None
-        note, options = prepare(continuation, load_prefix(reference), tools=tools,
-                                commit_required=bool(context.get("commit_required")))
+        note, options = prepare(
+            continuation,
+            load_prefix(reference),
+            tools=tools,
+            commit_required=bool(context.get("commit_required")),
+        )
         spec = super()._make_spec(note, workspace, journal, environment)
         spec.checkpoint_enabled = bool(context.get("capture_checkpoints", True))
         spec.extra["native_prefix"] = reference
         spec.extra.update(options)
-        spec.origin = {"parent_journal": str(parent),
-                       "branch_step": context["step"],
-                       "snapshot_id": context["snapshot_id"],
-                       "conversation_cut": context["conversation_cut"],
-                       **continuation.origin(),
-                       "parent_journal_sha256": context["parent_journal_sha256"]}
+        spec.origin = {
+            "parent_journal": str(parent),
+            "branch_step": context["step"],
+            "snapshot_id": context["snapshot_id"],
+            "conversation_cut": context["conversation_cut"],
+            **continuation.origin(),
+            "parent_journal_sha256": context["parent_journal_sha256"],
+        }
         return spec

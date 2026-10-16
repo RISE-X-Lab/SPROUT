@@ -14,11 +14,19 @@ from sprout.harbor_plugin.agentenv_agent import AgentENVAgent
 
 
 class AgentENVMini(AgentENVAgent):
-    def __init__(self, *args, inference_endpoint: str, api_key_env: str | None = None,
-                 actor_timeout_s: float = 36000, max_output_tokens: int = 64000,
-                 max_turns: int = 300, reasoning_effort: str | None = None,
-                 final_memory_snapshot: bool = False,
-                 command_timeout_s: int = DEFAULT_COMMAND_TIMEOUT_S, **kwargs):
+    def __init__(
+        self,
+        *args,
+        inference_endpoint: str,
+        api_key_env: str | None = None,
+        actor_timeout_s: float = 36000,
+        max_output_tokens: int = 64000,
+        max_turns: int = 300,
+        reasoning_effort: str | None = None,
+        final_memory_snapshot: bool = False,
+        command_timeout_s: int = DEFAULT_COMMAND_TIMEOUT_S,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
         self.final_memory_snapshot = bool(final_memory_snapshot)
         self.inference_endpoint = endpoint(inference_endpoint)
@@ -66,9 +74,13 @@ class AgentENVMini(AgentENVAgent):
         # Harbor owns the task timeout. This finite Sprout deadline also bounds
         # model traffic if Harbor loses its cancellation path.
         return RunSpec(
-            prompt=prompt, slot="mini-swe-agent", model=self.model_name,
-            cwd=str(workspace.resolve()), run_id=self.logs_dir.parent.name,
-            journal_path=journal, timeout_s=self.actor_timeout_s,
+            prompt=prompt,
+            slot="mini-swe-agent",
+            model=self.model_name,
+            cwd=str(workspace.resolve()),
+            run_id=self.logs_dir.parent.name,
+            journal_path=journal,
+            timeout_s=self.actor_timeout_s,
             keep_sandbox=True,
             checkpoint_enabled=environment.checkpoint_mode != "none",
             final_memory_snapshot=self.final_memory_snapshot,
@@ -78,8 +90,12 @@ class AgentENVMini(AgentENVAgent):
             extra={
                 "prompt_primer": "mini_tool_primer",
                 "mini": {
-                    "model": {"model_kwargs": {"max_tokens": self.max_output_tokens,
-                        **({"reasoning_effort": self.reasoning_effort} if self.reasoning_effort else {})}},
+                    "model": {
+                        "model_kwargs": {
+                            "max_tokens": self.max_output_tokens,
+                            **({"reasoning_effort": self.reasoning_effort} if self.reasoning_effort else {}),
+                        }
+                    },
                     "environment": {"timeout": self.command_timeout_s},
                 },
                 "rollout_contract": {
@@ -89,8 +105,10 @@ class AgentENVMini(AgentENVAgent):
                     "model": self.model_name,
                     "deadline_at": time.time() + self.actor_timeout_s,
                     "max_turns": self.max_turns,
-                    "sampling_params": {"max_new_tokens": self.max_output_tokens,
-                        **({"reasoning_effort": self.reasoning_effort} if self.reasoning_effort else {})},
+                    "sampling_params": {
+                        "max_new_tokens": self.max_output_tokens,
+                        **({"reasoning_effort": self.reasoning_effort} if self.reasoning_effort else {}),
+                    },
                 },
             },
         )

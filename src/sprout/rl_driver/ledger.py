@@ -50,7 +50,10 @@ class Ledger:
     def bind(self, backend_url: str) -> None:
         with self.connection() as db:
             db.execute("INSERT OR IGNORE INTO driver_meta VALUES ('backend_url', ?)", (backend_url,))
-            if db.execute("SELECT value FROM driver_meta WHERE name='backend_url'").fetchone()[0] != backend_url:
+            if (
+                db.execute("SELECT value FROM driver_meta WHERE name='backend_url'").fetchone()[0]
+                != backend_url
+            ):
                 raise Conflict("This ledger belongs to a different Run Store URL")
 
     @contextmanager
@@ -69,8 +72,10 @@ class Ledger:
     def create(self, group_id: str, request: dict, document: dict) -> dict:
         serialized = canonical(request)
         with self.connection() as db:
-            db.execute("INSERT OR IGNORE INTO driver_groups(id,request,document,created_at) VALUES (?,?,?,?)",
-                       (group_id, serialized, canonical(document), time.time()))
+            db.execute(
+                "INSERT OR IGNORE INTO driver_groups(id,request,document,created_at) VALUES (?,?,?,?)",
+                (group_id, serialized, canonical(document), time.time()),
+            )
             row = db.execute("SELECT * FROM driver_groups WHERE id=?", (group_id,)).fetchone()
             if row["request"] != serialized:
                 raise Conflict("rollout_job_id already names a different request")
@@ -80,9 +85,12 @@ class Ledger:
     def _row(row) -> dict:
         if row is None:
             raise KeyError("Unknown rollout group")
-        return {**dict(row), "request": json.loads(row["request"]),
-                "document": json.loads(row["document"]),
-                "cancel_requested": bool(row["cancel_requested"])}
+        return {
+            **dict(row),
+            "request": json.loads(row["request"]),
+            "document": json.loads(row["document"]),
+            "cancel_requested": bool(row["cancel_requested"]),
+        }
 
     def get(self, group_id: str) -> dict:
         with self.connection() as db:
@@ -90,13 +98,18 @@ class Ledger:
 
     def active(self) -> list[str]:
         with self.connection() as db:
-            return [row[0] for row in db.execute("SELECT id FROM driver_groups WHERE terminal=0 ORDER BY created_at,id")]
+            return [
+                row[0]
+                for row in db.execute("SELECT id FROM driver_groups WHERE terminal=0 ORDER BY created_at,id")
+            ]
 
     def save(self, group_id: str, document: dict, *, terminal: bool = False) -> None:
         # Separate columns prevent polling from overwriting a concurrent DELETE.
         with self.connection() as db:
-            db.execute("UPDATE driver_groups SET document=?, terminal=? WHERE id=?",
-                       (canonical(document), int(terminal), group_id))
+            db.execute(
+                "UPDATE driver_groups SET document=?, terminal=? WHERE id=?",
+                (canonical(document), int(terminal), group_id),
+            )
 
     def release(self, group_id: str) -> None:
         """A terminal DELETE acknowledges consumption; an active one requests cancellation."""
@@ -105,7 +118,9 @@ class Ledger:
             if row is None:
                 raise KeyError(group_id)
             if row["terminal"]:
-                db.execute("UPDATE driver_groups SET acknowledged_at=COALESCE(acknowledged_at,?) WHERE id=?",
-                           (time.time(), group_id))
+                db.execute(
+                    "UPDATE driver_groups SET acknowledged_at=COALESCE(acknowledged_at,?) WHERE id=?",
+                    (time.time(), group_id),
+                )
             else:
                 db.execute("UPDATE driver_groups SET cancel_requested=1 WHERE id=?", (group_id,))

@@ -33,8 +33,9 @@ def env_lines(exports: Mapping[str, str]) -> str:
 def status_table(rows: Sequence[StatusRow]) -> str:
     cells = [COLUMNS] + [(row.name, row.kind, row.pid, row.health, row.port) for row in rows]
     widths = [max(len(line[i]) for line in cells) for i in range(len(COLUMNS))]
-    return "".join(" | ".join(cell.ljust(widths[i]) for i, cell in enumerate(line)).rstrip() + "\n"
-                   for line in cells)
+    return "".join(
+        " | ".join(cell.ljust(widths[i]) for i, cell in enumerate(line)).rstrip() + "\n" for line in cells
+    )
 
 
 def doctor_line(word: str, subject: str, detail: str) -> str:

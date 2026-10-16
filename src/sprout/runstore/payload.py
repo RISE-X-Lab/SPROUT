@@ -36,8 +36,7 @@ def encode_payload(payload: dict, job_id: str, attempt_id: str) -> bytes:
     return data
 
 
-def checked_payload(payload: dict | None, expected_hash: str | None,
-                    job_id: str, attempt_id: str) -> dict:
+def checked_payload(payload: dict | None, expected_hash: str | None, job_id: str, attempt_id: str) -> dict:
     if payload is None:
         raise PayloadUnavailable("Attempt has no frozen DB payload")
     try:
@@ -70,8 +69,9 @@ def send_payload(stream: BinaryIO, data: bytes, *, timeout_s: float) -> None:
         stream.close()
 
 
-def receive_payload(descriptor: int, expected_hash: str, job_id: str, attempt_id: str,
-                    *, timeout_s: float = 60) -> dict:
+def receive_payload(
+    descriptor: int, expected_hash: str, job_id: str, attempt_id: str, *, timeout_s: float = 60
+) -> dict:
     deadline = time.monotonic() + timeout_s
     data = bytearray()
     with selectors.DefaultSelector() as selector:

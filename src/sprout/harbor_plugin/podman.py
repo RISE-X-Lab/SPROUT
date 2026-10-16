@@ -38,14 +38,22 @@ class PodmanEnvironment(SandboxEnvironment):
     def _validate_definition(self) -> None:
         super()._validate_definition()
         if not Path(self.store).is_dir():
-            raise ValueError(f"podman store does not exist: {self.store} (sudo ops/btrfs_store.sh "
-                             "<mount point> <image file> <size>)")
+            raise ValueError(
+                f"podman store does not exist: {self.store} (sudo ops/btrfs_store.sh "
+                "<mount point> <image file> <size>)"
+            )
 
     def _backend_section(self) -> dict:
-        return {"backend": "podman", "podman": {
-            "store": self.store, "runtime_bin": self.runtime_bin, "podman_bin": self.podman_bin,
-            # The baseline policy; Harbor's phases toggle the running container.
-            "allow_internet": self._allow_internet}}
+        return {
+            "backend": "podman",
+            "podman": {
+                "store": self.store,
+                "runtime_bin": self.runtime_bin,
+                "podman_bin": self.podman_bin,
+                # The baseline policy; Harbor's phases toggle the running container.
+                "allow_internet": self._allow_internet,
+            },
+        }
 
     def _resources(self) -> dict:
         # No disk: the rootfs is a subvolume of the store and has none to size.

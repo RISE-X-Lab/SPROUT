@@ -9,8 +9,15 @@ import httpx
 
 from sprout.runstore.specs import JobSpec
 from sprout.rl_driver.ledger import Ledger
-from sprout.rl_driver.outcome import (SHAPES, done_reason, export_problem, grade_verdict, root_verdict,
-                                      search_outcome, search_shape)
+from sprout.rl_driver.outcome import (
+    SHAPES,
+    done_reason,
+    export_problem,
+    grade_verdict,
+    root_verdict,
+    search_outcome,
+    search_shape,
+)
 from sprout.rl_driver.specs import initial_document, submission_key, validate_request
 
 
@@ -21,8 +28,18 @@ DONE = {"succeeded", "failed", "cancelled", "skipped", "expired"}
 #: tests, only the leak checks read -- ``methods.leak`` the names, so that every
 #: repair turn's ``leak_terms`` is computed rather than None, and the review's
 #: ``leak_judge`` the test patch itself.
-REVIEW_GRADE_KEYS = ("resolved", "progress", "test_statuses", "model_patch", "log", "reason", "error_output",
-                     "fail_to_pass", "test_patch_paths", "test_patch")
+REVIEW_GRADE_KEYS = (
+    "resolved",
+    "progress",
+    "test_statuses",
+    "model_patch",
+    "log",
+    "reason",
+    "error_output",
+    "fail_to_pass",
+    "test_patch_paths",
+    "test_patch",
+)
 
 #: How a repair writes the reviewer's turn into its history: as the turn's
 #: reasoning (``continuation.render_reasoning``), the form the policy samples.
@@ -72,7 +89,9 @@ class Driver:
         self.wakeup = threading.Event()
         self.stopping = threading.Event()
 
-    def submit(self, body: dict, *, source_request: dict | None = None, extra_document: dict | None = None) -> dict:
+    def submit(
+        self, body: dict, *, source_request: dict | None = None, extra_document: dict | None = None
+    ) -> dict:
         request = validate_request(body)
         document = {**initial_document(request), **(extra_document or {})}
         row = self.ledger.create(request["rollout_job_id"], source_request or request, document)
@@ -97,7 +116,7 @@ class Driver:
         search = document.get("search")
         if search:
             search.pop("review_templates", None)
-            search.pop("review_template", None)   # a document from before outcome-keyed review
+            search.pop("review_template", None)  # a document from before outcome-keyed review
             for stage in [search.get("review"), *search.get("chain_reviews", [])]:
                 if stage:
                     stage.pop("submission", None)
@@ -131,9 +150,14 @@ class Driver:
         try:
             if stage["operation"] == "branch":
                 branch = stage["submission"]
-                job_id = self.client.branch(branch["job_id"], branch["point_id"], idempotency_key=key,
-                                            continuation=branch["continuation"], budget=branch.get("budget"),
-                                            **branch["overrides"])
+                job_id = self.client.branch(
+                    branch["job_id"],
+                    branch["point_id"],
+                    idempotency_key=key,
+                    continuation=branch["continuation"],
+                    budget=branch.get("budget"),
+                    **branch["overrides"],
+                )
             else:
                 job_id = self.client.submit(JobSpec.from_dict(stage["submission"]), key)
         except httpx.HTTPStatusError as error:
@@ -158,8 +182,12 @@ class Driver:
             # cancelled, a running one stopped and its sandboxes reclaimed.
             self.client.stop(stage["job_id"])
             job = self.client.get(stage["job_id"])
-        stage.update(state=job["state"], attempt_id=job.get("active_attempt"),
-                     phase=job.get("phase"), error=job.get("error"))
+        stage.update(
+            state=job["state"],
+            attempt_id=job.get("active_attempt"),
+            phase=job.get("phase"),
+            error=job.get("error"),
+        )
         if job["state"] != "queued":
             # When it left the queue: a grade's wall time is its own, not the queue's.
             stage.setdefault("started_at", time.time())
@@ -186,16 +214,22 @@ class Driver:
             if [tool["depth"] for tool in tools] != list(range(1, final_depth + 1)):
                 raise ValueError("Final tool prefix has a gap")
             points = self.client.points(actor["job_id"], attempt_id=attempt)
-            candidates = [point for point in points if point.get("available") is True
-                          and point["tool_depth"] == final_depth]
+            candidates = [
+                point
+                for point in points
+                if point.get("available") is True and point["tool_depth"] == final_depth
+            ]
             if not candidates:
                 raise ValueError("Final message has no available recovery point; refusing an older snapshot")
             point = max(candidates, key=lambda item: item["message_step"])
         submission = deepcopy(grade["template"])
         submission["spec"]["snapshot_id"] = point["snapshot_id"]
         submission["context"]["rl_driver"] = {
-            "rollout_job_id": document["rollout_job_id"], "sample_slot_id": sample["sample_slot_id"],
-            "actor_job_id": actor["job_id"], "actor_attempt_id": attempt, "point_id": point["id"],
+            "rollout_job_id": document["rollout_job_id"],
+            "sample_slot_id": sample["sample_slot_id"],
+            "actor_job_id": actor["job_id"],
+            "actor_attempt_id": attempt,
+            "point_id": point["id"],
         }
         grade["submission"] = JobSpec.from_dict(submission).validate()
         grade["snapshot_id"] = point["snapshot_id"]
@@ -223,9 +257,12 @@ class Driver:
                 else:
                     # A lost acknowledgement cannot be reconciled by creating
                     # a possibly NEW job after cancellation was requested.
-                    stage["last_error"] = "Submission acknowledgement unknown; inspect Run Store using the idempotency key"
+                    stage["last_error"] = (
+                        "Submission acknowledgement unknown; inspect Run Store using the idempotency key"
+                    )
                     stage["idempotency_key"] = submission_key(
-                        document["rollout_job_id"], sample["sample_slot_id"], phase)
+                        document["rollout_job_id"], sample["sample_slot_id"], phase
+                    )
                 self._save(document)
                 return
             if phase == "grade" and "submission" not in stage:
@@ -275,17 +312,28 @@ class Driver:
                     except (httpx.HTTPError, ValueError, KeyError) as error:
                         document["search"]["last_error"] = str(error)
                         self._save(document)
-                stages = [sample[phase] for sample in document["samples"]
-                          for phase in ("actor", "grade") if sample[phase] is not None]
+                stages = [
+                    sample[phase]
+                    for sample in document["samples"]
+                    for phase in ("actor", "grade")
+                    if sample[phase] is not None
+                ]
                 settled = not document.get("search") or document["search"]["state"] == "done"
                 document["ready"] = settled and all(stage["state"] in DONE for stage in stages)
                 if document["ready"]:
-                    document["status"] = ("cancelled" if self._cancelled(document) else
-                                          "failed" if any(stage["state"] != "succeeded" for stage in stages)
-                                          else "completed")
+                    document["status"] = (
+                        "cancelled"
+                        if self._cancelled(document)
+                        else "failed"
+                        if any(stage["state"] != "succeeded" for stage in stages)
+                        else "completed"
+                    )
                 else:
-                    document["status"] = ("quarantined" if any(stage["state"] == "quarantined" for stage in stages)
-                                          else "running")
+                    document["status"] = (
+                        "quarantined"
+                        if any(stage["state"] == "quarantined" for stage in stages)
+                        else "running"
+                    )
                 self._save(document)
         finally:
             self._tick_lock.release()
@@ -319,16 +367,22 @@ class Driver:
         branches = [sample for sample in samples if sample["sample_slot_id"] not in search["root_slots"]]
 
         def settled(group):
-            return all(stage["state"] in DONE for sample in group
-                       for stage in (sample["actor"], sample["grade"]) if stage is not None)
+            return all(
+                stage["state"] in DONE
+                for sample in group
+                for stage in (sample["actor"], sample["grade"])
+                if stage is not None
+            )
 
         if search["state"] == "roots":
             if not settled(roots):
                 return
             verdicts = [root_verdict(sample) for sample in roots]
-            counts = {"planned": search["config"]["roots"],
-                      "graded": sum(verdict is not None for verdict in verdicts),
-                      "resolved": sum(verdict is True for verdict in verdicts)}
+            counts = {
+                "planned": search["config"]["roots"],
+                "graded": sum(verdict is not None for verdict in verdicts),
+                "resolved": sum(verdict is True for verdict in verdicts),
+            }
             outcome = search_outcome(**counts)
             # A document from before outcome-keyed review has one template and no
             # tf_student_continuations; past the shape check it ends for want of templates.
@@ -344,15 +398,34 @@ class Driver:
                 self._save(document)
                 return
             template = deepcopy(search["review_templates"][shape])
-            template["spec"]["parents"] = [{
-                "name": sample["sample_slot_id"], "job_id": sample["actor"]["job_id"],
-                "attempt_id": sample["actor"]["attempt_id"],
-                "grade": {key: value for key, value in sample["grade"]["result"].items() if key in REVIEW_GRADE_KEYS},
-            } for sample, verdict in zip(roots, verdicts, strict=True) if verdict is False]
-            template["context"] = {"rl_driver": {"rollout_job_id": document["rollout_job_id"], "phase": "review",
-                                                 "outcome": outcome}}
-            search["review"] = {"state": "planned", "job_id": None, "attempt_id": None, "operation": "review",
-                                "submission": JobSpec.from_dict(template).validate()}
+            template["spec"]["parents"] = [
+                {
+                    "name": sample["sample_slot_id"],
+                    "job_id": sample["actor"]["job_id"],
+                    "attempt_id": sample["actor"]["attempt_id"],
+                    "grade": {
+                        key: value
+                        for key, value in sample["grade"]["result"].items()
+                        if key in REVIEW_GRADE_KEYS
+                    },
+                }
+                for sample, verdict in zip(roots, verdicts, strict=True)
+                if verdict is False
+            ]
+            template["context"] = {
+                "rl_driver": {
+                    "rollout_job_id": document["rollout_job_id"],
+                    "phase": "review",
+                    "outcome": outcome,
+                }
+            }
+            search["review"] = {
+                "state": "planned",
+                "job_id": None,
+                "attempt_id": None,
+                "operation": "review",
+                "submission": JobSpec.from_dict(template).validate(),
+            }
             search["state"] = "reviewing"
             self._save(document)
         if search["state"] == "reviewing":
@@ -360,7 +433,7 @@ class Driver:
             self._advance(document, {"sample_slot_id": REVIEW_SLOT, "review": stage}, "review")
             if stage["state"] == "succeeded":
                 self._plan_branches(document)
-                return   # the branches settle on a later tick
+                return  # the branches settle on a later tick
             elif stage["state"] in DONE:
                 search.update(state="done", error=stage.get("error") or f"review {stage['state']}")
                 self._save(document)
@@ -388,8 +461,10 @@ class Driver:
         from planning. That change belongs here; nothing else computes a
         branch's budget.
         """
-        return {"max_turns": max(1, search["parent_max_turns"] - recovery["message_step"]),
-                "deadline_at": time.time() + search["config"]["wall_time_seconds"]}
+        return {
+            "max_turns": max(1, search["parent_max_turns"] - recovery["message_step"]),
+            "deadline_at": time.time() + search["config"]["wall_time_seconds"],
+        }
 
     def _plan_branches(self, document: dict) -> None:
         """Turn the review's points into branch samples, each in the next free slot.
@@ -408,51 +483,95 @@ class Driver:
         students = config["student_continuations"] if shape == "full" else config["tf_student_continuations"]
         plan = search["review"].get("result") or {}
         free = list(search["free_slots"])
-        roots = {sample["actor"]["job_id"]: sample for sample in document["samples"]
-                 if sample["sample_slot_id"] in search["root_slots"]}
+        roots = {
+            sample["actor"]["job_id"]: sample
+            for sample in document["samples"]
+            if sample["sample_slot_id"] in search["root_slots"]
+        }
         planned, skipped = [], []
         for index, point in enumerate(plan.get("points") or [], 1):
             root = roots.get(point["job_id"])
-            recovery = next((p for p in self.client.points(point["job_id"], attempt_id=point["attempt_id"])
-                             if p.get("available") is True and p["tool_depth"] == point["step"]), None)
+            recovery = next(
+                (
+                    p
+                    for p in self.client.points(point["job_id"], attempt_id=point["attempt_id"])
+                    if p.get("available") is True and p["tool_depth"] == point["step"]
+                ),
+                None,
+            )
             if root is None or recovery is None:
-                skipped.append({"point": index, "step": point.get("step"),
-                                "reason": "no available recovery point at that step" if root else "not a root of this group"})
+                skipped.append(
+                    {
+                        "point": index,
+                        "step": point.get("step"),
+                        "reason": "no available recovery point at that step"
+                        if root
+                        else "not a root of this group",
+                    }
+                )
                 continue
             budget = self._branch_budget(search, recovery)
             # Every branch also carries the roots' label and counts: the trainer
             # checks each trajectory's against the roots it is sent.
-            about = {"point": index, "point_id": recovery["id"], "step": point["step"],
-                     "message_step": recovery["message_step"], "parent_job_id": point["job_id"],
-                     "outcome": search.get("outcome"), "root_counts": search.get("root_counts")}
-            search["points"].append({**about, "snapshot_id": recovery["snapshot_id"], "why": point.get("why"),
-                                     "candidates": len(point.get("candidates") or [])})
+            about = {
+                "point": index,
+                "point_id": recovery["id"],
+                "step": point["step"],
+                "message_step": recovery["message_step"],
+                "parent_job_id": point["job_id"],
+                "outcome": search.get("outcome"),
+                "root_counts": search.get("root_counts"),
+            }
+            search["points"].append(
+                {
+                    **about,
+                    "snapshot_id": recovery["snapshot_id"],
+                    "why": point.get("why"),
+                    "candidates": len(point.get("candidates") or []),
+                }
+            )
 
             def branch(kind, continuation, group, **extra):
                 if not free:
                     skipped.append({"point": index, "reason": "no free slot"})
                     return
-                planned.append({
-                    "sample_slot_id": free.pop(0),
-                    "branch": {"job_id": point["job_id"], "point_id": recovery["id"],
-                               "continuation": continuation, "budget": budget},
-                    "grade": deepcopy(root["grade"]["template"]),
-                    "search": {"kind": kind, "group": group, **about, **extra},
-                })
+                planned.append(
+                    {
+                        "sample_slot_id": free.pop(0),
+                        "branch": {
+                            "job_id": point["job_id"],
+                            "point_id": recovery["id"],
+                            "continuation": continuation,
+                            "budget": budget,
+                        },
+                        "grade": deepcopy(root["grade"]["template"]),
+                        "search": {"kind": kind, "group": group, **about, **extra},
+                    }
+                )
 
             for _ in range(students):
                 branch("student", {"guidance": "none"}, f"student:{recovery['id']}")
             if shape == "full":
                 for c_index, candidate in enumerate(point.get("candidates") or [], 1):
                     for _ in range(config["candidate_continuations"]):
-                        branch("repair", {"guidance": "assistant-turn", "assistant_turn": candidate["assistant_turn"],
-                                          "assistant_turn_rendering": REPAIR_RENDERING},
-                               f"repair:{recovery['id']}:{c_index}", candidate=c_index,
-                               multiplicity=candidate.get("multiplicity", 1), samples=point.get("samples"), round=1,
-                               # The hidden test names the turn gives away, as the review
-                               # found them; None when it had nothing to check against.
-                               leak_terms=candidate.get("leak_terms"), assistant_turn_rendering=REPAIR_RENDERING,
-                               **_leak_judge(candidate))
+                        branch(
+                            "repair",
+                            {
+                                "guidance": "assistant-turn",
+                                "assistant_turn": candidate["assistant_turn"],
+                                "assistant_turn_rendering": REPAIR_RENDERING,
+                            },
+                            f"repair:{recovery['id']}:{c_index}",
+                            candidate=c_index,
+                            multiplicity=candidate.get("multiplicity", 1),
+                            samples=point.get("samples"),
+                            round=1,
+                            # The hidden test names the turn gives away, as the review
+                            # found them; None when it had nothing to check against.
+                            leak_terms=candidate.get("leak_terms"),
+                            assistant_turn_rendering=REPAIR_RENDERING,
+                            **_leak_judge(candidate),
+                        )
         search["skipped"] = skipped
         if not self._add_branches(document, planned, free):
             search["error"] = "the review proposed no branch that could be made"
@@ -461,16 +580,20 @@ class Driver:
         """Add planned branch samples to the document and dispatch them; whether there were any."""
         search = document["search"]
         if planned:
-            body = validate_request({"rollout_job_id": document["rollout_job_id"],
-                                     "prompt_group_id": document["prompt_group_id"],
-                                     "samples": [{k: v for k, v in sample.items() if k != "search"} for sample in planned]})
+            body = validate_request(
+                {
+                    "rollout_job_id": document["rollout_job_id"],
+                    "prompt_group_id": document["prompt_group_id"],
+                    "samples": [{k: v for k, v in sample.items() if k != "search"} for sample in planned],
+                }
+            )
             built = initial_document(body)["samples"]
             for sample, annotated in zip(built, planned, strict=True):
                 sample["search"] = annotated["search"]
             document["samples"].extend(built)
         search.update(free_slots=free, state="branching" if planned else "done")
         self._save(document)
-        for sample in document["samples"][-len(planned):] if planned else []:
+        for sample in document["samples"][-len(planned) :] if planned else []:
             if self.stopping.is_set():
                 break
             try:
@@ -492,37 +615,73 @@ class Driver:
         search = document["search"]
         config = search["config"]
         round_no = search.get("round", 1)
-        if (search.get("shape") != "full" or round_no >= config.get("repair_rounds", 1)
-                or self._cancelled(document)):
+        if (
+            search.get("shape") != "full"
+            or round_no >= config.get("repair_rounds", 1)
+            or self._cancelled(document)
+        ):
             return False
         parents = []
         for point in search["points"]:
-            at = [sample for sample in document["samples"]
-                  if (sample.get("search") or {}).get("point_id") == point["point_id"]]
+            at = [
+                sample
+                for sample in document["samples"]
+                if (sample.get("search") or {}).get("point_id") == point["point_id"]
+            ]
             if any(_resolved(sample) for sample in at):
                 continue
-            if not any(sample["search"]["kind"] == "student" and export_problem(sample) is None
-                       and grade_verdict(sample) is not None for sample in at):
+            if not any(
+                sample["search"]["kind"] == "student"
+                and export_problem(sample) is None
+                and grade_verdict(sample) is not None
+                for sample in at
+            ):
                 continue
-            parents += [sample for sample in at if sample["search"]["kind"] == "repair"
-                        and sample["search"].get("round", 1) == round_no
-                        and export_problem(sample) is None and grade_verdict(sample) is not None]
+            parents += [
+                sample
+                for sample in at
+                if sample["search"]["kind"] == "repair"
+                and sample["search"].get("round", 1) == round_no
+                and export_problem(sample) is None
+                and grade_verdict(sample) is not None
+            ]
         if not parents:
-            search["chain_end"] = f"after round {round_no}: no unresolved point with a failed repair to review"
+            search["chain_end"] = (
+                f"after round {round_no}: no unresolved point with a failed repair to review"
+            )
             return False
         template = deepcopy(search["review_templates"]["chain"])
         template["spec"]["round_no"] = round_no + 1
-        template["spec"]["parents"] = [{
-            "name": sample["sample_slot_id"], "job_id": sample["actor"]["job_id"],
-            "attempt_id": sample["actor"]["attempt_id"],
-            "grade": {key: value for key, value in sample["grade"]["result"].items() if key in REVIEW_GRADE_KEYS},
-        } for sample in parents]
-        template["context"] = {"rl_driver": {"rollout_job_id": document["rollout_job_id"], "phase": "review",
-                                             "outcome": search.get("outcome"), "round": round_no + 1}}
-        search.setdefault("chain_reviews", []).append({
-            "state": "planned", "job_id": None, "attempt_id": None, "operation": "review",
-            "slot": chain_review_slot(round_no + 1), "round": round_no + 1,
-            "submission": JobSpec.from_dict(template).validate()})
+        template["spec"]["parents"] = [
+            {
+                "name": sample["sample_slot_id"],
+                "job_id": sample["actor"]["job_id"],
+                "attempt_id": sample["actor"]["attempt_id"],
+                "grade": {
+                    key: value for key, value in sample["grade"]["result"].items() if key in REVIEW_GRADE_KEYS
+                },
+            }
+            for sample in parents
+        ]
+        template["context"] = {
+            "rl_driver": {
+                "rollout_job_id": document["rollout_job_id"],
+                "phase": "review",
+                "outcome": search.get("outcome"),
+                "round": round_no + 1,
+            }
+        }
+        search.setdefault("chain_reviews", []).append(
+            {
+                "state": "planned",
+                "job_id": None,
+                "attempt_id": None,
+                "operation": "review",
+                "slot": chain_review_slot(round_no + 1),
+                "round": round_no + 1,
+                "submission": JobSpec.from_dict(template).validate(),
+            }
+        )
         search.update(round=round_no + 1, state="chaining")
         return True
 
@@ -540,49 +699,97 @@ class Driver:
         config = search["config"]
         round_no = stage["round"]
         free = list(search["free_slots"])
-        repairs = {sample["actor"]["job_id"]: sample for sample in document["samples"]
-                   if (sample.get("search") or {}).get("kind") == "repair"}
+        repairs = {
+            sample["actor"]["job_id"]: sample
+            for sample in document["samples"]
+            if (sample.get("search") or {}).get("kind") == "repair"
+        }
         planned, skipped = [], search.setdefault("skipped", [])
         for point in (stage.get("result") or {}).get("points") or []:
             parent = repairs.get(point["job_id"])
-            recovery = None if parent is None else next(
-                (p for p in self.client.points(point["job_id"], attempt_id=point["attempt_id"])
-                 if p.get("available") is True and p["tool_depth"] == point["step"]), None)
+            recovery = (
+                None
+                if parent is None
+                else next(
+                    (
+                        p
+                        for p in self.client.points(point["job_id"], attempt_id=point["attempt_id"])
+                        if p.get("available") is True and p["tool_depth"] == point["step"]
+                    ),
+                    None,
+                )
+            )
             if parent is None or recovery is None:
-                skipped.append({"round": round_no, "step": point.get("step"),
-                                "reason": "no available recovery point at that step" if parent
-                                else "not a repair of this group"})
+                skipped.append(
+                    {
+                        "round": round_no,
+                        "step": point.get("step"),
+                        "reason": "no available recovery point at that step"
+                        if parent
+                        else "not a repair of this group",
+                    }
+                )
                 continue
             inherited = parent["actor"]["submission"].get("budget") or {}
-            budget = {"max_turns": max(1, inherited.get("max_turns", search["parent_max_turns"])
-                                       - recovery["message_step"]),
-                      "deadline_at": time.time() + config["wall_time_seconds"]}
-            about = {key: parent["search"][key] for key in
-                     ("point", "point_id", "step", "message_step", "parent_job_id", "outcome", "root_counts")}
-            about.update(round=round_no, chain_parent_job_id=point["job_id"], chain_point_id=recovery["id"],
-                         chain_step=point["step"])
+            budget = {
+                "max_turns": max(
+                    1, inherited.get("max_turns", search["parent_max_turns"]) - recovery["message_step"]
+                ),
+                "deadline_at": time.time() + config["wall_time_seconds"],
+            }
+            about = {
+                key: parent["search"][key]
+                for key in (
+                    "point",
+                    "point_id",
+                    "step",
+                    "message_step",
+                    "parent_job_id",
+                    "outcome",
+                    "root_counts",
+                )
+            }
+            about.update(
+                round=round_no,
+                chain_parent_job_id=point["job_id"],
+                chain_point_id=recovery["id"],
+                chain_step=point["step"],
+            )
             for c_index, candidate in enumerate(point.get("candidates") or [], 1):
                 number = (round_no - 1) * config["candidates"] + c_index
                 for _ in range(config["candidate_continuations"]):
                     if not free:
                         skipped.append({"round": round_no, "reason": "no free slot"})
                         break
-                    planned.append({
-                        "sample_slot_id": free.pop(0),
-                        "branch": {"job_id": point["job_id"], "point_id": recovery["id"],
-                                   "continuation": {"guidance": "assistant-turn",
-                                                    "assistant_turn": candidate["assistant_turn"],
-                                                    "assistant_turn_rendering": REPAIR_RENDERING},
-                                   "budget": budget},
-                        "grade": deepcopy(parent["grade"]["template"]),
-                        "search": {"kind": "repair", "group": f"repair:{about['point_id']}:{number}", **about,
-                                   "candidate": number, "multiplicity": candidate.get("multiplicity", 1),
-                                   "samples": point.get("samples"),
-                                   "leak_terms": _merged_leak_terms(parent["search"].get("leak_terms"),
-                                                                    candidate.get("leak_terms")),
-                                   "assistant_turn_rendering": REPAIR_RENDERING,
-                                   **_leak_judge(candidate, parent["search"].get("leak_judge"))},
-                    })
+                    planned.append(
+                        {
+                            "sample_slot_id": free.pop(0),
+                            "branch": {
+                                "job_id": point["job_id"],
+                                "point_id": recovery["id"],
+                                "continuation": {
+                                    "guidance": "assistant-turn",
+                                    "assistant_turn": candidate["assistant_turn"],
+                                    "assistant_turn_rendering": REPAIR_RENDERING,
+                                },
+                                "budget": budget,
+                            },
+                            "grade": deepcopy(parent["grade"]["template"]),
+                            "search": {
+                                "kind": "repair",
+                                "group": f"repair:{about['point_id']}:{number}",
+                                **about,
+                                "candidate": number,
+                                "multiplicity": candidate.get("multiplicity", 1),
+                                "samples": point.get("samples"),
+                                "leak_terms": _merged_leak_terms(
+                                    parent["search"].get("leak_terms"), candidate.get("leak_terms")
+                                ),
+                                "assistant_turn_rendering": REPAIR_RENDERING,
+                                **_leak_judge(candidate, parent["search"].get("leak_judge")),
+                            },
+                        }
+                    )
         if not self._add_branches(document, planned, free):
             search["chain_error"] = f"round {round_no}'s review proposed no branch that could be made"
 
@@ -600,8 +807,10 @@ class Driver:
             document = self.ledger.get(group_id)["document"]
             if phase == "review":
                 search = document.get("search") or {}
-                stages = {REVIEW_SLOT: search.get("review"),
-                          **{stage["slot"]: stage for stage in search.get("chain_reviews", [])}}
+                stages = {
+                    REVIEW_SLOT: search.get("review"),
+                    **{stage["slot"]: stage for stage in search.get("chain_reviews", [])},
+                }
                 if sample_id not in stages:
                     raise KeyError(sample_id)
                 stage = stages[sample_id]
@@ -616,8 +825,13 @@ class Driver:
             expected = submission_key(group_id, sample_id, phase)
             if job.get("idempotency_key") != expected:
                 raise ValueError("Job does not match this submission's idempotency key")
-            stage.update(job_id=job["id"], state=job["state"], attempt_id=job.get("active_attempt"),
-                         phase=job.get("phase"), error=job.get("error"))
+            stage.update(
+                job_id=job["id"],
+                state=job["state"],
+                attempt_id=job.get("active_attempt"),
+                phase=job.get("phase"),
+                error=job.get("error"),
+            )
             if job["state"] in DONE:
                 stage["result"] = job.get("result")
             stage.pop("last_error", None)

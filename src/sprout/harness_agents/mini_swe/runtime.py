@@ -49,26 +49,33 @@ class ChatModel(LitellmModel):
     # gateway statuses get a short bounded retry before queue-level recovery.
     abort_exceptions = [Exception, KeyboardInterrupt]
 
-    def __init__(self, task: TaskSpec, journal: JournalWriter, deadline: float,
-                 control: RunControl, **config) -> None:
+    def __init__(
+        self, task: TaskSpec, journal: JournalWriter, deadline: float, control: RunControl, **config
+    ) -> None:
         super().__init__(model_name=task.model, **config)
         self.journal, self.deadline, self.control = journal, deadline, control
         env = {**os.environ, **task.env}
         base = env.get("OPENAI_BASE_URL", "")
         if not base:
             raise ValueError("Set OPENAI_BASE_URL or configure the Sprout model gateway")
-        self.url = base.rstrip("/") + ("/chat/completions" if base.rstrip("/").endswith("/v1")
-                                       else "/v1/chat/completions")
+        self.url = base.rstrip("/") + (
+            "/chat/completions" if base.rstrip("/").endswith("/v1") else "/v1/chat/completions"
+        )
         self.key = env.get("OPENAI_API_KEY", "")
         self.usage = Usage()
         self.tools = mini_tool_schema(BASH_TOOL)
 
     def _query(self, messages: list[dict], **kwargs) -> litellm.ModelResponse:
         self.control.raise_if_stopped()
-        history_call_ids = {call["id"] for message in messages
-                            for call in message.get("tool_calls") or []}
-        payload = {"model": self.config.model_name, "messages": messages, "tools": self.tools,
-                   **self.config.model_kwargs, **kwargs, "stream": False}
+        history_call_ids = {call["id"] for message in messages for call in message.get("tool_calls") or []}
+        payload = {
+            "model": self.config.model_name,
+            "messages": messages,
+            "tools": self.tools,
+            **self.config.model_kwargs,
+            **kwargs,
+            "stream": False,
+        }
         # This OpenAI-compatible endpoint intermittently uses 403 for
         # admission/capacity rejection (the same request succeeds moments
         # later), so it is retryable here alongside ordinary gateway errors.
@@ -79,8 +86,13 @@ class ChatModel(LitellmModel):
                 self.control.request_stop("mini wall-time budget exhausted", stop_reason="timeout")
                 self.control.raise_if_stopped()
             try:
-                response = post(self.url, json=payload, timeout_s=min(600.0, remaining),
-                                control=self.control, headers=bearer_headers(self.key))
+                response = post(
+                    self.url,
+                    json=payload,
+                    timeout_s=min(600.0, remaining),
+                    control=self.control,
+                    headers=bearer_headers(self.key),
+                )
                 response.raise_for_status()
                 break
             # ``asyncio.wait_for`` in harness_core.control raises the builtin
@@ -91,11 +103,14 @@ class ChatModel(LitellmModel):
                 if attempt == 12:
                     self.journal.emit("model.request.failed", error_type=type(error).__name__)
                     raise
-                delay = min(float(2 ** min(attempt, 5)),
-                            max(0.0, self.deadline - time.monotonic()))
-                self.journal.emit("model.request.retry", status_code=None,
-                                  error_type=type(error).__name__, attempt=attempt,
-                                  delay_s=delay)
+                delay = min(float(2 ** min(attempt, 5)), max(0.0, self.deadline - time.monotonic()))
+                self.journal.emit(
+                    "model.request.retry",
+                    status_code=None,
+                    error_type=type(error).__name__,
+                    attempt=attempt,
+                    delay_s=delay,
+                )
                 time.sleep(delay)
                 self.control.raise_if_stopped()
             except httpx.HTTPStatusError as error:
@@ -104,18 +119,18 @@ class ChatModel(LitellmModel):
                 # the rollout like an exhausted turn budget: the workspace is
                 # still a valid attempt for the verifier to grade.
                 if status == 400 and CONTEXT_EXCEEDED.search(error.response.text):
-                    self.journal.emit("model.request.failed", status_code=status,
-                                      error_type="context_length_exceeded")
-                    self.control.request_stop("model context window exhausted",
-                                              stop_reason="context_exhausted")
+                    self.journal.emit(
+                        "model.request.failed", status_code=status, error_type="context_length_exceeded"
+                    )
+                    self.control.request_stop(
+                        "model context window exhausted", stop_reason="context_exhausted"
+                    )
                     self.control.raise_if_stopped()
                 if status not in transient_statuses or attempt == 12:
                     self.journal.emit("model.request.failed", status_code=status)
                     raise
-                delay = min(float(2 ** min(attempt, 5)),
-                            max(0.0, self.deadline - time.monotonic()))
-                self.journal.emit("model.request.retry", status_code=status,
-                                  attempt=attempt, delay_s=delay)
+                delay = min(float(2 ** min(attempt, 5)), max(0.0, self.deadline - time.monotonic()))
+                self.journal.emit("model.request.retry", status_code=status, attempt=attempt, delay_s=delay)
                 time.sleep(delay)
                 self.control.raise_if_stopped()
         raw = response.json()
@@ -126,8 +141,11 @@ class ChatModel(LitellmModel):
         _absorb_usage(raw.get("usage") if isinstance(raw, dict) else None, usage)
         self.usage.add(usage)
         self.journal.emit(USAGE_UPDATED, usage=usage.as_dict())
-        if (not isinstance(raw, dict) or len(raw.get("choices", [])) != 1
-                or raw["choices"][0].get("finish_reason") not in {"stop", "tool_calls", "length"}):
+        if (
+            not isinstance(raw, dict)
+            or len(raw.get("choices", [])) != 1
+            or raw["choices"][0].get("finish_reason") not in {"stop", "tool_calls", "length"}
+        ):
             raise ValueError("mini model response is missing a valid terminal choice")
         message = raw["choices"][0].get("message", {})
         if message.get("role") != "assistant" or not isinstance(message.get("content") or "", str):
@@ -175,28 +193,36 @@ class ChatModel(LitellmModel):
         if errors:
             # DefaultAgent already charges this response and retries FormatError.
             # The marker is consumed below, producing tool-role errors, not a hint.
-            raise FormatError({
-                "role": "user",
-                "content": "Tool schema validation failed. No calls in this response were executed. "
-                           "Correct the arguments and submit new tool calls matching the tool schema.",
-                "extra": {"interrupt_type": "FormatError", "tool_schema_feedback": True,
-                          "call_errors": errors, "tools": deepcopy(self.tools)},
-            })
+            raise FormatError(
+                {
+                    "role": "user",
+                    "content": "Tool schema validation failed. No calls in this response were executed. "
+                    "Correct the arguments and submit new tool calls matching the tool schema.",
+                    "extra": {
+                        "interrupt_type": "FormatError",
+                        "tool_schema_feedback": True,
+                        "call_errors": errors,
+                        "tools": deepcopy(self.tools),
+                    },
+                }
+            )
         return super()._parse_actions(response)
 
 
 class ToolEnvironment:
     """mini's environment over the run's ToolAccess: ``bash`` is the runtime's ``shell``."""
 
-    def __init__(self, tools: ToolAccess, journal: JournalWriter, deadline: float,
-                 control: RunControl, config: dict) -> None:
+    def __init__(
+        self, tools: ToolAccess, journal: JournalWriter, deadline: float, control: RunControl, config: dict
+    ) -> None:
         self.tools, self.journal = tools, journal
         self.deadline, self.control = deadline, control
         self.config = config
         self.turn_id = None
         shell = next((tool for tool in tools.tools if tool["name"] == "shell"), None)
         if shell is None or not {"command", "working_dir", "timeout"} <= set(
-                shell["inputSchema"].get("properties", {})):
+            shell["inputSchema"].get("properties", {})
+        ):
             raise ValueError("mini requires Sprout shell(command, working_dir, timeout)")
 
     def execute(self, action: dict, cwd: str = "") -> dict:
@@ -208,36 +234,63 @@ class ToolEnvironment:
         if any(not re.fullmatch(r"[A-Za-z_][A-Za-z_0-9]*", key) for key in env):
             raise ValueError("Invalid sandbox environment variable name")
         prefix = " ".join(shlex.quote(f"{key}={value}") for key, value in env.items())
-        args = {"command": f"env {prefix} bash -c {shlex.quote(command)}",
-                "working_dir": cwd or self.config["cwd"],
-                "timeout": max(1, min(self.config.get("timeout", DEFAULT_COMMAND_TIMEOUT_S),
-                                      math.ceil(self.deadline - time.monotonic())))}
+        args = {
+            "command": f"env {prefix} bash -c {shlex.quote(command)}",
+            "working_dir": cwd or self.config["cwd"],
+            "timeout": max(
+                1,
+                min(
+                    self.config.get("timeout", DEFAULT_COMMAND_TIMEOUT_S),
+                    math.ceil(self.deadline - time.monotonic()),
+                ),
+            ),
+        }
         result = self.tools.call("shell", args, call_id=call_id, turn_id=self.turn_id)
         # A rollout limit refuses the call and stops the run; say so as a stop.
         self.control.raise_if_stopped()
         outcome = result.outcome
         if outcome is None or type(outcome.exit_code) is not int or outcome.running:
-            raise ValueError("Sprout shell did not return a settled command outcome: %s"
-                             % (result.error or result.output)[:500])
+            raise ValueError(
+                "Sprout shell did not return a settled command outcome: %s"
+                % (result.error or result.output)[:500]
+            )
         # mini's completion sentinel and observation template consume streams.
-        return {"output": outcome.stdout + outcome.stderr, "returncode": outcome.exit_code,
-                "exception_info": "Command timed out" if outcome.timed_out else "",
-                "extra": {"timed_out": outcome.timed_out}}
+        return {
+            "output": outcome.stdout + outcome.stderr,
+            "returncode": outcome.exit_code,
+            "exception_info": "Command timed out" if outcome.timed_out else "",
+            "extra": {"timed_out": outcome.timed_out},
+        }
 
     def get_template_vars(self, **kwargs) -> dict:
         # No host environment or host uname enters the sandbox prompt.
-        return {**self.config, "repository_dir": getattr(self, "repository_dir", None),
-                "system": "Linux", "release": "", "version": "", "machine": "", **kwargs}
+        return {
+            **self.config,
+            "repository_dir": getattr(self, "repository_dir", None),
+            "system": "Linux",
+            "release": "",
+            "version": "",
+            "machine": "",
+            **kwargs,
+        }
 
     def serialize(self) -> dict:
         return {"info": {"config": {"environment": self.config, "environment_type": "sprout-tool-access"}}}
 
 
 class CheckpointAgent(DefaultAgent):
-    def __init__(self, model: ChatModel, env: ToolEnvironment, history: History,
-                 journal: JournalWriter, control: RunControl, *, assistant_turn: dict | None = None,
-                 resume_without_hint: bool = False,
-                 **kwargs) -> None:
+    def __init__(
+        self,
+        model: ChatModel,
+        env: ToolEnvironment,
+        history: History,
+        journal: JournalWriter,
+        control: RunControl,
+        *,
+        assistant_turn: dict | None = None,
+        resume_without_hint: bool = False,
+        **kwargs,
+    ) -> None:
         super().__init__(model, env, **kwargs)
         self.history, self.journal, self.control = history, journal, control
         self.initialized = False
@@ -250,9 +303,13 @@ class CheckpointAgent(DefaultAgent):
             raise ValueError("Point-only continuation cannot include an assistant_turn")
         if (assistant_turn is not None or resume_without_hint) and not history.prefix_messages:
             raise ValueError("This branch mode requires an exact mini history prefix")
-        self.pending_turn = (validate_assistant_turn(assistant_turn, history=history.prefix_messages, tools=model.tools,
-                                                     allow_reasoning=True)
-                             if assistant_turn is not None else None)
+        self.pending_turn = (
+            validate_assistant_turn(
+                assistant_turn, history=history.prefix_messages, tools=model.tools, allow_reasoning=True
+            )
+            if assistant_turn is not None
+            else None
+        )
         self.omit_user_hint = assistant_turn is not None or resume_without_hint
 
     def add_messages(self, *messages: dict) -> list[dict]:
@@ -261,8 +318,11 @@ class CheckpointAgent(DefaultAgent):
             if self.history.prefix_messages:
                 self.messages = deepcopy(self.history.prefix_messages)
                 # The new mode continues the prefix directly, without a user hint.
-                messages = (() if self.omit_user_hint else (
-                    self.model.format_message(role="user", content=self.extra_template_vars["task"]),))
+                messages = (
+                    ()
+                    if self.omit_user_hint
+                    else (self.model.format_message(role="user", content=self.extra_template_vars["task"]),)
+                )
         for message in messages:
             extra = message.get("extra", {})
             response = extra.get("response")
@@ -290,16 +350,34 @@ class CheckpointAgent(DefaultAgent):
         observations = tool_schema_feedback(original, errors, feedback["extra"]["tools"])
         for call, observation in zip(calls, observations, strict=True):
             identifier = call["id"]
-            self.journal.emit("tool.rejected", call_id=identifier, turn_id=self.turn_id,
-                              name=(call.get("function") or {}).get("name"), executed=False,
-                              source="schema_validation", feedback=observation["content"])
+            self.journal.emit(
+                "tool.rejected",
+                call_id=identifier,
+                turn_id=self.turn_id,
+                name=(call.get("function") or {}).get("name"),
+                executed=False,
+                source="schema_validation",
+                feedback=observation["content"],
+            )
             self.add_messages(observation)
         ids = [call["id"] for call in calls]
         # Rejected turns close conversation only: no tool step or snapshot exists.
-        self.history.append({"type": "mini.turn", "turn_id": self.turn_id,
-                             "call_ids": ids, "rejected": True, "source": "schema_validation"})
-        self.journal.emit("mini.turn.rejected", turn_id=self.turn_id, call_ids=ids,
-                          source="schema_validation", executed=False)
+        self.history.append(
+            {
+                "type": "mini.turn",
+                "turn_id": self.turn_id,
+                "call_ids": ids,
+                "rejected": True,
+                "source": "schema_validation",
+            }
+        )
+        self.journal.emit(
+            "mini.turn.rejected",
+            turn_id=self.turn_id,
+            call_ids=ids,
+            source="schema_validation",
+            executed=False,
+        )
         self.journal.emit("turn.completed", turn=self.turn_count, source="actor", rejected=True)
 
     def _malformed_feedback(self, feedback: dict) -> None:
@@ -314,8 +392,13 @@ class CheckpointAgent(DefaultAgent):
         """
         problems = feedback["extra"]["malformed_tool_calls"]
         self._journal_said(feedback["extra"]["response"]["choices"][0].get("message") or {})
-        self.journal.emit("mini.turn.rejected", turn_id=self.turn_id, source="malformed_tool_calls",
-                          executed=False, problems=problems)
+        self.journal.emit(
+            "mini.turn.rejected",
+            turn_id=self.turn_id,
+            source="malformed_tool_calls",
+            executed=False,
+            problems=problems,
+        )
         self.journal.emit("turn.completed", turn=self.turn_count, source=self.turn_source, rejected=True)
         super().add_messages(feedback)
         self.history.append({"type": "mini.message", "message": feedback})
@@ -331,8 +414,13 @@ class CheckpointAgent(DefaultAgent):
         """
         original = deepcopy(response["choices"][0]["message"])
         self.add_messages(original)
-        self.journal.emit("mini.turn.rejected", turn_id=self.turn_id, source="no_tool_calls",
-                          executed=False, feedback=feedback["content"])
+        self.journal.emit(
+            "mini.turn.rejected",
+            turn_id=self.turn_id,
+            source="no_tool_calls",
+            executed=False,
+            feedback=feedback["content"],
+        )
         self.journal.emit("turn.completed", turn=self.turn_count, source=self.turn_source, rejected=True)
         super().add_messages(feedback)
         self.history.append({"type": "mini.message", "message": feedback})
@@ -354,11 +442,16 @@ class CheckpointAgent(DefaultAgent):
         if self.pending_turn is not None:
             message, self.pending_turn = self.pending_turn, None
             # Use mini's real parser; no model request, usage or fake observation.
-            response = litellm.ModelResponse(choices=[{
-                "index": 0, "finish_reason": "tool_calls", "message": message}])
+            response = litellm.ModelResponse(
+                choices=[{"index": 0, "finish_reason": "tool_calls", "message": message}]
+            )
             message["extra"] = {"actions": self.model._parse_actions(response), "source": "reviewer"}
-            self.journal.emit("branch.assistant_turn", source="reviewer", turn_id=self.turn_id,
-                              message={k: v for k, v in message.items() if k != "extra"})
+            self.journal.emit(
+                "branch.assistant_turn",
+                source="reviewer",
+                turn_id=self.turn_id,
+                message={k: v for k, v in message.items() if k != "extra"},
+            )
             self.add_messages(message)
             return message
         return super().query()
@@ -379,21 +472,37 @@ class CheckpointAgent(DefaultAgent):
                 submitted = end
                 # Calls after the submission never run. Each still gets a real
                 # tool result so the history stays paired for training export.
-                for skipped in actions[index + 1:]:
-                    self.journal.emit("tool.rejected", call_id=skipped["tool_call_id"],
-                                      turn_id=self.turn_id, executed=False, source="after_submit")
-                    self.add_messages({"role": "tool", "tool_call_id": skipped["tool_call_id"],
-                                       "content": "Not executed: the task was already submitted "
-                                                  "by an earlier call in this response."})
+                for skipped in actions[index + 1 :]:
+                    self.journal.emit(
+                        "tool.rejected",
+                        call_id=skipped["tool_call_id"],
+                        turn_id=self.turn_id,
+                        executed=False,
+                        source="after_submit",
+                    )
+                    self.add_messages(
+                        {
+                            "role": "tool",
+                            "tool_call_id": skipped["tool_call_id"],
+                            "content": "Not executed: the task was already submitted "
+                            "by an earlier call in this response.",
+                        }
+                    )
                 break
         calls = [action["tool_call_id"] for action in actions]
         if calls and len(observed) == len(actions):
             # The whole response and every observation are durable: the turn is
             # closed, and ToolAccess may pair its end state with this prefix.
-            self.history.append({"type": "mini.turn", "turn_id": self.turn_id,
-                                 "call_ids": calls, "source": self.turn_source})
-            self.journal.emit("model.turn.completed", turn_id=self.turn_id, call_ids=calls,
-                              step=self.journal.tool_calls()[-1]["step"], source=self.turn_source)
+            self.history.append(
+                {"type": "mini.turn", "turn_id": self.turn_id, "call_ids": calls, "source": self.turn_source}
+            )
+            self.journal.emit(
+                "model.turn.completed",
+                turn_id=self.turn_id,
+                call_ids=calls,
+                step=self.journal.tool_calls()[-1]["step"],
+                source=self.turn_source,
+            )
             self.env.tools.close_turn(self.turn_id)
             self.journal.emit("turn.completed", turn=self.turn_count, source=self.turn_source)
         if submitted:
@@ -401,8 +510,7 @@ class CheckpointAgent(DefaultAgent):
         return observed
 
 
-def run(task: TaskSpec, journal: JournalWriter, tools: ToolAccess,
-        home: Path, session_id: str) -> SlotResult:
+def run(task: TaskSpec, journal: JournalWriter, tools: ToolAccess, home: Path, session_id: str) -> SlotResult:
     config = yaml.safe_load((package_dir / "config/mini.yaml").read_text())
     overrides = task.extra.get("mini", {})
     if not isinstance(overrides, dict) or set(overrides) - {"agent", "environment", "model"}:
@@ -410,20 +518,30 @@ def run(task: TaskSpec, journal: JournalWriter, tools: ToolAccess,
     for section, value in overrides.items():
         config[section] = {**config.get(section, {}), **value}
     # Admission and pricing belong to Sprout. No hidden upstream step/cost budget.
-    agent_config = {**config["agent"], "step_limit": 0, "cost_limit": 0,
-                    "wall_time_limit_seconds": 0, "output_path": home / f"{session_id}.traj.json"}
+    agent_config = {
+        **config["agent"],
+        "step_limit": 0,
+        "cost_limit": 0,
+        "wall_time_limit_seconds": 0,
+        "output_path": home / f"{session_id}.traj.json",
+    }
     for key in ("step_limit", "cost_limit", "wall_time_limit_seconds", "output_path"):
         if key in overrides.get("agent", {}):
             raise ValueError(f"Use Sprout rollout controls instead of mini agent.{key}")
     env_config = {"cwd": None, "timeout": DEFAULT_COMMAND_TIMEOUT_S, **config.get("environment", {})}
     if set(env_config) - {"cwd", "timeout", "env"}:
         raise ValueError("mini environment only accepts cwd, timeout and env")
-    if (not isinstance(env_config["cwd"], str) or not env_config["cwd"].startswith("/")
-            or type(env_config["timeout"]) is not int or env_config["timeout"] <= 0
-            or not isinstance(env_config.get("env", {}), dict)
-            or any(not isinstance(k, str) or not isinstance(v, str)
-                   for k, v in env_config.get("env", {}).items())):
-        raise ValueError("mini requires a discovered or explicit absolute sandbox cwd, positive timeout and text env")
+    if (
+        not isinstance(env_config["cwd"], str)
+        or not env_config["cwd"].startswith("/")
+        or type(env_config["timeout"]) is not int
+        or env_config["timeout"] <= 0
+        or not isinstance(env_config.get("env", {}), dict)
+        or any(not isinstance(k, str) or not isinstance(v, str) for k, v in env_config.get("env", {}).items())
+    ):
+        raise ValueError(
+            "mini requires a discovered or explicit absolute sandbox cwd, positive timeout and text env"
+        )
     workspace = task.extra.get("mini_workspace") or {"cwd": env_config["cwd"], "repository_dir": None}
     if workspace["cwd"] != env_config["cwd"]:
         raise ValueError("mini prompt workspace and execution working directory differ")
@@ -439,8 +557,15 @@ def run(task: TaskSpec, journal: JournalWriter, tools: ToolAccess,
     model_config.pop("model_name", None)
     model_kwargs = model_config.pop("model_kwargs", {})
     model_kwargs.pop("drop_params", None)
-    if set(model_kwargs) - {"temperature", "top_p", "top_k", "max_tokens", "stop", "parallel_tool_calls",
-                            "reasoning_effort"}:
+    if set(model_kwargs) - {
+        "temperature",
+        "top_p",
+        "top_k",
+        "max_tokens",
+        "stop",
+        "parallel_tool_calls",
+        "reasoning_effort",
+    }:
         raise ValueError("Unsupported mini model_kwargs; parameters must reach the model unchanged")
     model_config["model_kwargs"] = model_kwargs
     control = task.control or RunControl()
@@ -461,22 +586,37 @@ def run(task: TaskSpec, journal: JournalWriter, tools: ToolAccess,
         raise ValueError("This branch mode requires an exact mini history prefix")
     if assistant_turn is not None:
         # As continuation.prepare left it: possibly rendered, its text as reasoning_content.
-        validate_assistant_turn(assistant_turn, history=[
-            entry["message"] for entry in prefix if entry.get("type") == "mini.message"], allow_reasoning=True)
+        validate_assistant_turn(
+            assistant_turn,
+            history=[entry["message"] for entry in prefix if entry.get("type") == "mini.message"],
+            allow_reasoning=True,
+        )
     history = History(home / f"{session_id}.jsonl", session_id, prefix=prefix, workspace=workspace)
     model, agent = None, None
     status, error, final_text = "error", None, ""
-    journal.emit("run.started", slot="mini-swe-agent", slot_version="2.4.6", model=task.model,
-                 task_prompt=task.prompt, cwd=task.cwd,
-                 **({"prompt_primer": task.extra["prompt_primer"]} if task.extra.get("prompt_primer") else {}))
+    journal.emit(
+        "run.started",
+        slot="mini-swe-agent",
+        slot_version="2.4.6",
+        model=task.model,
+        task_prompt=task.prompt,
+        cwd=task.cwd,
+        **({"prompt_primer": task.extra["prompt_primer"]} if task.extra.get("prompt_primer") else {}),
+    )
     journal.emit("session.ref", native_session_id=session_id, transcript_path=str(history.path.resolve()))
     if inherited:
         # Make standalone branch indexing aware of the inherited call ids too.
-        journal.emit("mini.restored", inherited_native={
-            **inherited, "slot": "mini-swe-agent",
-            "byte_length": inherited.get("byte_length", Path(inherited["path"]).stat().st_size)})
-    timer = threading.Timer(task.timeout_s, lambda: control.request_stop(
-        "mini wall-time budget exhausted", stop_reason="timeout"))
+        journal.emit(
+            "mini.restored",
+            inherited_native={
+                **inherited,
+                "slot": "mini-swe-agent",
+                "byte_length": inherited.get("byte_length", Path(inherited["path"]).stat().st_size),
+            },
+        )
+    timer = threading.Timer(
+        task.timeout_s, lambda: control.request_stop("mini wall-time budget exhausted", stop_reason="timeout")
+    )
     timer.daemon = True
     timer.start()
     try:
@@ -484,17 +624,23 @@ def run(task: TaskSpec, journal: JournalWriter, tools: ToolAccess,
         journal.emit("rollout.model_tools", shape="chat/completions", tools=model.tools)
         env = ToolEnvironment(tools, journal, deadline, control, env_config)
         env.repository_dir = workspace["repository_dir"]
-        agent = CheckpointAgent(model, env, history, journal, control,
-                                assistant_turn=assistant_turn, resume_without_hint=resume_without_hint,
-                                **agent_config)
+        agent = CheckpointAgent(
+            model,
+            env,
+            history,
+            journal,
+            control,
+            assistant_turn=assistant_turn,
+            resume_without_hint=resume_without_hint,
+            **agent_config,
+        )
         info = agent.run(task.prompt)
         final_text = info.get("submission", "")
         status = "completed" if info.get("exit_status") == "Submitted" else "error"
         error = None if status == "completed" else info.get("exit_status", "mini did not submit")
     except RunAborted as exc:
         # Exhausting a sampling budget leaves a valid workspace to grade.
-        status = ("timeout" if control.stop_reason in GRADABLE_STOP_REASONS
-                  else "killed")
+        status = "timeout" if control.stop_reason in GRADABLE_STOP_REASONS else "killed"
         error = str(exc) or control.reason
     except (TimeoutError, KeyboardInterrupt) as exc:
         control.request_stop("mini wall-time budget exhausted", stop_reason="timeout")
@@ -507,8 +653,9 @@ def run(task: TaskSpec, journal: JournalWriter, tools: ToolAccess,
     usage = model.usage.as_dict() if model else {}
     journal.emit(RUN_RESULT, text=final_text)
     journal.emit("run.finished", status=status, error=error, usage=usage)
-    return SlotResult(status=status, final_text=final_text, usage=usage,
-                      native_session_id=session_id, error=error)
+    return SlotResult(
+        status=status, final_text=final_text, usage=usage, native_session_id=session_id, error=error
+    )
 
 
 def malformed_tool_calls(calls: list, history_ids: set) -> list[dict]:
@@ -548,8 +695,13 @@ def malformed_tool_calls(calls: list, history_ids: set) -> list[dict]:
         elif identifier in history_ids:
             faults.append("id was already used earlier in this conversation")
         if faults:
-            problems.append({"index": index, "id": identifier if isinstance(identifier, str) else None,
-                             "error": "; ".join(faults)})
+            problems.append(
+                {
+                    "index": index,
+                    "id": identifier if isinstance(identifier, str) else None,
+                    "error": "; ".join(faults),
+                }
+            )
     return problems
 
 
@@ -572,8 +724,9 @@ def malformed_feedback(problems: list[dict], message: dict, raw: dict) -> dict:
         call = calls[problem["index"]]
         function = call.get("function") if isinstance(call, dict) else None
         function = function if isinstance(function, dict) else {}
-        rejected.append({**problem, "name": function.get("name"),
-                         "arguments": _head(function.get("arguments"), 2000)})
+        rejected.append(
+            {**problem, "name": function.get("name"), "arguments": _head(function.get("arguments"), 2000)}
+        )
     content = (
         "Tool call error: the previous response was rejected before execution because "
         "%d of its %d tool call(s) were malformed. None of them ran, and the response is "
@@ -583,11 +736,21 @@ def malformed_feedback(problems: list[dict], message: dict, raw: dict) -> dict:
         'in this conversation, type "function", function.name "bash" and function.arguments '
         "as a JSON-encoded string with the single field command, for example "
         '{"command": "ls -la"}.'
-        % (len(problems), len(calls), json.dumps(
-            {"content": _head(message.get("content") or "", 1000), "rejected_tool_calls": rejected},
-            ensure_ascii=False, indent=1)))
-    return {"role": "user", "content": content,
-            "extra": {"interrupt_type": "FormatError", "malformed_tool_calls": problems, "response": raw}}
+        % (
+            len(problems),
+            len(calls),
+            json.dumps(
+                {"content": _head(message.get("content") or "", 1000), "rejected_tool_calls": rejected},
+                ensure_ascii=False,
+                indent=1,
+            ),
+        )
+    )
+    return {
+        "role": "user",
+        "content": content,
+        "extra": {"interrupt_type": "FormatError", "malformed_tool_calls": problems, "response": raw},
+    }
 
 
 def tool_schema_feedback(message: dict, errors: dict[str, str], tools: list[dict]) -> list[dict]:
@@ -598,10 +761,14 @@ def tool_schema_feedback(message: dict, errors: dict[str, str], tools: list[dict
             "type": "tool_schema_error" if identifier in errors else "tool_batch_rejected",
             "message": errors.get(identifier, "Another call in this response failed schema validation."),
         }
-        content = json.dumps({
-            "error": error, "executed": False,
-            "instruction": "No calls in this response were executed. Correct and resend the tool calls.",
-            "available_tools": tools,
-        }, ensure_ascii=False)
+        content = json.dumps(
+            {
+                "error": error,
+                "executed": False,
+                "instruction": "No calls in this response were executed. Correct and resend the tool calls.",
+                "available_tools": tools,
+            },
+            ensure_ascii=False,
+        )
         observations.append({"role": "tool", "tool_call_id": identifier, "content": content})
     return observations

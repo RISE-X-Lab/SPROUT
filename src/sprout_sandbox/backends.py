@@ -46,10 +46,14 @@ class GatewayBackend:
     that are only reachable that way: the AgentENV microVM host.
     """
 
-    def __init__(self, gateway_url: str, sandbox_id: str,
-                 sandbox_id_header: str = "X-Sandbox-ID",
-                 target_port: int | None = None,
-                 target_port_header: str = "X-Target-Port"):
+    def __init__(
+        self,
+        gateway_url: str,
+        sandbox_id: str,
+        sandbox_id_header: str = "X-Sandbox-ID",
+        target_port: int | None = None,
+        target_port_header: str = "X-Target-Port",
+    ):
         self.gateway_url = gateway_url.rstrip("/")
         self.sandbox_id = sandbox_id
         self.sandbox_id_header = sandbox_id_header
@@ -64,13 +68,13 @@ class GatewayBackend:
             headers[self.target_port_header] = str(self.target_port)
         return headers
 
-    async def call(self, tool_name: str, args: dict,
-                   agent_id: str = "") -> ToolResult:
+    async def call(self, tool_name: str, args: dict, agent_id: str = "") -> ToolResult:
         resp = await self._client.post(
             self.gateway_url,
             headers=self._routing_headers(),
             json={
-                "jsonrpc": "2.0", "id": 1,
+                "jsonrpc": "2.0",
+                "id": 1,
                 "method": "tools/call",
                 "params": call_params(tool_name, args, agent_id),
             },
@@ -115,10 +119,10 @@ class HttpBackend:
         resp.raise_for_status()
         return resp.json()
 
-    async def call(self, tool_name: str, args: dict,
-                   agent_id: str = "") -> ToolResult:
-        data = await self._rpc("tools/call", call_params(tool_name, args, agent_id),
-                               wait=call_wait(args, self.timeout))
+    async def call(self, tool_name: str, args: dict, agent_id: str = "") -> ToolResult:
+        data = await self._rpc(
+            "tools/call", call_params(tool_name, args, agent_id), wait=call_wait(args, self.timeout)
+        )
         error = data.get("error")
         if error:
             # A protocol-level refusal (unknown tool, malformed params) has no

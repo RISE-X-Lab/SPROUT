@@ -37,11 +37,31 @@ import re
 MIN_TERM = 6
 MIN_IDENTIFIER = 8
 #: Names any repository may hold. Naming one reveals nothing about the hidden tests.
-GENERIC_BASENAMES = frozenset({
-    "__init__.py", "conftest.py", "setup.py", "setup.cfg", "pytest.ini", "tox.ini", "pyproject.toml",
-    "package.json", "Cargo.toml", "go.mod", "Makefile", "test.py", "tests.py", "utils.py", "helpers.py",
-    "common.py", "main.py", "index.js", "index.ts", "mod.rs", "lib.rs",
-})
+GENERIC_BASENAMES = frozenset(
+    {
+        "__init__.py",
+        "conftest.py",
+        "setup.py",
+        "setup.cfg",
+        "pytest.ini",
+        "tox.ini",
+        "pyproject.toml",
+        "package.json",
+        "Cargo.toml",
+        "go.mod",
+        "Makefile",
+        "test.py",
+        "tests.py",
+        "utils.py",
+        "helpers.py",
+        "common.py",
+        "main.py",
+        "index.js",
+        "index.ts",
+        "mod.rs",
+        "lib.rs",
+    }
+)
 _SEPARATORS = re.compile(r"[^A-Za-z0-9_]+")
 
 
@@ -68,8 +88,9 @@ def hidden_terms(*, fail_to_pass, test_patch_paths) -> frozenset[str]:
         name = name.strip()
         if len(name) >= MIN_IDENTIFIER:
             terms.add(name)
-        terms.update(token for token in _SEPARATORS.split(name)
-                     if len(token) >= MIN_IDENTIFIER and not token.isdigit())
+        terms.update(
+            token for token in _SEPARATORS.split(name) if len(token) >= MIN_IDENTIFIER and not token.isdigit()
+        )
     return frozenset(terms)
 
 
@@ -102,7 +123,7 @@ def turn_text(turn: dict) -> str:
         if isinstance(arguments, str):
             try:
                 arguments = json.loads(arguments)
-            except ValueError:   # a call the schema check rejected: the raw text is all it shows
+            except ValueError:  # a call the schema check rejected: the raw text is all it shows
                 continue
         if isinstance(arguments, dict) and isinstance(arguments.get("command"), str):
             parts.append(arguments["command"])
@@ -118,7 +139,9 @@ def _observation(content) -> list[str]:
         document = json.loads(content) if isinstance(content, str) else None
     except ValueError:
         return []
-    return [value for value in document.values() if isinstance(value, str)] if isinstance(document, dict) else []
+    return (
+        [value for value in document.values() if isinstance(value, str)] if isinstance(document, dict) else []
+    )
 
 
 def visible_text(messages: Iterable[dict]) -> str:

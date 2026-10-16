@@ -81,9 +81,15 @@ class MicroVMPool:
     #: runtime itself, staging binary fixtures a tool call cannot carry).
     ENVD_PORT = "49983"
 
-    def __init__(self, server_url: str, runtime_port: int = 3000, api_key: str = "",
-                 request_timeout: float = 120, sandbox_ttl: int = 300,
-                 allow_internet: "bool | None" = None):
+    def __init__(
+        self,
+        server_url: str,
+        runtime_port: int = 3000,
+        api_key: str = "",
+        request_timeout: float = 120,
+        sandbox_ttl: int = 300,
+        allow_internet: "bool | None" = None,
+    ):
         """
         Args:
             server_url: AgentENV server, e.g. "http://127.0.0.1:8000".
@@ -130,8 +136,9 @@ class MicroVMPool:
 
     # --- Host files ---
 
-    async def upload_file(self, sandbox: Sandbox, source, destination: str,
-                          timeout: float | None = None) -> None:
+    async def upload_file(
+        self, sandbox: Sandbox, source, destination: str, timeout: float | None = None
+    ) -> None:
         """Copy a host file into the sandbox, bypassing the runtime.
 
         The tool surface cannot carry this: `shell` takes a command and
@@ -139,35 +146,40 @@ class MicroVMPool:
         multi-megabyte. The backend's file service takes the bytes directly.
         """
         from pathlib import Path
+
         source = Path(source)
         sid = sandbox.require_id()
-        headers = {self.SANDBOX_ID_HEADER: sid,
-                   self.TARGET_PORT_HEADER: self.ENVD_PORT}
+        headers = {self.SANDBOX_ID_HEADER: sid, self.TARGET_PORT_HEADER: self.ENVD_PORT}
         with open(source, "rb") as handle:
             resp = await self._client.post(
-                f"{self.server_url}/files", params={"path": destination},
+                f"{self.server_url}/files",
+                params={"path": destination},
                 headers=headers,
-                files={"file": (source.name, handle,
-                                "application/octet-stream")},
+                files={"file": (source.name, handle, "application/octet-stream")},
                 # Not the client's default: these are megabytes over a
                 # proxy, and the client is tuned for short control calls.
-                timeout=timeout or 300.0)
+                timeout=timeout or 300.0,
+            )
         resp.raise_for_status()
 
-    async def download_file(self, sandbox: Sandbox, source: str, destination,
-                            timeout: float | None = None) -> None:
+    async def download_file(
+        self, sandbox: Sandbox, source: str, destination, timeout: float | None = None
+    ) -> None:
         """Stream a guest file to an atomic host destination, outside the runtime."""
         from pathlib import Path
         import tempfile
 
         destination = Path(destination)
-        headers = {self.SANDBOX_ID_HEADER: sandbox.require_id(),
-                   self.TARGET_PORT_HEADER: self.ENVD_PORT}
+        headers = {self.SANDBOX_ID_HEADER: sandbox.require_id(), self.TARGET_PORT_HEADER: self.ENVD_PORT}
         temporary = None
         try:
             async with self._client.stream(
-                    "GET", f"{self.server_url}/files", params={"path": source},
-                    headers=headers, timeout=timeout or 120.0) as response:
+                "GET",
+                f"{self.server_url}/files",
+                params={"path": source},
+                headers=headers,
+                timeout=timeout or 120.0,
+            ) as response:
                 response.raise_for_status()
                 with tempfile.NamedTemporaryFile(dir=destination.parent, delete=False) as handle:
                     temporary = Path(handle.name)
@@ -184,8 +196,7 @@ class MicroVMPool:
         """Sandboxes this pool currently holds."""
         return list(self._sandboxes.values())
 
-    async def spawn(self, image: str, env: dict[str, str] | None = None,
-                    agent_id: str = "") -> Sandbox:
+    async def spawn(self, image: str, env: dict[str, str] | None = None, agent_id: str = "") -> Sandbox:
         """Start a microVM from a template or snapshot and attach to its runtime.
 
         ``image`` names a template whose image already runs sprout-runtime, or a
@@ -221,8 +232,9 @@ class MicroVMPool:
         resp.raise_for_status()
         return self.attach(_sandbox_id(resp.json()), agent_id)
 
-    async def spawn_from_image(self, image: str, agent_id: str = "",
-                               resources: dict | None = None) -> Sandbox:
+    async def spawn_from_image(
+        self, image: str, agent_id: str = "", resources: dict | None = None
+    ) -> Sandbox:
         """Cold-start a microVM from an OCI image reference.
 
         :meth:`spawn` starts from a snapshot or template, which is what a
@@ -251,8 +263,7 @@ class MicroVMPool:
                 payload["diskSizeMB"] = int(resources["disk_size_mb"])
         if self.allow_internet is not None:
             payload["allowInternetAccess"] = self.allow_internet
-        resp = await self._client.post(f"{self.server_url}/sandboxes-cold",
-                                       json=payload)
+        resp = await self._client.post(f"{self.server_url}/sandboxes-cold", json=payload)
         resp.raise_for_status()
         return self.attach(_sandbox_id(resp.json()), agent_id)
 
@@ -294,8 +305,9 @@ class MicroVMPool:
 
     # --- Snapshots ---
 
-    async def snapshot(self, sandbox: Sandbox, *, name: str | None = None,
-                       disk_only: bool = False) -> Snapshot:
+    async def snapshot(
+        self, sandbox: Sandbox, *, name: str | None = None, disk_only: bool = False
+    ) -> Snapshot:
         """Publish the sandbox's current state; the sandbox keeps running.
 
         This is the checkpoint primitive a rollout uses per step, and
@@ -313,13 +325,11 @@ class MicroVMPool:
             payload["name"] = name
         if disk_only:
             payload["diskOnly"] = True
-        resp = await self._client.post(
-            f"{self.server_url}/sandboxes/{sid}/snapshots", json=payload)
+        resp = await self._client.post(f"{self.server_url}/sandboxes/{sid}/snapshots", json=payload)
         resp.raise_for_status()
         return Snapshot.from_api(resp.json(), disk_only=disk_only)
 
-    async def squash(self, snapshot: Snapshot | str, *,
-                     name: str | None = None) -> Snapshot:
+    async def squash(self, snapshot: Snapshot | str, *, name: str | None = None) -> Snapshot:
         """Flatten a snapshot's chain into an equivalent one-layer snapshot.
 
         A sandbox started from a snapshot inherits its layers as a prefix it
@@ -333,8 +343,7 @@ class MicroVMPool:
         payload: dict = {}
         if name:
             payload["name"] = name
-        resp = await self._client.post(
-            f"{self.server_url}/snapshots/{snapshot_id}/squash", json=payload)
+        resp = await self._client.post(f"{self.server_url}/snapshots/{snapshot_id}/squash", json=payload)
         resp.raise_for_status()
         return Snapshot.from_api(resp.json(), disk_only=disk_only)
 
@@ -346,12 +355,16 @@ class MicroVMPool:
         A handle's HTTP client binds to the first event loop that uses it, so
         whoever calls from another loop takes its own handle from here.
         """
-        sb = Sandbox(backend=GatewayBackend(
-            self.server_url, sandbox_id,
-            sandbox_id_header=self.SANDBOX_ID_HEADER,
-            target_port=self.runtime_port,
-            target_port_header=self.TARGET_PORT_HEADER,
-        ), agent_id=agent_id)
+        sb = Sandbox(
+            backend=GatewayBackend(
+                self.server_url,
+                sandbox_id,
+                sandbox_id_header=self.SANDBOX_ID_HEADER,
+                target_port=self.runtime_port,
+                target_port_header=self.TARGET_PORT_HEADER,
+            ),
+            agent_id=agent_id,
+        )
         sb._container_id = sandbox_id
         return sb
 

@@ -40,7 +40,7 @@ class TaskSpec:
 
 @dataclass
 class SlotResult:
-    status: str                   # completed | error | timeout | killed
+    status: str  # completed | error | timeout | killed
     final_text: str = ""
     usage: Dict[str, object] = field(default_factory=dict)
     native_session_id: Optional[str] = None

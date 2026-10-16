@@ -22,8 +22,9 @@ FORMATS = {FORMAT, "ash-mini-v1"}  # the second: histories written before the re
 
 
 def read_entries(data: bytes) -> list[dict]:
-    return [json.loads(line) for line in data.splitlines(keepends=True)
-            if line.endswith(b"\n") and line.strip()]
+    return [
+        json.loads(line) for line in data.splitlines(keepends=True) if line.endswith(b"\n") and line.strip()
+    ]
 
 
 def training_messages(entries: list[dict]) -> list[dict]:
@@ -34,17 +35,24 @@ def training_messages(entries: list[dict]) -> list[dict]:
         native = entry["message"]
         if native.get("role") == "exit":
             continue
-        message = {key: deepcopy(native[key]) for key in (
-            "role", "content", "tool_calls", "tool_call_id", "reasoning_content")
-            if native.get(key) is not None}
+        message = {
+            key: deepcopy(native[key])
+            for key in ("role", "content", "tool_calls", "tool_call_id", "reasoning_content")
+            if native.get(key) is not None
+        }
         message.setdefault("content", "")
         if not isinstance(message["content"], str):
             raise ValueError("mini training requires text content")
         if message.get("tool_calls"):
             message["tool_calls"] = [
-                {"id": call["id"], "type": call["type"],
-                 "function": {"name": call["function"]["name"],
-                              "arguments": call["function"]["arguments"]}}
+                {
+                    "id": call["id"],
+                    "type": call["type"],
+                    "function": {
+                        "name": call["function"]["name"],
+                        "arguments": call["function"]["arguments"],
+                    },
+                }
                 for call in message["tool_calls"]
             ]
         messages.append(message)
@@ -55,7 +63,7 @@ def load_prefix(reference: dict) -> list[dict]:
     path = Path(reference["path"])
     with path.open("rb") as stream:
         data = stream.read(reference.get("byte_length", -1))
-    if (not data.endswith(b"\n") or hashlib.sha256(data).hexdigest() != reference["sha256"]):
+    if not data.endswith(b"\n") or hashlib.sha256(data).hexdigest() != reference["sha256"]:
         raise ValueError("mini native prefix checksum changed")
     entries = read_entries(data)
     if not entries or entries[-1].get("type") != "mini.turn":
@@ -71,8 +79,12 @@ class History:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.stream = self.path.open("x", encoding="utf-8")
-        metadata = {"type": "mini.session", "format": FORMAT,
-                    "mini_version": "2.4.6", "session_id": session_id}
+        metadata = {
+            "type": "mini.session",
+            "format": FORMAT,
+            "mini_version": "2.4.6",
+            "session_id": session_id,
+        }
         if workspace is not None:
             metadata["workspace"] = deepcopy(workspace)
         self.append(metadata)
@@ -99,8 +111,13 @@ TURN_KEYS = frozenset({"role", "content", "tool_calls"})
 REASONING_TURN_KEYS = TURN_KEYS | {"reasoning_content"}
 
 
-def validate_assistant_turn(message: dict, *, history: Sequence[dict] = (),
-                            tools: list[dict] | None = None, allow_reasoning: bool = False) -> dict:
+def validate_assistant_turn(
+    message: dict,
+    *,
+    history: Sequence[dict] = (),
+    tools: list[dict] | None = None,
+    allow_reasoning: bool = False,
+) -> dict:
     """Return an owned copy; observations and provider thinking are never supplied.
 
     ``allow_reasoning`` admits the canonical rendering as well: the text as
@@ -113,16 +130,28 @@ def validate_assistant_turn(message: dict, *, history: Sequence[dict] = (),
         tools = validate_mini_tools(tools)
     keys = set(message) if isinstance(message, dict) else None
     if allow_reasoning and keys == REASONING_TURN_KEYS:
-        if message["role"] != "assistant" or not isinstance(message["content"], str) or "\n" in message["content"]:
-            raise ValueError("assistant_turn with reasoning_content requires assistant role "
-                             "and content of at most one line")
+        if (
+            message["role"] != "assistant"
+            or not isinstance(message["content"], str)
+            or "\n" in message["content"]
+        ):
+            raise ValueError(
+                "assistant_turn with reasoning_content requires assistant role "
+                "and content of at most one line"
+            )
         reasoning = message["reasoning_content"]
         if not isinstance(reasoning, str) or not reasoning.strip():
             raise ValueError("assistant_turn reasoning_content must be non-empty text")
     elif keys != TURN_KEYS:
-        raise ValueError("assistant_turn requires exactly role, content and tool_calls"
-                         + (", or those and reasoning_content" if allow_reasoning else ""))
-    elif message["role"] != "assistant" or not isinstance(message["content"], str) or not message["content"].strip():
+        raise ValueError(
+            "assistant_turn requires exactly role, content and tool_calls"
+            + (", or those and reasoning_content" if allow_reasoning else "")
+        )
+    elif (
+        message["role"] != "assistant"
+        or not isinstance(message["content"], str)
+        or not message["content"].strip()
+    ):
         raise ValueError("assistant_turn requires assistant role and non-empty ordinary content")
     calls = message["tool_calls"]
     if not isinstance(calls, list) or not calls:
@@ -136,9 +165,12 @@ def validate_assistant_turn(message: dict, *, history: Sequence[dict] = (),
             raise ValueError("assistant_turn tool call ids must be non-empty and unique across history")
         used.add(identifier)
         function = call["function"]
-        if (call["type"] != "function" or not isinstance(function, dict)
-                or set(function) != {"name", "arguments"}
-                or not isinstance(function["arguments"], str)):
+        if (
+            call["type"] != "function"
+            or not isinstance(function, dict)
+            or set(function) != {"name", "arguments"}
+            or not isinstance(function["arguments"], str)
+        ):
             raise ValueError("assistant_turn supports only bash with JSON-string arguments")
         if function["name"] != "bash":
             raise ValueError(
@@ -153,8 +185,12 @@ def validate_assistant_turn(message: dict, *, history: Sequence[dict] = (),
             raise ValueError(
                 f"assistant_turn.tool_calls[{index}] ({identifier}) bash arguments are not valid JSON: {error}"
             ) from error
-        if (not isinstance(arguments, dict) or set(arguments) != {"command"}
-                or not isinstance(arguments["command"], str) or not arguments["command"].strip()):
+        if (
+            not isinstance(arguments, dict)
+            or set(arguments) != {"command"}
+            or not isinstance(arguments["command"], str)
+            or not arguments["command"].strip()
+        ):
             raise ValueError(
                 f"assistant_turn.tool_calls[{index}] ({identifier}) bash arguments require exactly one non-empty string command"
             )
@@ -164,7 +200,9 @@ def validate_assistant_turn(message: dict, *, history: Sequence[dict] = (),
             try:
                 Draft202012Validator(tools[0]["function"]["parameters"]).validate(arguments)
             except ValidationError as error:
-                raise ValueError(f"assistant_turn does not match the recorded actor tool schema: {error.message}") from error
+                raise ValueError(
+                    f"assistant_turn does not match the recorded actor tool schema: {error.message}"
+                ) from error
     return deepcopy(message)
 
 
@@ -197,9 +235,15 @@ def valid_prefix(reference: dict) -> bool:
         return False
 
 
-def index_native(journal: Path, transcript: Path, slot: str, session_id: str, *,
-                 events: list[dict] | None = None,
-                 inherited_native: dict | None = None) -> list[NativePoint]:
+def index_native(
+    journal: Path,
+    transcript: Path,
+    slot: str,
+    session_id: str,
+    *,
+    events: list[dict] | None = None,
+    inherited_native: dict | None = None,
+) -> list[NativePoint]:
     """Recovery points of one attempt: closed turns with an exact snapshot."""
     if slot != "mini-swe-agent":
         raise ValueError("Unsupported native history slot")
@@ -207,8 +251,7 @@ def index_native(journal: Path, transcript: Path, slot: str, session_id: str, *,
         # Split as bytes, like every journal reader: str.splitlines() also
         # breaks at U+0085 and U+2028, which a tool's output keeps verbatim.
         events = journal_events(journal)
-    return index_mini(journal, transcript, session_id, events=list(events),
-                      inherited_native=inherited_native)
+    return index_mini(journal, transcript, session_id, events=list(events), inherited_native=inherited_native)
 
 
 def materialize(reference: dict, cwd: Path, destination: Path, native_home: Path) -> dict:
@@ -221,17 +264,33 @@ def materialize(reference: dict, cwd: Path, destination: Path, native_home: Path
     return {"native_prefix": {"path": str(path.resolve()), "sha256": reference["sha256"]}}
 
 
-def index_mini(journal: Path, transcript: Path, session_id: str, *,
-               events: list[dict], inherited_native: dict | None = None) -> list:
+def index_mini(
+    journal: Path,
+    transcript: Path,
+    session_id: str,
+    *,
+    events: list[dict],
+    inherited_native: dict | None = None,
+) -> list:
     local_calls = [e["call_id"] for e in events if e.get("type") == "tool.started"]
     positions = {call: i for i, call in enumerate(local_calls, 1)}
     admitted = set(local_calls)
-    rejection_events = {e["call_id"]: e for e in events
-                        if e.get("type") == "tool.rejected" and e.get("source") == "schema_validation"
-                        and e.get("executed") is False and e.get("call_id")}
-    rejected_turns = {e["turn_id"]: e for e in events
-                      if e.get("type") == "mini.turn.rejected" and e.get("source") == "schema_validation"
-                      and e.get("executed") is False and e.get("turn_id")}
+    rejection_events = {
+        e["call_id"]: e
+        for e in events
+        if e.get("type") == "tool.rejected"
+        and e.get("source") == "schema_validation"
+        and e.get("executed") is False
+        and e.get("call_id")
+    }
+    rejected_turns = {
+        e["turn_id"]: e
+        for e in events
+        if e.get("type") == "mini.turn.rejected"
+        and e.get("source") == "schema_validation"
+        and e.get("executed") is False
+        and e.get("turn_id")
+    }
     admitted.update(rejection_events)
     inherited_rejections = {}
     if inherited_native:
@@ -269,7 +328,9 @@ def index_mini(journal: Path, transcript: Path, session_id: str, *,
                 call_id = message.get("tool_call_id")
                 if call_id not in pending:
                     break
-                if call_id in rejection_events and message.get("content") != rejection_events[call_id].get("feedback"):
+                if call_id in rejection_events and message.get("content") != rejection_events[call_id].get(
+                    "feedback"
+                ):
                     break
                 pending.remove(call_id)
                 seen.add(call_id)
@@ -277,9 +338,11 @@ def index_mini(journal: Path, transcript: Path, session_id: str, *,
             if pending or row.get("call_ids") != group:
                 break
             message_step += 1
-            is_rejection = (bool(set(group) & set(rejection_events))
-                            or row.get("turn_id") in rejected_turns
-                            or row.get("turn_id") in inherited_rejections)
+            is_rejection = (
+                bool(set(group) & set(rejection_events))
+                or row.get("turn_id") in rejected_turns
+                or row.get("turn_id") in inherited_rejections
+            )
             if is_rejection or row.get("rejected") is True:
                 if row.get("rejected") is not True:
                     break
@@ -289,8 +352,9 @@ def index_mini(journal: Path, transcript: Path, session_id: str, *,
                 if tid in inherited_rejections:
                     if inherited_rejections[tid] != group:
                         break
-                elif (rejected_turns.get(tid, {}).get("call_ids") != group
-                      or any(rejection_events.get(call, {}).get("turn_id") != tid for call in group)):
+                elif rejected_turns.get(tid, {}).get("call_ids") != group or any(
+                    rejection_events.get(call, {}).get("turn_id") != tid for call in group
+                ):
                     break
                 group = []
                 continue
@@ -299,15 +363,29 @@ def index_mini(journal: Path, transcript: Path, session_id: str, *,
                 depth = max(positions[call] for call in local)
                 turn = closed.get(row.get("turn_id"), {})
                 point = checkpoints.get(depth)
-                if (turn.get("call_ids") != group or turn.get("step") != depth
-                        or not set(local_calls[:depth]) <= seen or set(local_calls[depth:]) & seen):
+                if (
+                    turn.get("call_ids") != group
+                    or turn.get("step") != depth
+                    or not set(local_calls[:depth]) <= seen
+                    or set(local_calls[depth:]) & seen
+                ):
                     break
                 if point and point.turn_id == row["turn_id"] and point.session_ckpt == session_id:
-                    points.append(NativePoint(message_step, depth, point.snapshot_id, {
-                        "slot": "mini-swe-agent", "session_id": session_id,
-                        "path": str(Path(transcript).resolve()), "byte_length": offset,
-                        "sha256": checksum.hexdigest(), "cut": row["turn_id"],
-                    }))
+                    points.append(
+                        NativePoint(
+                            message_step,
+                            depth,
+                            point.snapshot_id,
+                            {
+                                "slot": "mini-swe-agent",
+                                "session_id": session_id,
+                                "path": str(Path(transcript).resolve()),
+                                "byte_length": offset,
+                                "sha256": checksum.hexdigest(),
+                                "cut": row["turn_id"],
+                            },
+                        )
+                    )
             group = []
         else:
             raise ValueError("Unknown mini native record")
@@ -316,21 +394,31 @@ def index_mini(journal: Path, transcript: Path, session_id: str, *,
 
 def reference_at(journal: Path, step: int, session_id: str) -> dict | None:
     events = journal_events(Path(journal))
-    reference = next((e for e in reversed(events) if e.get("type") == "session.ref"
-                      and e.get("native_session_id") == session_id and e.get("transcript_path")), None)
+    reference = next(
+        (
+            e
+            for e in reversed(events)
+            if e.get("type") == "session.ref"
+            and e.get("native_session_id") == session_id
+            and e.get("transcript_path")
+        ),
+        None,
+    )
     if reference is None:
         return None
-    inherited = next((e.get("inherited_native") for e in events
-                      if e.get("type") == "mini.restored"), None)
-    points = index_mini(journal, reference["transcript_path"], session_id,
-                        events=events, inherited_native=inherited)
+    inherited = next((e.get("inherited_native") for e in events if e.get("type") == "mini.restored"), None)
+    points = index_mini(
+        journal, reference["transcript_path"], session_id, events=events, inherited_native=inherited
+    )
     return next((point.native for point in points if point.tool_depth == step), None)
 
 
 def conversation_restore(journal_path, step: int, session_ref: str) -> str | None:
     """The exact native cut at ``step``, or None when there is none."""
-    if not any(row.get("type") == "run.started" and row.get("slot") == "mini-swe-agent"
-               for row in read_journal(journal_path)):
+    if not any(
+        row.get("type") == "run.started" and row.get("slot") == "mini-swe-agent"
+        for row in read_journal(journal_path)
+    ):
         return None
     reference = reference_at(journal_path, step, session_ref)
     return reference["cut"] if reference else None
@@ -340,8 +428,7 @@ def available_branch_points(journal_path):
     """The same candidates, indexing each native session once per inspection."""
     events = read_journal(journal_path)
     points = branch_checkpoints(journal_path, events=events)
-    if not any(row.get("type") == "run.started" and row.get("slot") == "mini-swe-agent"
-               for row in events):
+    if not any(row.get("type") == "run.started" and row.get("slot") == "mini-swe-agent" for row in events):
         return {}
     # Match reference_at's last reference for each session. A local index avoids
     # reparsing the entire transcript once for every checkpoint, without keeping
@@ -351,18 +438,19 @@ def available_branch_points(journal_path):
         for row in events
         if row.get("type") == "session.ref" and row.get("transcript_path")
     }
-    inherited = next((row.get("inherited_native") for row in events
-                      if row.get("type") == "mini.restored"), None)
+    inherited = next(
+        (row.get("inherited_native") for row in events if row.get("type") == "mini.restored"), None
+    )
     cuts = {}
     for session_id in dict.fromkeys(point.session_ckpt for point in points.values()):
         reference = references.get(session_id)
         if reference is None:
             continue
-        indexed = index_mini(journal_path, reference["transcript_path"], session_id,
-                             events=events, inherited_native=inherited)
+        indexed = index_mini(
+            journal_path, reference["transcript_path"], session_id, events=events, inherited_native=inherited
+        )
         cuts[session_id] = {point.tool_depth: point.native["cut"] for point in indexed}
-    return {step: point for step, point in points.items()
-            if cuts.get(point.session_ckpt, {}).get(step)}
+    return {step: point for step, point in points.items() if cuts.get(point.session_ckpt, {}).get(step)}
 
 
 def actor_tools_at(journal, step: int) -> list[dict]:

@@ -47,6 +47,7 @@ class ShellContext(ToolInterceptor):
     def before(self, context):
         arguments = dict(context.args)
         arguments["command"] = shell_command(
-            arguments["command"], arguments.get("working_dir") or self.cwd, self.env, self.user)
+            arguments["command"], arguments.get("working_dir") or self.cwd, self.env, self.user
+        )
         arguments["working_dir"] = "/"
         return Rewrite(arguments)

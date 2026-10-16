@@ -16,8 +16,9 @@ LOG = logging.getLogger(__name__)
 DEFAULT_PORT = 11001
 
 
-def create_app(driver: Driver, token: str | None, *, poll_interval_s: float = 1,
-               background: bool = True, miles=None) -> FastAPI:
+def create_app(
+    driver: Driver, token: str | None, *, poll_interval_s: float = 1, background: bool = True, miles=None
+) -> FastAPI:
     if token == "":
         raise ValueError("Use a nonempty token or None for trusted local access")
     if poll_interval_s <= 0:
@@ -47,14 +48,17 @@ def create_app(driver: Driver, token: str | None, *, poll_interval_s: float = 1,
                 if thread:
                     thread.join(timeout=45)
                     if thread.is_alive():
-                        raise RuntimeError("Driver polling did not stop; submission intents remain in the ledger")
+                        raise RuntimeError(
+                            "Driver polling did not stop; submission intents remain in the ledger"
+                        )
 
     def authenticate(authorization: str = Header(default="")):
         if token is not None and not secrets.compare_digest(authorization, "Bearer " + token):
             raise HTTPException(401, "Invalid driver token")
 
-    app = FastAPI(title="Sprout RL driver", version="0.2.0",
-                  dependencies=[Depends(authenticate)], lifespan=lifespan)
+    app = FastAPI(
+        title="Sprout RL driver", version="0.2.0", dependencies=[Depends(authenticate)], lifespan=lifespan
+    )
 
     @app.exception_handler(Conflict)
     async def conflict(_request, error):
@@ -63,16 +67,23 @@ def create_app(driver: Driver, token: str | None, *, poll_interval_s: float = 1,
     @app.exception_handler(ValueError)
     @app.exception_handler(TypeError)
     async def invalid(_request, error):
-        return JSONResponse(status_code=400 if _request.url.path.startswith("/rollout-") else 422,
-                            content={"detail": str(error)})
+        return JSONResponse(
+            status_code=400 if _request.url.path.startswith("/rollout-") else 422,
+            content={"detail": str(error)},
+        )
 
     @app.exception_handler(KeyError)
     async def missing(_request, error):
-        return JSONResponse(status_code=404, content={"detail": "Group, sample or execution reference not found"})
+        return JSONResponse(
+            status_code=404, content={"detail": "Group, sample or execution reference not found"}
+        )
 
     @app.exception_handler(httpx.HTTPError)
     async def upstream(_request, error):
-        return JSONResponse(status_code=502, content={"detail": "Run Store query failed; retry without resubmitting execution"})
+        return JSONResponse(
+            status_code=502,
+            content={"detail": "Run Store query failed; retry without resubmitting execution"},
+        )
 
     @app.get("/health")
     def health():
@@ -115,7 +126,9 @@ def create_app(driver: Driver, token: str | None, *, poll_interval_s: float = 1,
     @app.delete("/execution-groups/{group_id}")
     def release(group_id: str):
         acknowledgement = driver.release(group_id)
-        return JSONResponse(acknowledgement, status_code=202 if acknowledgement["status"] == "cancelling" else 200)
+        return JSONResponse(
+            acknowledgement, status_code=202 if acknowledgement["status"] == "cancelling" else 200
+        )
 
     @app.post("/execution-groups/{group_id}/samples/{sample_id}/reconcile-submission")
     def reconcile_submission(group_id: str, sample_id: str, body: dict):
@@ -123,7 +136,8 @@ def create_app(driver: Driver, token: str | None, *, poll_interval_s: float = 1,
             raise ValueError("Reconciliation requires phase and job_id")
         from sprout.rl_driver.specs import identifier
 
-        return driver.reconcile_submission(group_id, sample_id, body["phase"],
-                                            identifier(body["job_id"], "job_id"))
+        return driver.reconcile_submission(
+            group_id, sample_id, body["phase"], identifier(body["job_id"], "job_id")
+        )
 
     return app

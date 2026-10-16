@@ -39,8 +39,9 @@ def _load(font_path: Path) -> tuple[hb.Font, TTFont]:
     return hb.Font(hb.Face(font_path.read_bytes())), TTFont(str(font_path))
 
 
-def outline(text: str, font_path: Path, size: float, x: float, baseline: float,
-            tracking_em: float = 0.0) -> tuple[str, float]:
+def outline(
+    text: str, font_path: Path, size: float, x: float, baseline: float, tracking_em: float = 0.0
+) -> tuple[str, float]:
     """Return (svg path data, advance width) for ``text`` set at ``size`` px."""
     font, tt = _load(font_path)
     buf = hb.Buffer()
@@ -58,8 +59,7 @@ def outline(text: str, font_path: Path, size: float, x: float, baseline: float,
     for info, pos in zip(buf.glyph_infos, buf.glyph_positions):
         gx = cursor + pos.x_offset * scale
         gy = baseline - pos.y_offset * scale
-        glyph_set[order[info.codepoint]].draw(
-            TransformPen(pen, (scale, 0, 0, -scale, gx, gy)))
+        glyph_set[order[info.codepoint]].draw(TransformPen(pen, (scale, 0, 0, -scale, gx, gy)))
         cursor += pos.x_advance * scale + tracking
     return pen.getCommands(), cursor - x - tracking
 
@@ -75,8 +75,9 @@ class Glyphs:
     def __init__(self) -> None:
         self._defs: dict[str, str] = {}
 
-    def text(self, s: str, font_path: Path, size: float, x: float, y: float, fill: str,
-             anchor: str = "start") -> tuple[str, float]:
+    def text(
+        self, s: str, font_path: Path, size: float, x: float, y: float, fill: str, anchor: str = "start"
+    ) -> tuple[str, float]:
         """Place ``s`` with its baseline at ``y``; returns (svg, advance width)."""
         font, tt = _load(font_path)
         buf = hb.Buffer()
@@ -103,10 +104,16 @@ class Glyphs:
             cursor += pos.x_advance
         w = cursor * scale
         dx = {"start": 0.0, "middle": -w / 2, "end": -w}[anchor]
-        svg = (f'<g fill="{fill}" transform="translate({x + dx:.1f} {y:.1f}) scale({scale:.5f} {-scale:.5f})">'
-               + "".join(uses) + "</g>")
+        svg = (
+            f'<g fill="{fill}" transform="translate({x + dx:.1f} {y:.1f}) scale({scale:.5f} {-scale:.5f})">'
+            + "".join(uses)
+            + "</g>"
+        )
         return svg, w
 
     def defs(self) -> str:
-        return "<defs>" + "".join(f'<path id="{gid}" d="{d}"/>' for gid, d in self._defs.items()
-                                  if d) + "</defs>"
+        return (
+            "<defs>"
+            + "".join(f'<path id="{gid}" d="{d}"/>' for gid, d in self._defs.items() if d)
+            + "</defs>"
+        )

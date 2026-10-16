@@ -18,8 +18,14 @@ from sprout.harness_tools.pipeline import Continue, Reject, ToolInterceptor
 def endpoint(value: str) -> str:
     """The API prefix callers append ``/v1/chat/completions`` to: a trailing ``/v1`` is dropped."""
     parts = urlsplit(value)
-    if (parts.scheme not in {"http", "https"} or not parts.hostname or parts.username
-            or parts.password or parts.query or parts.fragment):
+    if (
+        parts.scheme not in {"http", "https"}
+        or not parts.hostname
+        or parts.username
+        or parts.password
+        or parts.query
+        or parts.fragment
+    ):
         raise ValueError("Rollout endpoint must be HTTP(S), without credentials/query/fragment")
     value = value.rstrip("/")
     return value[:-3] if value.endswith("/v1") else value
@@ -60,16 +66,20 @@ class RolloutControls(ToolInterceptor):
         remaining = self.deadline - time.time()
         if remaining <= 0:
             raise ValueError("Rollout group wall-time budget expired before execution")
-        self.timer = threading.Timer(remaining, lambda: self.control.request_stop(
-            "rollout wall-time budget exhausted", stop_reason="timeout"))
+        self.timer = threading.Timer(
+            remaining,
+            lambda: self.control.request_stop("rollout wall-time budget exhausted", stop_reason="timeout"),
+        )
         self.timer.daemon = True
         self.timer.start()
 
     def _stop_reason(self, limited: bool):
         """(reason, stop_reason) if this call may not proceed, else None."""
         if self.control.reason or time.time() >= self.deadline:
-            return ("rollout wall-time budget exhausted or execution stopped",
-                    None if self.control.reason else "timeout")
+            return (
+                "rollout wall-time budget exhausted or execution stopped",
+                None if self.control.reason else "timeout",
+            )
         if limited and self.model_calls >= self.max_turns:
             return "rollout turn budget exhausted", "max_turns_reached"
         return None
@@ -106,22 +116,40 @@ class RolloutControls(ToolInterceptor):
 
 
 def validate(value):
-    allowed = {"temperature", "top_p", "top_k", "max_tokens", "max_new_tokens",
-               "max_output_tokens", "stop", "reasoning_effort"}
+    allowed = {
+        "temperature",
+        "top_p",
+        "top_k",
+        "max_tokens",
+        "max_new_tokens",
+        "max_output_tokens",
+        "stop",
+        "reasoning_effort",
+    }
     if not isinstance(value, dict) or set(value) - allowed:
         raise ValueError("Unknown message sampling controls")
     for key in ("temperature", "top_p"):
         if key in value:
             number = value[key]
-            if (type(number) not in (int, float) or not math.isfinite(number)
-                    or number < 0 or (key == "top_p" and not 0 < number <= 1)):
+            if (
+                type(number) not in (int, float)
+                or not math.isfinite(number)
+                or number < 0
+                or (key == "top_p" and not 0 < number <= 1)
+            ):
                 raise ValueError(f"Invalid {key}")
     if "top_k" in value and (type(value["top_k"]) is not int or value["top_k"] < -1):
         raise ValueError("top_k must be -1 or a nonnegative integer")
-    if ("reasoning_effort" in value
-            and value["reasoning_effort"] not in {
-                "none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"
-            }):
+    if "reasoning_effort" in value and value["reasoning_effort"] not in {
+        "none",
+        "minimal",
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max",
+        "ultra",
+    }:
         raise ValueError("Invalid reasoning_effort")
     limits = [value[k] for k in ("max_tokens", "max_new_tokens", "max_output_tokens") if k in value]
     if limits and any(type(n) is not int or n <= 0 or n != limits[0] for n in limits):

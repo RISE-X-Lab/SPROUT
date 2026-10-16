@@ -30,8 +30,9 @@ DEFAULT_PROMPTS_PATH = resource("methods/prompts.yaml")
 #: braces are literal (shepherd.system shows the JSON object it wants back), so
 #: it is not parsed as a template.
 REQUIRED_PLACEHOLDERS: dict[str, Optional[frozenset[str]]] = {
-    "analyst.case": frozenset({"problem", "verdict", "transcript", "checkpoint_steps", "lo", "hi",
-                               "candidate_limit"}),
+    "analyst.case": frozenset(
+        {"problem", "verdict", "transcript", "checkpoint_steps", "lo", "hi", "candidate_limit"}
+    ),
     "analyst.feedback": frozenset({"error"}),
     "reviewer.assistant_turn": frozenset({"problem", "reports", "count_rule"}),
     "reviewer.assistant_format_hint": frozenset(),
@@ -82,8 +83,11 @@ def _lookup(data: dict, key: str, path: Path) -> str:
 def _leaves(node, prefix: str = "") -> list[str]:
     if not isinstance(node, dict):
         return [prefix]
-    return [leaf for name, child in node.items()
-            for leaf in _leaves(child, f"{prefix}.{name}" if prefix else str(name))]
+    return [
+        leaf
+        for name, child in node.items()
+        for leaf in _leaves(child, f"{prefix}.{name}" if prefix else str(name))
+    ]
 
 
 def load_prompts(path: Path | None = None) -> Prompts:
@@ -106,8 +110,9 @@ def load_prompts(path: Path | None = None) -> Prompts:
         raise ValueError(f"{path}: the prompts file must be a mapping, not {type(data).__name__}")
     unknown = sorted(set(_leaves(data)) - set(REQUIRED_PLACEHOLDERS))
     if unknown:
-        raise ValueError(f"{path}: unknown prompt keys {unknown}; the known ones are "
-                         f"{sorted(REQUIRED_PLACEHOLDERS)}")
+        raise ValueError(
+            f"{path}: unknown prompt keys {unknown}; the known ones are {sorted(REQUIRED_PLACEHOLDERS)}"
+        )
     values = {}
     for key, required in REQUIRED_PLACEHOLDERS.items():
         text = _lookup(data, key, path)
@@ -119,11 +124,14 @@ def load_prompts(path: Path | None = None) -> Prompts:
                 # string") names neither the file nor the key; a stray single
                 # brace is the likeliest slip in a file whose literal braces
                 # are doubled.
-                raise ValueError(f"{path}: prompt {key} is not a valid str.format template: {error}") from error
+                raise ValueError(
+                    f"{path}: prompt {key} is not a valid str.format template: {error}"
+                ) from error
             if found != required:
                 raise ValueError(
                     f"{path}: prompt {key} has the wrong placeholders: missing {sorted(required - found)}, "
-                    f"unexpected {sorted(found - required)}; it needs exactly {sorted(required)}")
+                    f"unexpected {sorted(found - required)}; it needs exactly {sorted(required)}"
+                )
         values[key.replace(".", "_")] = text
     return Prompts(**values, path=path, sha256=hashlib.sha256(raw).hexdigest())
 

@@ -40,14 +40,14 @@ from sprout.harness_core.journal import utc_now
 
 DEFAULT_LEDGER = "runs/resources.jsonl"
 
-CLAIM = "claim"        # {run_id, kind, id, pid, keep, backend}
-RELEASE = "release"    # {run_id, kind, id}
+CLAIM = "claim"  # {run_id, kind, id, pid, keep, backend}
+RELEASE = "release"  # {run_id, kind, id}
 RUN_DONE = "run_done"  # {run_id}
 
 
 @dataclass
 class Resource:
-    kind: str            # "sandbox"
+    kind: str  # "sandbox"
     id: str
     run_id: str
     pid: Optional[int] = None
@@ -83,12 +83,20 @@ class RunClaim:
         self.run_id = run_id
         self.sandboxes: List[str] = []
 
-    def sandbox(self, sandbox_id: str, *, keep: bool = False,
-                backend: str = "microvm", store: Optional[str] = None) -> str:
+    def sandbox(
+        self, sandbox_id: str, *, keep: bool = False, backend: str = "microvm", store: Optional[str] = None
+    ) -> str:
         self.sandboxes.append(sandbox_id)
-        self._ledger._append(CLAIM, run_id=self.run_id, kind="sandbox",
-                             id=sandbox_id, pid=os.getpid(), keep=keep, backend=backend,
-                             **({"store": store} if store else {}))
+        self._ledger._append(
+            CLAIM,
+            run_id=self.run_id,
+            kind="sandbox",
+            id=sandbox_id,
+            pid=os.getpid(),
+            keep=keep,
+            backend=backend,
+            **({"store": store} if store else {}),
+        )
         return sandbox_id
 
     def released(self, kind: str, resource_id: str) -> None:
@@ -193,6 +201,6 @@ def _pid_alive(pid: Optional[int]) -> bool:
     except ProcessLookupError:
         return False
     except PermissionError:
-        return True   # exists, owned by someone else
+        return True  # exists, owned by someone else
     except (TypeError, ValueError):
         return True

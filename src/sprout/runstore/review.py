@@ -77,7 +77,13 @@ from typing import Any, Callable
 
 from sprout.harness_agents.mini_swe.history import available_branch_points, training_messages
 from sprout.methods.branching import (
-    Attempt, BranchChoice, Grade, analyse, outcome_from_journal, review, selected_prefix,
+    Attempt,
+    BranchChoice,
+    Grade,
+    analyse,
+    outcome_from_journal,
+    review,
+    selected_prefix,
 )
 from sprout.methods.review_transport import RequestStopped, ReviewTransport
 from sprout.methods.leak import hidden_terms_of, leak_terms, visible_text
@@ -112,8 +118,13 @@ def grade_of(record: dict) -> Grade:
         lines.append("test log (tail):\n" + tail)
     if record.get("error_output"):
         lines.append("error output:\n" + str(record["error_output"])[-4000:])
-    return Grade(resolved=record["resolved"], reward=float(record["resolved"]), patch=patch,
-                 detail="\n".join(lines), error=record.get("error"))
+    return Grade(
+        resolved=record["resolved"],
+        reward=float(record["resolved"]),
+        patch=patch,
+        detail="\n".join(lines),
+        error=record.get("error"),
+    )
 
 
 def load_attempt(root: Path, parent: dict) -> Attempt:
@@ -121,8 +132,12 @@ def load_attempt(root: Path, parent: dict) -> Attempt:
     journal = directory / "trajectory.jsonl"
     if not journal.is_file():
         raise ValueError(f"Review parent {parent['name']} has no journal at {journal}")
-    return Attempt(name=parent["name"], outcome=outcome_from_journal(journal, run_id=parent["name"]),
-                   grade=grade_of(parent["grade"]), hint=parent.get("hint") or "")
+    return Attempt(
+        name=parent["name"],
+        outcome=outcome_from_journal(journal, run_id=parent["name"]),
+        grade=grade_of(parent["grade"]),
+        hint=parent.get("hint") or "",
+    )
 
 
 def commands_of(turn: dict) -> tuple:
@@ -187,8 +202,17 @@ class _Stop:
 
 def _analysis(spec: ReviewSpec, transport, attempt: Attempt) -> dict:
     points = available_branch_points(attempt.outcome.journal_path)
-    return analyse(transport, spec.model, spec.problem, attempt, points, spec.points, spec.transcript_tokens,
-                   max_attempts=spec.max_attempts, prompt_chars=spec.prompt_chars)
+    return analyse(
+        transport,
+        spec.model,
+        spec.problem,
+        attempt,
+        points,
+        spec.points,
+        spec.transcript_tokens,
+        max_attempts=spec.max_attempts,
+        prompt_chars=spec.prompt_chars,
+    )
 
 
 @dataclass(frozen=True)
@@ -203,14 +227,28 @@ class LeakFacts:
     hidden: HiddenText | None
 
 
-def _point_review(spec: ReviewSpec, transport, scope: list[Attempt], reports: dict,
-                  plan_path: Path) -> list[tuple[BranchChoice, LeakFacts | None]]:
+def _point_review(
+    spec: ReviewSpec, transport, scope: list[Attempt], reports: dict, plan_path: Path
+) -> list[tuple[BranchChoice, LeakFacts | None]]:
     """Stage 1 over ``scope``: the points chosen, each with what its candidates' leak check reads."""
-    choices = review(transport, spec.model, spec.problem, scope, reports, round_no=spec.round_no,
-                     width=spec.points, plan_path=plan_path, guidance_mode="none", count_mode="adaptive",
-                     reviewer_max_attempts=spec.max_attempts, prompt_chars=spec.prompt_chars)
-    return [(choice, _leak_facts(spec, choice) if spec.guidance == "assistant-turn" else None)
-            for choice in choices]
+    choices = review(
+        transport,
+        spec.model,
+        spec.problem,
+        scope,
+        reports,
+        round_no=spec.round_no,
+        width=spec.points,
+        plan_path=plan_path,
+        guidance_mode="none",
+        count_mode="adaptive",
+        reviewer_max_attempts=spec.max_attempts,
+        prompt_chars=spec.prompt_chars,
+    )
+    return [
+        (choice, _leak_facts(spec, choice) if spec.guidance == "assistant-turn" else None)
+        for choice in choices
+    ]
 
 
 def _leak_facts(spec: ReviewSpec, choice: BranchChoice) -> LeakFacts:
@@ -222,17 +260,34 @@ def _leak_facts(spec: ReviewSpec, choice: BranchChoice) -> LeakFacts:
         # The test patch the grade applied, and the verdict as the analyst read it.
         patch_path = parent["grade"].get("test_patch")
         if patch_path and Path(patch_path).is_file():
-            hidden = HiddenText(Path(patch_path).read_text(errors="replace"),
-                                tuple(parent["grade"].get("fail_to_pass") or ()), choice.base.grade.detail)
+            hidden = HiddenText(
+                Path(patch_path).read_text(errors="replace"),
+                tuple(parent["grade"].get("fail_to_pass") or ()),
+                choice.base.grade.detail,
+            )
     # h_s. Hints are removed as in the training export: no policy is trained on
     # one, so a name that only a hint showed is still hidden.
-    visible = visible_text(clean_messages(training_messages(
-        selected_prefix(choice.base.outcome.journal_path, choice.checkpoint)))) if terms or hidden else ""
+    visible = (
+        visible_text(
+            clean_messages(
+                training_messages(selected_prefix(choice.base.outcome.journal_path, choice.checkpoint))
+            )
+        )
+        if terms or hidden
+        else ""
+    )
     return LeakFacts(terms, visible, hidden)
 
 
-def _candidate(spec: ReviewSpec, transport, choice: BranchChoice, report: dict, plan_path: Path,
-               facts: LeakFacts, judge_factory: Callable[[dict], Any] | None) -> BranchChoice | None:
+def _candidate(
+    spec: ReviewSpec,
+    transport,
+    choice: BranchChoice,
+    report: dict,
+    plan_path: Path,
+    facts: LeakFacts,
+    judge_factory: Callable[[dict], Any] | None,
+) -> BranchChoice | None:
     """Stage 2, one sample: an ``assistant-turn`` review confined to the point; None when it chose nothing.
 
     With ``leak_judge`` configured every turn the reviewer writes is checked
@@ -245,15 +300,35 @@ def _candidate(spec: ReviewSpec, transport, choice: BranchChoice, report: dict, 
         judge = judge_factory(spec.leak_judge)
 
         def turn_check(proposal: BranchChoice) -> dict:
-            return check_turn(proposal.assistant_turn, terms=facts.terms, visible=facts.visible, judge=judge,
-                              task_statement=spec.problem, hidden=facts.hidden)
+            return check_turn(
+                proposal.assistant_turn,
+                terms=facts.terms,
+                visible=facts.visible,
+                judge=judge,
+                task_statement=spec.problem,
+                hidden=facts.hidden,
+            )
+
     try:
-        found = review(transport, spec.model, spec.problem, [choice.base], {choice.base.name: report},
-                       round_no=spec.round_no, width=1, plan_path=plan_path, guidance_mode="assistant-turn",
-                       count_mode="fixed", reviewer_max_attempts=spec.max_attempts, prompt_chars=spec.prompt_chars,
-                       eligible={choice.base.name: {choice.checkpoint.step}}, turn_check=turn_check,
-                       turn_resamples=(spec.leak_judge.get("resamples", LEAK_RESAMPLES)
-                                       if spec.leak_judge is not None else 0))
+        found = review(
+            transport,
+            spec.model,
+            spec.problem,
+            [choice.base],
+            {choice.base.name: report},
+            round_no=spec.round_no,
+            width=1,
+            plan_path=plan_path,
+            guidance_mode="assistant-turn",
+            count_mode="fixed",
+            reviewer_max_attempts=spec.max_attempts,
+            prompt_chars=spec.prompt_chars,
+            eligible={choice.base.name: {choice.checkpoint.step}},
+            turn_check=turn_check,
+            turn_resamples=(
+                spec.leak_judge.get("resamples", LEAK_RESAMPLES) if spec.leak_judge is not None else 0
+            ),
+        )
     finally:
         if judge is not None and hasattr(judge, "close"):
             judge.close()
@@ -277,8 +352,12 @@ def jev_judge(config: dict) -> JevLeakJudge:
     """The Jev judge a review's ``leak_judge`` config names; its key is read on the worker."""
     # The review runs under its own deadline: a judge that cannot answer gives up
     # in about a minute and a half per request, and the turn stays unchecked.
-    return JevLeakJudge(judge_key(config), timeout_s=REVIEW_TIMEOUT_S, max_attempts=REVIEW_ATTEMPTS,
-                        **{name: config[name] for name in ("model", "threshold") if name in config})
+    return JevLeakJudge(
+        judge_key(config),
+        timeout_s=REVIEW_TIMEOUT_S,
+        max_attempts=REVIEW_ATTEMPTS,
+        **{name: config[name] for name in ("model", "threshold") if name in config},
+    )
 
 
 def _merge_candidates(samples: list[BranchChoice | None], facts: LeakFacts, judged: bool) -> list[dict]:
@@ -302,16 +381,25 @@ def _merge_candidates(samples: list[BranchChoice | None], facts: LeakFacts, judg
             if judged:
                 proposals[key]["leak_judge"] = found.turn_check
     for candidate in proposals.values():
-        candidate["leak_terms"] = (None if facts.terms is None
-                                   else leak_terms(candidate["assistant_turn"], facts.terms, facts.visible))
+        candidate["leak_terms"] = (
+            None
+            if facts.terms is None
+            else leak_terms(candidate["assistant_turn"], facts.terms, facts.visible)
+        )
     return list(proposals.values())
 
 
 class _Review:
     """One review job's calls: which can start, what each returned, and the points they make."""
 
-    def __init__(self, spec: ReviewSpec, failed: list[Attempt], directory: Path,
-                 transport_factory: Callable[..., Any], judge_factory: Callable[[dict], Any] | None = None):
+    def __init__(
+        self,
+        spec: ReviewSpec,
+        failed: list[Attempt],
+        directory: Path,
+        transport_factory: Callable[..., Any],
+        judge_factory: Callable[[dict], Any] | None = None,
+    ):
         self.spec, self.failed, self.directory = spec, failed, directory
         self.transport_factory, self.judge_factory = transport_factory, judge_factory
         self.transports: list = []
@@ -367,8 +455,11 @@ class _Review:
         except BaseException as error:
             interrupted = not isinstance(error, Exception)
             for _, stop in running.values():
-                stop("the review was interrupted" if interrupted
-                     else f"the review failed: {type(error).__name__}: {error}")
+                stop(
+                    "the review was interrupted"
+                    if interrupted
+                    else f"the review failed: {type(error).__name__}: {error}"
+                )
             self._note_lost(error, failures)
             if not interrupted:
                 for thread, _ in running.values():
@@ -416,8 +507,10 @@ class _Review:
     @staticmethod
     def _real(failures: list[tuple[Call, BaseException]]) -> list[tuple[Call, BaseException]]:
         """The failures in ``Call`` order, but for calls that failed because the review stopped them."""
-        return sorted((failure for failure in failures if not isinstance(failure[1], RequestStopped)),
-                      key=lambda failure: failure[0])
+        return sorted(
+            (failure for failure in failures if not isinstance(failure[1], RequestStopped)),
+            key=lambda failure: failure[0],
+        )
 
     @classmethod
     def _first(cls, failures: list[tuple[Call, BaseException]]) -> BaseException:
@@ -430,7 +523,9 @@ class _Review:
         (call, error), others = (real[0], real[1:]) if real else (min(failures, key=lambda f: f[0]), [])
         error.add_note(f"in review call {call.name}")
         for other, other_error in others:
-            error.add_note(f"review call {other.name} failed too: {type(other_error).__name__}: {other_error}")
+            error.add_note(
+                f"review call {other.name} failed too: {type(other_error).__name__}: {other_error}"
+            )
         return error
 
     @classmethod
@@ -438,17 +533,25 @@ class _Review:
         """The failures an interrupt (or a fault of the review's own) cuts off, noted on it and logged."""
         for call, failure in cls._real(failures):
             error.add_note(f"review call {call.name} had failed: {type(failure).__name__}: {failure}")
-            logging.getLogger(__name__).error("Review call %s had failed when the review was cut off",
-                                              call.name, exc_info=failure)
+            logging.getLogger(__name__).error(
+                "Review call %s had failed when the review was cut off", call.name, exc_info=failure
+            )
 
     def _transport(self, call: Call, stop: _Stop) -> Callable[[str, str], str]:
         """A transport of the call's own, numbering its receipts in
         ``reviews/<name>/``, that sends nothing once the call is stopped."""
         spec = self.spec
         transport = self.transport_factory(
-            self.directory / "reviews" / call.name, model=spec.model, model_endpoint=spec.model_endpoint,
-            api_key_env=spec.api_key_env, max_output_tokens=spec.max_output_tokens, timeout_s=spec.timeout_s,
-            reasoning_effort=spec.reasoning_effort, temperature=spec.temperature, stop=stop.event)
+            self.directory / "reviews" / call.name,
+            model=spec.model,
+            model_endpoint=spec.model_endpoint,
+            api_key_env=spec.api_key_env,
+            max_output_tokens=spec.max_output_tokens,
+            timeout_s=spec.timeout_s,
+            reasoning_effort=spec.reasoning_effort,
+            temperature=spec.temperature,
+            stop=stop.event,
+        )
         self.transports.append(transport)
 
         def request(model: str, prompt: str) -> str:
@@ -471,11 +574,25 @@ class _Review:
         plan_path = self.directory / f"plan-{call.name}.json"
         if call.stage == POINTS:
             scope = [self.failed[call.attempt - 1]] if call.attempt else self.failed
-            return partial(_point_review, self.spec, transport, scope,
-                           {attempt.name: self.analyses[attempt.name] for attempt in scope}, plan_path)
+            return partial(
+                _point_review,
+                self.spec,
+                transport,
+                scope,
+                {attempt.name: self.analyses[attempt.name] for attempt in scope},
+                plan_path,
+            )
         choice, facts = self.points[Call(POINTS, call.attempt)][call.point - 1]
-        return partial(_candidate, self.spec, transport, choice, self.analyses[choice.base.name], plan_path,
-                       facts, self.judge_factory)
+        return partial(
+            _candidate,
+            self.spec,
+            transport,
+            choice,
+            self.analyses[choice.base.name],
+            plan_path,
+            facts,
+            self.judge_factory,
+        )
 
     def _finished(self, call: Call, value: Any) -> list[Call]:
         """Records what a call returned; returns the calls that can start now."""
@@ -489,27 +606,42 @@ class _Review:
             self.points[call] = value
             if self.spec.guidance != "assistant-turn":
                 return []
-            return [Call(CANDIDATE, call.attempt, point, sample)
-                    for point in range(1, len(value) + 1) for sample in range(1, self.spec.candidates + 1)]
+            return [
+                Call(CANDIDATE, call.attempt, point, sample)
+                for point in range(1, len(value) + 1)
+                for sample in range(1, self.spec.candidates + 1)
+            ]
         self.samples[call] = value
         return []
 
     def _selected(self) -> list[dict]:
         """The points in failed-attempt and choice order, each with its candidates."""
         spec = self.spec
-        point_reviews = ([Call(POINTS, position) for position in range(1, len(self.failed) + 1)]
-                         if spec.points_per_attempt else [Call(POINTS, 0)])
+        point_reviews = (
+            [Call(POINTS, position) for position in range(1, len(self.failed) + 1)]
+            if spec.points_per_attempt
+            else [Call(POINTS, 0)]
+        )
         selected = []
         for point_review in point_reviews:
             for point, (choice, leak) in enumerate(self.points[point_review], 1):
                 parent = next(p for p in spec.parents if p["name"] == choice.base.name)
-                entry = {"base": choice.base.name, "job_id": parent["job_id"], "attempt_id": parent["attempt_id"],
-                         "step": choice.checkpoint.step, "snapshot_id": choice.checkpoint.snapshot_id,
-                         "conversation_cut": choice.cut, "why": choice.why, "candidates": []}
+                entry = {
+                    "base": choice.base.name,
+                    "job_id": parent["job_id"],
+                    "attempt_id": parent["attempt_id"],
+                    "step": choice.checkpoint.step,
+                    "snapshot_id": choice.checkpoint.snapshot_id,
+                    "conversation_cut": choice.cut,
+                    "why": choice.why,
+                    "candidates": [],
+                }
                 if spec.guidance == "assistant-turn":
                     # Stage 2: the independent proposals for this one point.
-                    samples = [self.samples[Call(CANDIDATE, point_review.attempt, point, sample)]
-                               for sample in range(1, spec.candidates + 1)]
+                    samples = [
+                        self.samples[Call(CANDIDATE, point_review.attempt, point, sample)]
+                        for sample in range(1, spec.candidates + 1)
+                    ]
                     entry["candidates"] = _merge_candidates(samples, leak, spec.leak_judge is not None)
                     entry["samples"] = spec.candidates
                 selected.append(entry)
@@ -525,9 +657,13 @@ class _Review:
         return sum(transport.sequence for transport in {id(t): t for t in self.transports}.values())
 
 
-def run_review(spec: dict, directory: Path, *,
-               transport_factory: Callable[..., Any] = ReviewTransport,
-               judge_factory: Callable[[dict], Any] | None = None) -> dict:
+def run_review(
+    spec: dict,
+    directory: Path,
+    *,
+    transport_factory: Callable[..., Any] = ReviewTransport,
+    judge_factory: Callable[[dict], Any] | None = None,
+) -> dict:
     """The review job. ``transport_factory`` is called once per call (``Call``),
     with the directory for that call's receipts, the model settings and
     ``stop``, an event set once the call's requests are no longer wanted;
@@ -540,15 +676,25 @@ def run_review(spec: dict, directory: Path, *,
     if review_spec.api_key_env is None:
         raise ValueError("A review needs api_key_env, the worker-side variable holding the endpoint key")
     if review_spec.leak_judge is not None and judge_factory is None:
-        judge_key(review_spec.leak_judge)   # before any model call is paid for
+        judge_key(review_spec.leak_judge)  # before any model call is paid for
     root = Path(review_spec.artifact_root)
     attempts = [load_attempt(root, parent) for parent in review_spec.parents]
     failed = [attempt for attempt in attempts if not attempt.grade.resolved]
     if not failed:
-        return {"status": "completed", "guidance": review_spec.guidance, "points": [], "reports": {},
-                "reason": "every attempt resolved the task; nothing to repair"}
+        return {
+            "status": "completed",
+            "guidance": review_spec.guidance,
+            "points": [],
+            "reports": {},
+            "reason": "every attempt resolved the task; nothing to repair",
+        }
     calls = _Review(review_spec, failed, directory, transport_factory, judge_factory or jev_judge)
     points = calls.run()
-    return {"status": "completed", "guidance": review_spec.guidance, "points": points,
-            "reports": calls.reports(), "analysed": [attempt.name for attempt in failed],
-            "review_requests": calls.requests()}
+    return {
+        "status": "completed",
+        "guidance": review_spec.guidance,
+        "points": points,
+        "reports": calls.reports(),
+        "analysed": [attempt.name for attempt in failed],
+        "review_requests": calls.requests(),
+    }

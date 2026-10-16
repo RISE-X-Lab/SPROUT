@@ -58,6 +58,7 @@ class ProcessState:
 
 # --- the log ------------------------------------------------------------------
 
+
 def log_line(log_path: Path, text: str) -> None:
     log_path.parent.mkdir(parents=True, exist_ok=True)
     with log_path.open("a", encoding="utf-8") as fh:
@@ -82,8 +83,14 @@ def run_logged(argv: Sequence[str], env: Mapping[str, str], log_path: Path, cwd:
     cwd.mkdir(parents=True, exist_ok=True)
     with log_path.open("ab") as log:
         try:
-            done = subprocess.run(list(argv), cwd=str(cwd), env=dict(env), stdin=subprocess.DEVNULL,
-                                  stdout=log, stderr=subprocess.STDOUT)
+            done = subprocess.run(
+                list(argv),
+                cwd=str(cwd),
+                env=dict(env),
+                stdin=subprocess.DEVNULL,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+            )
         except OSError as error:
             log_line(log_path, "run: %s: %s" % (argv[0], error))
             return 127
@@ -102,6 +109,7 @@ def resolve_program(name: str) -> str:
 
 
 # --- what is running ----------------------------------------------------------
+
 
 def read_pid(paths: Paths, name: str) -> int | None:
     pid_file = paths.pid_file(name)
@@ -142,7 +150,7 @@ def _exists(pid: int) -> bool:
     except ProcessLookupError:
         return False
     except PermissionError:
-        return True            # exists, owned by someone else
+        return True  # exists, owned by someone else
     return True
 
 
@@ -190,8 +198,14 @@ def process_state(paths: Paths, name: str, command: Sequence[str]) -> ProcessSta
 
 # --- start / stop -------------------------------------------------------------
 
-def wait_for(probe: Callable[[], Probe], timeout_s: float, *, still_running: Callable[[], str | None],
-             interval_s: float = POLL_S) -> tuple[Probe, float]:
+
+def wait_for(
+    probe: Callable[[], Probe],
+    timeout_s: float,
+    *,
+    still_running: Callable[[], str | None],
+    interval_s: float = POLL_S,
+) -> tuple[Probe, float]:
     """Poll ``probe`` until it passes, the process dies or the timeout runs out.
 
     ``still_running`` returns None while the process lives, else why it does
@@ -212,8 +226,15 @@ def wait_for(probe: Callable[[], Probe], timeout_s: float, *, still_running: Cal
         time.sleep(min(interval_s, timeout_s - elapsed))
 
 
-def start(name: str, command: Sequence[str], env: Mapping[str, str], paths: Paths, *,
-          probe: Callable[[], Probe], timeout_s: float) -> int:
+def start(
+    name: str,
+    command: Sequence[str],
+    env: Mapping[str, str],
+    paths: Paths,
+    *,
+    probe: Callable[[], Probe],
+    timeout_s: float,
+) -> int:
     """Start ``command`` detached and wait for ``probe``; the pid, or a StartError.
 
     The child runs from its own state directory -- never from the checkout,
@@ -226,8 +247,15 @@ def start(name: str, command: Sequence[str], env: Mapping[str, str], paths: Path
     log_line(log_path, "start: %s" % shlex.join(argv))
     with log_path.open("ab") as log:
         try:
-            child = subprocess.Popen(argv, cwd=str(directory), env=dict(env), stdin=subprocess.DEVNULL,
-                                     stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+            child = subprocess.Popen(
+                argv,
+                cwd=str(directory),
+                env=dict(env),
+                stdin=subprocess.DEVNULL,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+            )
         except OSError as error:
             raise StartError("%s: cannot start %s: %s" % (name, argv[0], error)) from None
     paths.pid_file(name).write_text("%d\n" % child.pid, encoding="ascii")
@@ -243,12 +271,19 @@ def start(name: str, command: Sequence[str], env: Mapping[str, str], paths: Path
     if child.poll() is not None:
         paths.pid_file(name).unlink(missing_ok=True)
         log_line(log_path, "start: pid %d %s" % (child.pid, result.detail))
-        raise StartError("%s: %s before it answered its health probe; last lines of %s:\n%s"
-                         % (name, result.detail, log_path, tail(log_path)))
-    log_line(log_path, "start: pid %d not healthy after %.0f s (%s); left running" % (child.pid, timeout_s, result.detail))
-    raise StartError("%s: pid %d is running but not healthy after %.0f s (%s); it is left running for you "
-                     "to look at (`logs %s`, then `down %s`); last lines of %s:\n%s"
-                     % (name, child.pid, timeout_s, result.detail, name, name, log_path, tail(log_path)))
+        raise StartError(
+            "%s: %s before it answered its health probe; last lines of %s:\n%s"
+            % (name, result.detail, log_path, tail(log_path))
+        )
+    log_line(
+        log_path,
+        "start: pid %d not healthy after %.0f s (%s); left running" % (child.pid, timeout_s, result.detail),
+    )
+    raise StartError(
+        "%s: pid %d is running but not healthy after %.0f s (%s); it is left running for you "
+        "to look at (`logs %s`, then `down %s`); last lines of %s:\n%s"
+        % (name, child.pid, timeout_s, result.detail, name, name, log_path, tail(log_path))
+    )
 
 
 def _signal(pid: int, sig: int) -> None:
@@ -273,13 +308,19 @@ def _wait_gone(pid: int, timeout_s: float) -> bool:
         time.sleep(0.1)
 
 
-def stop(paths: Paths, name: str, command: Sequence[str], *, grace_s: float = GRACE_S,
-         kill_wait_s: float = KILL_WAIT_S) -> str:
+def stop(
+    paths: Paths,
+    name: str,
+    command: Sequence[str],
+    *,
+    grace_s: float = GRACE_S,
+    kill_wait_s: float = KILL_WAIT_S,
+) -> str:
     """SIGTERM, up to ``grace_s`` for a clean exit, then SIGKILL; one line saying what happened."""
     state = process_state(paths, name, command)
     pid_file = paths.pid_file(name)
     if not state.alive:
-        pid_file.unlink(missing_ok=True)     # a stale pid is removed, never signalled
+        pid_file.unlink(missing_ok=True)  # a stale pid is removed, never signalled
         return "not running (%s)" % state.detail
     pid = state.pid or 0
     log_path = paths.log_file(name)

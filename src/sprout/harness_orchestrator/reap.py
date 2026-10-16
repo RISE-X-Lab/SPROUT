@@ -94,8 +94,9 @@ class Reaper:
     ) -> ReapPlan:
         plan = ReapPlan()
 
-        live = {backend: {s["id"]: s for s in client.list_sandboxes()}
-                for backend, client in self.clients.items()}
+        live = {
+            backend: {s["id"]: s for s in client.list_sandboxes()} for backend, client in self.clients.items()
+        }
 
         ledger_ids = set()
         for resource in self.ledger.resources():
@@ -115,14 +116,16 @@ class Reaper:
                 plan.foreign.append(resource.id)
                 plan.reasons[resource.id] = (
                     "%s sandbox of run %s (pid %s gone): no client for that backend"
-                    % (resource.backend, resource.run_id or "?", resource.pid))
+                    % (resource.backend, resource.run_id or "?", resource.pid)
+                )
                 continue
             if resource.id not in live[resource.backend]:
                 continue  # already gone; the ledger entry is just stale
             plan.sandboxes.append(resource.id)
             plan.backends[resource.id] = resource.backend
             plan.reasons[resource.id] = "orphan of run %s (pid %s gone)" % (
-                resource.run_id or "?", resource.pid,
+                resource.run_id or "?",
+                resource.pid,
             )
 
         if include_unknown:
@@ -250,14 +253,12 @@ class PodmanClient:
     def _podman(self, *args: str) -> Optional[str]:
         """stdout of a podman command, or ``None`` (with stderr reported) when it failed."""
         try:
-            completed = subprocess.run([self.podman_bin, *args], capture_output=True,
-                                       text=True, timeout=120)
+            completed = subprocess.run([self.podman_bin, *args], capture_output=True, text=True, timeout=120)
         except (OSError, subprocess.TimeoutExpired):
             return None
         if completed.returncode != 0:
             if completed.stderr.strip():
-                print("podman %s: %s" % (args[0], completed.stderr.strip().splitlines()[-1]),
-                      file=sys.stderr)
+                print("podman %s: %s" % (args[0], completed.stderr.strip().splitlines()[-1]), file=sys.stderr)
             return None
         return completed.stdout
 
@@ -273,17 +274,26 @@ class PodmanClient:
                 if not rootfs.is_dir() or rootfs.name in seen:
                     continue
                 seen.add(rootfs.name)
-                result.append({
-                    "id": rootfs.name,
-                    "created_at": datetime.fromtimestamp(rootfs.stat().st_mtime, tz=timezone.utc).isoformat(),
-                    "names": [],
-                })
+                result.append(
+                    {
+                        "id": rootfs.name,
+                        "created_at": datetime.fromtimestamp(
+                            rootfs.stat().st_mtime, tz=timezone.utc
+                        ).isoformat(),
+                        "names": [],
+                    }
+                )
         for network in self._networks():
             if network["name"] not in seen:
                 seen.add(network["name"])
                 created = _parse_ts(network["created"])
-                result.append({"id": network["name"], "created_at": created.isoformat() if created else None,
-                               "names": []})
+                result.append(
+                    {
+                        "id": network["name"],
+                        "created_at": created.isoformat() if created else None,
+                        "names": [],
+                    }
+                )
         return result
 
     def _networks(self) -> List[dict]:
@@ -293,10 +303,15 @@ class PodmanClient:
             items = json.loads(raw or "[]")
         except ValueError:
             return []
-        return [{"name": item["name"], "store": (item.get("labels") or {}).get(STORE_LABEL),
-                 "created": item.get("created")}
-                for item in (items if isinstance(items, list) else [])
-                if isinstance(item, dict) and item.get("name")]
+        return [
+            {
+                "name": item["name"],
+                "store": (item.get("labels") or {}).get(STORE_LABEL),
+                "created": item.get("created"),
+            }
+            for item in (items if isinstance(items, list) else [])
+            if isinstance(item, dict) and item.get("name")
+        ]
 
     def _containers(self) -> List[dict]:
         raw = self._podman("ps", "-a", "--filter", "label=" + MANAGED_LABEL, "--format", "json")
@@ -310,14 +325,19 @@ class PodmanClient:
             if not names:
                 continue
             created = item.get("Created")
-            result.append({
-                "id": names[0],
-                "created_at": (datetime.fromtimestamp(created, tz=timezone.utc).isoformat()
-                               if isinstance(created, (int, float)) else None),
-                # Every container here is named by the pool; none is a
-                # deliberately named artifact.
-                "names": [],
-            })
+            result.append(
+                {
+                    "id": names[0],
+                    "created_at": (
+                        datetime.fromtimestamp(created, tz=timezone.utc).isoformat()
+                        if isinstance(created, (int, float))
+                        else None
+                    ),
+                    # Every container here is named by the pool; none is a
+                    # deliberately named artifact.
+                    "names": [],
+                }
+            )
         return result
 
     def leftovers(self, sandbox_id: str) -> List[str]:
@@ -331,8 +351,9 @@ class PodmanClient:
         found = []
         for kind in ("container", "network"):
             try:
-                code = subprocess.run([self.podman_bin, kind, "exists", sandbox_id], capture_output=True,
-                                      timeout=120).returncode
+                code = subprocess.run(
+                    [self.podman_bin, kind, "exists", sandbox_id], capture_output=True, timeout=120
+                ).returncode
             except (OSError, subprocess.TimeoutExpired) as error:
                 found.append("unknown (%s exists: %s)" % (kind, error))
                 continue
@@ -340,8 +361,11 @@ class PodmanClient:
                 found.append(kind)
             elif code != 1:
                 found.append("unknown (%s exists exited %d)" % (kind, code))
-        found += ["rootfs in %s" % store for store in self.stores
-                  if (Path(store) / "sandboxes" / sandbox_id).exists()]
+        found += [
+            "rootfs in %s" % store
+            for store in self.stores
+            if (Path(store) / "sandboxes" / sandbox_id).exists()
+        ]
         return found
 
     def delete_sandbox(self, sandbox_id: str) -> bool:
@@ -353,15 +377,25 @@ class PodmanClient:
             # or one removed by hand. Its rootfs, wherever a known store -- or
             # the store its network's label names -- holds it, and the socket
             # directory the pool gives such a sandbox by default.
-            known = sorted(set(self.stores) | {network["store"] for network in self._networks()
-                                               if network["name"] == sandbox_id and network["store"]})
+            known = sorted(
+                set(self.stores)
+                | {
+                    network["store"]
+                    for network in self._networks()
+                    if network["name"] == sandbox_id and network["store"]
+                }
+            )
             stores = [store for store in known if (Path(store) / "sandboxes" / sandbox_id).is_dir()]
-            return self._discard_traces(sandbox_id, stores,
-                                        [str(Path(store) / "sockets" / sandbox_id) for store in known])
+            return self._discard_traces(
+                sandbox_id, stores, [str(Path(store) / "sockets" / sandbox_id) for store in known]
+            )
         [info] = json.loads(raw)
         store = ((info.get("Config") or {}).get("Labels") or {}).get(STORE_LABEL)
-        sockets = [m.get("Source") for m in info.get("Mounts") or []
-                   if m.get("Destination") == SOCKET_MOUNT and m.get("Source")]
+        sockets = [
+            m.get("Source")
+            for m in info.get("Mounts") or []
+            if m.get("Destination") == SOCKET_MOUNT and m.get("Source")
+        ]
         if self._podman("rm", "-f", sandbox_id) is None:
             return False
         return self._discard_traces(sandbox_id, [store] if store else [], sockets)
@@ -370,15 +404,19 @@ class PodmanClient:
         """The sandbox's network, the rootfs in each store (subvolumes made inside it first) and the socket directories."""
         # A sandbox of an older pool joined one network per store and has none
         # of its own; `network exists` answers that with no output.
-        reclaimed = (self._podman("network", "exists", sandbox_id) is None
-                     or self._podman("network", "rm", sandbox_id) is not None)
+        reclaimed = (
+            self._podman("network", "exists", sandbox_id) is None
+            or self._podman("network", "rm", sandbox_id) is not None
+        )
         for store in stores:
             try:
                 btrfs = BtrfsStore(store)
                 asyncio.run(btrfs.discard_rootfs(btrfs.sandboxes / sandbox_id, podman_bin=self.podman_bin))
             except Exception as error:  # noqa: BLE001 - the container is gone; say what is not
-                print("%s: container removed but its rootfs in %s was not: %s" % (sandbox_id, store, error),
-                      file=sys.stderr)
+                print(
+                    "%s: container removed but its rootfs in %s was not: %s" % (sandbox_id, store, error),
+                    file=sys.stderr,
+                )
                 reclaimed = False
         for directory in sockets:
             shutil.rmtree(directory, ignore_errors=True)

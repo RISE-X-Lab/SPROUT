@@ -53,10 +53,12 @@ class ModelRoute:
             return 0.0
         rate = {k: float(v) / 1_000_000 for k, v in self.pricing.items()}
         uncached = max(0, usage.input_tokens - usage.cached_input_tokens)
-        return (uncached * rate.get("input", 0.0)
-                + usage.output_tokens * rate.get("output", 0.0)
-                + usage.cached_input_tokens * rate.get("cache_read", 0.0)
-                + usage.cache_creation_tokens * rate.get("cache_write", 0.0))
+        return (
+            uncached * rate.get("input", 0.0)
+            + usage.output_tokens * rate.get("output", 0.0)
+            + usage.cached_input_tokens * rate.get("cache_read", 0.0)
+            + usage.cache_creation_tokens * rate.get("cache_write", 0.0)
+        )
 
     def resolve_key(self) -> Optional[str]:
         if self.api_key:

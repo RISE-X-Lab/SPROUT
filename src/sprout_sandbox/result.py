@@ -6,11 +6,20 @@ from typing import Any
 
 #: Fields of the runtime's CommandOutcome schema (runtime/tools/boundedlog.go),
 #: the shape `shell` answers in when there is more to say than bare stdout.
-_OUTCOME_FIELDS = frozenset({
-    "stdout", "stderr", "exit_code", "running", "timed_out",
-    "stdout_bytes", "stderr_bytes", "stdout_truncated", "stderr_truncated",
-    "max_per_stream",
-})
+_OUTCOME_FIELDS = frozenset(
+    {
+        "stdout",
+        "stderr",
+        "exit_code",
+        "running",
+        "timed_out",
+        "stdout_bytes",
+        "stderr_bytes",
+        "stdout_truncated",
+        "stderr_truncated",
+        "max_per_stream",
+    }
+)
 
 
 @dataclass

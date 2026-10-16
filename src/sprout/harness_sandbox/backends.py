@@ -37,10 +37,18 @@ from typing import Callable
 from sprout_sandbox import MicroVMPool, PodmanPool
 from sprout_sandbox.podman import default_podman_bin
 
-__all__ = ["build_pool", "backend_name", "BackendError", "BACKENDS",
-           "resolve_microvm_endpoint", "with_sandbox_budget",
-           "snapshot_store", "spawn_takes_shape", "default_podman_store",
-           "default_aenv_server_url"]
+__all__ = [
+    "build_pool",
+    "backend_name",
+    "BackendError",
+    "BACKENDS",
+    "resolve_microvm_endpoint",
+    "with_sandbox_budget",
+    "snapshot_store",
+    "spawn_takes_shape",
+    "default_podman_store",
+    "default_aenv_server_url",
+]
 
 
 class BackendError(ValueError):
@@ -83,13 +91,21 @@ def with_sandbox_budget(config: dict, budget_s: float) -> dict:
     result = dict(config)
     if backend_name(result) != "microvm":
         return result
-    if (isinstance(budget_s, bool) or not isinstance(budget_s, (int, float))
-            or not math.isfinite(budget_s) or budget_s <= 0):
+    if (
+        isinstance(budget_s, bool)
+        or not isinstance(budget_s, (int, float))
+        or not math.isfinite(budget_s)
+        or budget_s <= 0
+    ):
         raise BackendError("VM lifetime requires a finite positive operation budget")
     section = _section(config, "microvm", MICROVM_KEYS)
     explicit = section.get("sandbox_ttl", 0)
-    if (isinstance(explicit, bool) or not isinstance(explicit, (int, float))
-            or not math.isfinite(explicit) or explicit < 0):
+    if (
+        isinstance(explicit, bool)
+        or not isinstance(explicit, (int, float))
+        or not math.isfinite(explicit)
+        or explicit < 0
+    ):
         raise BackendError("microvm.sandbox_ttl must be a finite non-negative number")
     section["sandbox_ttl"] = max(math.ceil(explicit), math.ceil(budget_s) + VM_LIFETIME_MARGIN_S)
     result["microvm"] = section
@@ -97,29 +113,35 @@ def with_sandbox_budget(config: dict, budget_s: float) -> dict:
 
 
 #: Recognised keys of the ``microvm`` section, so a typo is reported rather than ignored.
-MICROVM_KEYS = {"server_url", "runtime_port", "api_key", "api_key_file",
-                "request_timeout", "sandbox_ttl",
-                # Whether this harness's image names are OCI references to
-                # cold-start (a benchmark's per-instance images) rather than
-                # names of snapshots already in the backend's catalog. Only the
-                # cold-start path accepts an image reference, so the answer is
-                # configuration, not something to guess from the string.
-                "from_image",
-                # Path to a local sprout-runtime binary. Set it and the harness
-                # builds a template per instance image on demand, uploading
-                # the binary through the backend's file service
-                # (harness_sandbox/templates.py); leave it unset and the harness
-                # expects templates to exist already.
-                "runtime_bin",
-                # False = no egress from any sandbox this pool creates
-                # (AgentENV `allowInternetAccess`). A benchmark whose tasks
-                # declare no-network sets it; unset keeps the server default.
-                "allow_internet",
-                # True = templates launch the runtime under the image's own
-                # OCI ENV (PATH included), read with regctl at build time. The
-                # guest agent otherwise rebuilds PATH and drops e.g. a venv's
-                # bin. Opt-in so existing template names stay stable.
-                "image_env"}
+MICROVM_KEYS = {
+    "server_url",
+    "runtime_port",
+    "api_key",
+    "api_key_file",
+    "request_timeout",
+    "sandbox_ttl",
+    # Whether this harness's image names are OCI references to
+    # cold-start (a benchmark's per-instance images) rather than
+    # names of snapshots already in the backend's catalog. Only the
+    # cold-start path accepts an image reference, so the answer is
+    # configuration, not something to guess from the string.
+    "from_image",
+    # Path to a local sprout-runtime binary. Set it and the harness
+    # builds a template per instance image on demand, uploading
+    # the binary through the backend's file service
+    # (harness_sandbox/templates.py); leave it unset and the harness
+    # expects templates to exist already.
+    "runtime_bin",
+    # False = no egress from any sandbox this pool creates
+    # (AgentENV `allowInternetAccess`). A benchmark whose tasks
+    # declare no-network sets it; unset keeps the server default.
+    "allow_internet",
+    # True = templates launch the runtime under the image's own
+    # OCI ENV (PATH included), read with regctl at build time. The
+    # guest agent otherwise rebuilds PATH and drops e.g. a venv's
+    # bin. Opt-in so existing template names stay stable.
+    "image_env",
+}
 
 #: Recognised keys of the ``podman`` section. No lease; a container lives
 #: until it is removed.
@@ -190,8 +212,8 @@ def _section(config: dict, name: str, keys: set) -> dict:
     unknown = set(section) - keys
     if unknown:
         raise BackendError(
-            f"unknown {name} setting(s): {', '.join(sorted(unknown))}; "
-            f"known: {', '.join(sorted(keys))}")
+            f"unknown {name} setting(s): {', '.join(sorted(unknown))}; known: {', '.join(sorted(keys))}"
+        )
     return dict(section)
 
 
@@ -233,16 +255,15 @@ def _microvm(config: dict) -> MicroVMPool:
     server_url, api_key = resolve_microvm_endpoint(section)
     if not server_url:
         raise BackendError(
-            "backend 'microvm' needs microvm.server_url (or AENV_SERVER_URL), "
-            f"e.g. {DEFAULT_AENV_SERVER_URL}")
+            f"backend 'microvm' needs microvm.server_url (or AENV_SERVER_URL), e.g. {DEFAULT_AENV_SERVER_URL}"
+        )
     return MicroVMPool(
         server_url=str(server_url),
         runtime_port=int(section.get("runtime_port", 3000)),
         api_key=api_key,
         request_timeout=float(section.get("request_timeout", 120)),
         sandbox_ttl=int(section.get("sandbox_ttl", 600)),
-        allow_internet=(None if section.get("allow_internet") is None
-                        else bool(section["allow_internet"])),
+        allow_internet=(None if section.get("allow_internet") is None else bool(section["allow_internet"])),
     )
 
 
@@ -254,19 +275,22 @@ def _podman(config: dict) -> PodmanPool:
     if not runtime_bin:
         raise BackendError(
             "backend 'podman' needs podman.runtime_bin: the sprout-runtime binary is "
-            "mounted into every container (--runtime-bin runtime/sprout-runtime)")
+            "mounted into every container (--runtime-bin runtime/sprout-runtime)"
+        )
     if not section.get("store"):
         raise BackendError(
             "backend 'podman' needs podman.store: a directory on a btrfs filesystem "
             "mounted with user_subvol_rm_allowed (sudo ops/btrfs_store.sh <mount point> "
-            "<image file> <size>; then --store <mount point>)")
+            "<image file> <size>; then --store <mount point>)"
+        )
     try:
         return PodmanPool(
             store=_expanded(section["store"]),
             runtime_bin=_expanded(runtime_bin),
             podman_bin=str(section.get("podman_bin") or default_podman_bin()),
-            allow_internet=(None if section.get("allow_internet") is None
-                            else bool(section["allow_internet"])),
+            allow_internet=(
+                None if section.get("allow_internet") is None else bool(section["allow_internet"])
+            ),
             socket_dir=_expanded(section["socket_dir"]) if section.get("socket_dir") else None,
         )
     except ValueError as error:
@@ -289,6 +313,6 @@ def build_pool(config: dict | None = None) -> "MicroVMPool | PodmanPool":
     builder = BACKENDS.get(backend)
     if builder is None:
         raise BackendError(
-            f"unknown backend {backend!r}; the backends are "
-            + ", ".join(repr(name) for name in BACKENDS))
+            f"unknown backend {backend!r}; the backends are " + ", ".join(repr(name) for name in BACKENDS)
+        )
     return builder(config)

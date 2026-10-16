@@ -39,8 +39,14 @@ from sprout.runstore.messages import clean_messages, is_truncated_result
 
 #: What the search samples after roots with each label. New shapes -- roots
 #: that confirm a split, children of a resolved root -- would be added here.
-SHAPES = {"TT": "none", "TT_partial": "none", "ungraded": "none",
-          "TF": "points_only", "FF_partial": "points_only", "FF": "full"}
+SHAPES = {
+    "TT": "none",
+    "TT_partial": "none",
+    "ungraded": "none",
+    "TF": "points_only",
+    "FF_partial": "points_only",
+    "FF": "full",
+}
 
 _NO_STUDENTS = "tf_student_continuations is 0: a task whose roots split is not branched"
 #: Why a search whose shape is ``none`` ends at its roots, by label (``done_reason``
@@ -57,8 +63,13 @@ DONE_REASONS = {
 
 def search_outcome(planned: int, graded: int, resolved: int) -> str:
     """The label of a search task's roots: planned, graded (a verdict came back) and resolved."""
-    if any(type(count) is not int for count in (planned, graded, resolved)) or not 0 <= resolved <= graded <= planned:
-        raise ValueError(f"expected 0 <= resolved <= graded <= planned, got {planned=}, {graded=}, {resolved=}")
+    if (
+        any(type(count) is not int for count in (planned, graded, resolved))
+        or not 0 <= resolved <= graded <= planned
+    ):
+        raise ValueError(
+            f"expected 0 <= resolved <= graded <= planned, got {planned=}, {graded=}, {resolved=}"
+        )
     if graded == 0:
         return "ungraded"
     if resolved == graded:
@@ -112,7 +123,7 @@ def export_problem(sample: dict) -> str | None:
         if clean_messages(messages) != messages:
             # The provenance indexes these messages; nothing may shift them.
             return "Exported messages are not in their cleaned training form"
-    except (ValueError, KeyError, TypeError) as error:   # a history clean_messages refuses, a malformed record
+    except (ValueError, KeyError, TypeError) as error:  # a history clean_messages refuses, a malformed record
         return str(error)
     if not sample.get("grade"):
         return "Sample has no grade"

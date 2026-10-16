@@ -70,10 +70,16 @@ class Continuation:
     @classmethod
     def from_dict(cls, value: object) -> Continuation:
         if not isinstance(value, dict) or set(value) - FIELDS:
-            raise ValueError("A continuation is an object with guidance and, for its mode, "
-                             "assistant_turn (and optionally assistant_turn_rendering) or hint")
-        return cls(value.get("guidance"), deepcopy(value.get("assistant_turn")), value.get("hint"),
-                   value.get("assistant_turn_rendering", "content"))
+            raise ValueError(
+                "A continuation is an object with guidance and, for its mode, "
+                "assistant_turn (and optionally assistant_turn_rendering) or hint"
+            )
+        return cls(
+            value.get("guidance"),
+            deepcopy(value.get("assistant_turn")),
+            value.get("hint"),
+            value.get("assistant_turn_rendering", "content"),
+        )
 
     def to_dict(self) -> dict:
         body: dict = {"guidance": self.guidance}
@@ -105,8 +111,12 @@ def render_reasoning(turn: dict) -> dict:
     ``content`` becomes ``reasoning_content``, verbatim, beside an empty
     ``content``; the calls are kept as they are. The input is not touched.
     """
-    return {"role": "assistant", "content": "", "reasoning_content": turn["content"],
-            "tool_calls": deepcopy(turn["tool_calls"])}
+    return {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": turn["content"],
+        "tool_calls": deepcopy(turn["tool_calls"]),
+    }
 
 
 def render_branch_note(hint: str, *, commit_required: bool = False) -> str:
@@ -114,7 +124,8 @@ def render_branch_note(hint: str, *, commit_required: bool = False) -> str:
     if not isinstance(hint, str) or not hint.strip():
         raise ValueError("branch hint must be a non-empty string")
     lines = [
-        hint, "",
+        hint,
+        "",
         "Continue the task directly, without acknowledging or recapping this message.",
         "Keep reasoning and actions focused on the code and observable behavior.",
         "Check uncertain claims against the actual implementation; do not invent",
@@ -125,8 +136,13 @@ def render_branch_note(hint: str, *, commit_required: bool = False) -> str:
     return "\n".join(lines)
 
 
-def prepare(continuation: Continuation, prefix: Sequence[dict], *, tools: list[dict] | None = None,
-            commit_required: bool = False) -> tuple[str, dict]:
+def prepare(
+    continuation: Continuation,
+    prefix: Sequence[dict],
+    *,
+    tools: list[dict] | None = None,
+    commit_required: bool = False,
+) -> tuple[str, dict]:
     """The prompt mini appends after ``prefix``, and the options it runs the branch with.
 
     ``prefix`` is the restored native history (``history.load_prefix``). The

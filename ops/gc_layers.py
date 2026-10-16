@@ -36,13 +36,14 @@ DIGEST = re.compile(r"sha256:([0-9a-f]{64})")
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--store", required=True,
-                        help="the snapshot-store root (contains repository/)")
-    parser.add_argument("--min-age-hours", type=float, default=2.0,
-                        help="never touch layers younger than this (capture "
-                             "window guard)")
-    parser.add_argument("--yes", action="store_true",
-                        help="actually delete (default: report only)")
+    parser.add_argument("--store", required=True, help="the snapshot-store root (contains repository/)")
+    parser.add_argument(
+        "--min-age-hours",
+        type=float,
+        default=2.0,
+        help="never touch layers younger than this (capture window guard)",
+    )
+    parser.add_argument("--yes", action="store_true", help="actually delete (default: report only)")
     args = parser.parse_args()
 
     repo = Path(args.store) / "repository"
@@ -50,8 +51,7 @@ def main() -> int:
     layers_dir = repo / "managed-layers"
     for required in (records_dir, layers_dir):
         if not required.is_dir():
-            print("not a posixfs snapshot store: missing %s" % required,
-                  file=sys.stderr)
+            print("not a posixfs snapshot store: missing %s" % required, file=sys.stderr)
             return 2
 
     referenced: set[str] = set()
@@ -61,8 +61,7 @@ def main() -> int:
             continue
         records += 1
         referenced.update(DIGEST.findall(record.read_text(errors="replace")))
-    print("records scanned: %d, distinct digests referenced: %d"
-          % (records, len(referenced)))
+    print("records scanned: %d, distinct digests referenced: %d" % (records, len(referenced)))
 
     now = time.time()
     min_age = args.min_age_hours * 3600
@@ -74,7 +73,7 @@ def main() -> int:
         if not name.startswith("sha256_"):
             keep += 1  # unknown naming: never touch what we do not understand
             continue
-        digest = name[len("sha256_"):].split(".")[0]
+        digest = name[len("sha256_") :].split(".")[0]
         if digest in referenced:
             keep += 1
             continue
@@ -86,8 +85,7 @@ def main() -> int:
         orphan_bytes += stat.st_size
         victims.append(layer)
 
-    print("layers: %d referenced/kept, %d too young to judge, %d orphaned"
-          % (keep, young, orphan))
+    print("layers: %d referenced/kept, %d too young to judge, %d orphaned" % (keep, young, orphan))
     print("reclaimable: %.1f GiB" % (orphan_bytes / 2**30))
 
     if not args.yes:

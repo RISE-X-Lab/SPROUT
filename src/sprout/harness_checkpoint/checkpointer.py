@@ -129,8 +129,12 @@ class Checkpointer:
             # Nothing could have changed: the previous snapshot is this step's
             # state, so record the mapping without paying for a capture.
             return CheckpointRecord(
-                turn=turn, snapshot_id=self.latest_snapshot_id,
-                captured=False, reason="clean", disk_only=self.disk_only)
+                turn=turn,
+                snapshot_id=self.latest_snapshot_id,
+                captured=False,
+                reason="clean",
+                disk_only=self.disk_only,
+            )
 
         snapshot = self.session.snapshot(disk_only=self.disk_only)
         if snapshot is None:
@@ -139,21 +143,28 @@ class Checkpointer:
             # so, because a run that has silently stopped checkpointing is
             # indistinguishable from one with nothing to capture.
             self._failed_captures += 1
-            if self._failed_captures in (1, 10, 100) or (
-                    self._failed_captures % 250 == 0):
+            if self._failed_captures in (1, 10, 100) or (self._failed_captures % 250 == 0):
                 logging.getLogger(__name__).warning(
                     "checkpoint capture has failed %d time(s); steps are "
                     "mapping to an older snapshot and replay from them will "
-                    "be wrong", self._failed_captures)
+                    "be wrong",
+                    self._failed_captures,
+                )
             return CheckpointRecord(
-                turn=turn, snapshot_id=self.latest_snapshot_id,
-                captured=False, reason="failed", disk_only=self.disk_only)
+                turn=turn,
+                snapshot_id=self.latest_snapshot_id,
+                captured=False,
+                reason="failed",
+                disk_only=self.disk_only,
+            )
 
         if self.tracker is not None:
             self.tracker.clear()
         self.latest_snapshot_id = snapshot.id
         record = CheckpointRecord(
-            turn=turn, snapshot_id=snapshot.id, captured=True,
+            turn=turn,
+            snapshot_id=snapshot.id,
+            captured=True,
             disk_only=self.disk_only,
             delta_empty=getattr(snapshot, "delta_empty", None),
         )
@@ -181,8 +192,7 @@ class Checkpointer:
             # every capture compacts, and with re-boarding that means a swap
             # every other step. It still works -- say so once, loudly, because
             # the fix is a config value, not code.
-            self._consecutive_compactions = (
-                self._consecutive_compactions + 1 if compacted else 0)
+            self._consecutive_compactions = self._consecutive_compactions + 1 if compacted else 0
             if self._consecutive_compactions >= 3 and not self._warned_budget:
                 self._warned_budget = True
                 logging.getLogger(__name__).warning(
@@ -190,7 +200,8 @@ class Checkpointer:
                     "server's compaction budget (max_chain_size_mib) is "
                     "likely smaller than a single step's writes for this "
                     "workload; raise it to amortize compaction over more "
-                    "steps")
+                    "steps"
+                )
 
         return record
 

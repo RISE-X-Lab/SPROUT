@@ -25,11 +25,30 @@ from sprout.resource import resource
 from sprout.services import health, secrets
 from sprout.services.podman import Podman
 from sprout.services.render import StatusRow, doctor_line, env_lines, status_table
-from sprout.services.spec import (Context, ExpandError, Service, Spec, SpecError, expand, expand_all, load_spec,
-                                  podman_bin_for, store_for, template_path)
+from sprout.services.spec import (
+    Context,
+    ExpandError,
+    Service,
+    Spec,
+    SpecError,
+    expand,
+    expand_all,
+    load_spec,
+    podman_bin_for,
+    store_for,
+    template_path,
+)
 from sprout.services.state import Paths
-from sprout.services.supervisor import (StartError, process_state, resolve_program, run_logged, start, stop,
-                                        tail, wait_for)
+from sprout.services.supervisor import (
+    StartError,
+    process_state,
+    resolve_program,
+    run_logged,
+    start,
+    stop,
+    tail,
+    wait_for,
+)
 
 Say = Callable[[str], None]
 
@@ -37,7 +56,7 @@ Say = Callable[[str], None]
 def _one_line(text: str, limit: int = 160) -> str:
     """An action line stays one line: whitespace collapsed, a long argv cut (the log has it whole)."""
     flat = " ".join(text.split())
-    return flat if len(flat) <= limit else flat[:limit - 3] + "..."
+    return flat if len(flat) <= limit else flat[: limit - 3] + "..."
 
 
 #: A `health: {kind: process}` service is up once it has stayed alive this long:
@@ -93,7 +112,7 @@ class Manager:
             if service.check == "podman":
                 return health.podman_bin(self.podman_bin(service))
             return health.btrfs_store(self.store_path(service))
-        except ExpandError as error:               # an unset {env:...} in `path`
+        except ExpandError as error:  # an unset {env:...} in `path`
             return health.Probe(False, str(error))
 
     # --- what is running ---------------------------------------------------
@@ -153,8 +172,10 @@ class Manager:
         alive, detail, _ = self.liveness(service, self.ctx)
         if alive:
             # A second instance would fail on the port and hide the real fault.
-            raise StartError("%s is running but not healthy (%s); `logs %s`, then `restart %s`"
-                             % (detail, unhealthy, name, name))
+            raise StartError(
+                "%s is running but not healthy (%s); `logs %s`, then `restart %s`"
+                % (detail, unhealthy, name, name)
+            )
         env = self.environment(service, self.ctx)
         directory = self.paths.service(name)
         directory.mkdir(parents=True, exist_ok=True)
@@ -167,7 +188,9 @@ class Manager:
             say("%s: preparing: %s" % (name, _one_line(shlex.join(argv))))
             status = run_logged(argv, env, log_path, directory)
             if status != 0:
-                raise StartError("prepare step exited %d; last lines of %s:\n%s" % (status, log_path, tail(log_path)))
+                raise StartError(
+                    "prepare step exited %d; last lines of %s:\n%s" % (status, log_path, tail(log_path))
+                )
         command = self.command(service, self.ctx)
         say("%s: starting (argv and output in %s)" % (name, log_path))
         if service.health.kind in ("process", "none"):
@@ -177,8 +200,10 @@ class Manager:
                 settled = time.monotonic() - started
                 return health.Probe(settled >= SETTLE_S, "alive for %.1f s" % settled)
         else:
+
             def probe() -> health.Probe:
                 return health.probe(service.health, self.ctx, alive=True, alive_detail="")
+
         pid = start(name, command, env, self.paths, probe=probe, timeout_s=service.timeout_s)
         say("%s: up (pid %d, log %s)" % (name, pid, log_path))
 
@@ -199,11 +224,16 @@ class Manager:
             current = podman.inspect(container)
             return None if current.running else "container %s is %s" % (container, current.status)
 
-        result, elapsed = wait_for(lambda: health.probe(service.health, self.ctx, alive=True, alive_detail=""),
-                                   service.timeout_s, still_running=running)
+        result, elapsed = wait_for(
+            lambda: health.probe(service.health, self.ctx, alive=True, alive_detail=""),
+            service.timeout_s,
+            still_running=running,
+        )
         if not result.ok:
-            raise StartError("container %s is not healthy after %.0f s (%s); see `podman logs %s`"
-                             % (container, elapsed, result.detail, container))
+            raise StartError(
+                "container %s is not healthy after %.0f s (%s); see `podman logs %s`"
+                % (container, elapsed, result.detail, container)
+            )
         say("%s: up (container %s, %s)" % (name, container, result.detail))
 
     # --- down --------------------------------------------------------------
@@ -216,8 +246,10 @@ class Manager:
             podman = self.podman(service)
             state = podman.inspect(service.container)
             if not state.running:
-                say("%s: container %s %s" % (name, service.container,
-                                            "is %s" % state.status if state.exists else "does not exist"))
+                say(
+                    "%s: container %s %s"
+                    % (name, service.container, "is %s" % state.status if state.exists else "does not exist")
+                )
                 return True
             say("%s: stopping container %s (podman stop)" % (name, service.container))
             try:
@@ -253,8 +285,13 @@ class Manager:
         fine = True
         host = [
             ("uv", health.program("uv")),
-            ("runtime", health.file_present(self.paths.runtime_binary(),
-                                             "cd runtime && go generate ./... && go build -o sprout-runtime .")),
+            (
+                "runtime",
+                health.file_present(
+                    self.paths.runtime_binary(),
+                    "cd runtime && go generate ./... && go build -o sprout-runtime .",
+                ),
+            ),
             ("keyring", health.keyring_quota()),
         ]
         if not any(s.kind == "check" and s.check == "podman" for s in self.spec.services):
@@ -279,6 +316,7 @@ class Manager:
 
 
 # --- init ---------------------------------------------------------------------
+
 
 def _seed(path: Path, text: str, say: Say) -> bool:
     """Write a file that does not exist yet; never overwrite an edited one."""
@@ -338,16 +376,21 @@ def _cmd_init(args: argparse.Namespace, paths: Paths) -> int:
         say("%s secret %s" % ("kept  " if existed else "made  ", paths.secrets / name))
     say("")
     say("edit   %s: the model aliases the experiments use" % (paths.config / "litellm.yaml"))
-    say("edit   %s: profiles (the podman store, snapshot_repository, sandbox_resources, worker_env)"
-        % (paths.config / "runstore.json"))
+    say(
+        "edit   %s: profiles (the podman store, snapshot_repository, sandbox_resources, worker_env)"
+        % (paths.config / "runstore.json")
+    )
     say("edit   %s: miles.tasks, when the RL driver is used" % (paths.config / "rl_driver.json"))
     say("then   python -m sprout.services up        # dependencies first; `status` and `doctor` to look")
-    say('       eval "$(python -m sprout.services env)"   # the podman and store the sandboxes use, the DSN, tokens '
-        'and proxy URL for an experiment shell')
+    say(
+        '       eval "$(python -m sprout.services env)"   # the podman and store the sandboxes use, the DSN, tokens '
+        "and proxy URL for an experiment shell"
+    )
     return 0
 
 
 # --- the other commands ------------------------------------------------------
+
 
 def _load(paths: Paths) -> Spec | None:
     if not paths.spec.is_file():
@@ -363,7 +406,10 @@ def _load(paths: Paths) -> Spec | None:
 def _known(spec: Spec, names: Sequence[str]) -> bool:
     unknown = [name for name in names if name not in spec.names]
     if unknown:
-        print("unknown service %s (services.yaml has: %s)" % (", ".join(unknown), ", ".join(spec.names)), file=sys.stderr)
+        print(
+            "unknown service %s (services.yaml has: %s)" % (", ".join(unknown), ", ".join(spec.names)),
+            file=sys.stderr,
+        )
     return not unknown
 
 
@@ -486,12 +532,18 @@ def _cmd_doctor(args: argparse.Namespace, paths: Paths) -> int:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="python -m sprout.services", description=sprout.services.__doc__,
-                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        prog="python -m sprout.services",
+        description=sprout.services.__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
-    init = sub.add_parser("init", help="write services.yaml and the per-service configs from the templates; "
-                                       "make the secrets (never overwrites)")
+    init = sub.add_parser(
+        "init",
+        help="write services.yaml and the per-service configs from the templates; "
+        "make the secrets (never overwrites)",
+    )
     init.set_defaults(func=_cmd_init)
 
     up = sub.add_parser("up", help="start what is not already healthy, dependencies first")
@@ -499,7 +551,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     up.set_defaults(func=_cmd_up)
 
     down = sub.add_parser("down", help="stop, dependents first")
-    down.add_argument("names", nargs="*", metavar="NAME", help="default: everything (dependents of a named service are stopped too)")
+    down.add_argument(
+        "names",
+        nargs="*",
+        metavar="NAME",
+        help="default: everything (dependents of a named service are stopped too)",
+    )
     down.set_defaults(func=_cmd_down)
 
     restart = sub.add_parser("restart", help="down then up for the named services and their dependents")
@@ -511,14 +568,22 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     logs = sub.add_parser("logs", help="a service's log (a container's through `podman logs`)")
     logs.add_argument("name", metavar="NAME")
-    logs.add_argument("-f", "--follow", action="store_true", help="keep printing as lines arrive (Ctrl-C to stop)")
-    logs.add_argument("-n", "--lines", type=int, default=50, help="how many trailing lines to start with (default 50)")
+    logs.add_argument(
+        "-f", "--follow", action="store_true", help="keep printing as lines arrive (Ctrl-C to stop)"
+    )
+    logs.add_argument(
+        "-n", "--lines", type=int, default=50, help="how many trailing lines to start with (default 50)"
+    )
     logs.set_defaults(func=_cmd_logs)
 
-    env = sub.add_parser("env", help='shell export lines for every service\'s exports: eval "$(python -m sprout.services env)"')
+    env = sub.add_parser(
+        "env", help='shell export lines for every service\'s exports: eval "$(python -m sprout.services env)"'
+    )
     env.set_defaults(func=_cmd_env)
 
-    doctor = sub.add_parser("doctor", help="every host check and health probe, starting nothing; exit 1 when something is wrong")
+    doctor = sub.add_parser(
+        "doctor", help="every host check and health probe, starting nothing; exit 1 when something is wrong"
+    )
     doctor.set_defaults(func=_cmd_doctor)
 
     args = parser.parse_args(argv)

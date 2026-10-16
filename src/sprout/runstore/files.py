@@ -42,9 +42,18 @@ def failure_kind(result: dict) -> str | None:
         return "actor"
     if any(marker in message for marker in ("budget exhausted", "cost limit", "step limit", "maximum turns")):
         return "actor"
-    if re.search(r"\b(?:502|503|504)\b", message) or any(marker in message for marker in (
-            "transportclosederror", "connection reset", "connection refused", "stream stalled",
-            "execution uncertain", "tool execution did not settle", "final snapshot failed",
-            "readtimeout")):
+    if re.search(r"\b(?:502|503|504)\b", message) or any(
+        marker in message
+        for marker in (
+            "transportclosederror",
+            "connection reset",
+            "connection refused",
+            "stream stalled",
+            "execution uncertain",
+            "tool execution did not settle",
+            "final snapshot failed",
+            "readtimeout",
+        )
+    ):
         return "infrastructure"
     return result.get("failure_kind") or "actor"

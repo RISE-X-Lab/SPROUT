@@ -66,7 +66,7 @@ def export_messages(directory, session_id, slot, *, allow_incomplete_tail=False)
     if not data.endswith(b"\n"):
         if not allow_incomplete_tail:
             raise ValueError("Native history has an incomplete final record")
-        data = data[:data.rfind(b"\n") + 1]
+        data = data[: data.rfind(b"\n") + 1]
     entries = [json.loads(line) for line in data.splitlines() if line.strip()]
     from sprout.harness_agents.mini_swe.history import training_messages
 
@@ -100,11 +100,13 @@ TERMINATION_GRACE_SECONDS = 120
 
 
 def is_truncated_result(result: dict) -> bool:
-    return (result.get("status") == "truncated"
-            and result.get("stop_reason") in TRUNCATION_STOP_REASONS
-            and isinstance(result.get("final_snapshot_id"), str)
-            and bool(result["final_snapshot_id"])
-            and failure_kind(result) not in {"configuration", "infrastructure"})
+    return (
+        result.get("status") == "truncated"
+        and result.get("stop_reason") in TRUNCATION_STOP_REASONS
+        and isinstance(result.get("final_snapshot_id"), str)
+        and bool(result["final_snapshot_id"])
+        and failure_kind(result) not in {"configuration", "infrastructure"}
+    )
 
 
 def branch_origin(point: dict) -> dict:
@@ -126,16 +128,23 @@ def provenance(directory, session_id: str, messages: list[dict], branch_point: d
     files = list((directory / "native-home").glob(f"**/*{session_id}.jsonl"))
     if len(files) != 1:
         raise ValueError("Expected one native history for the attempt")
-    inserted_calls = {call["id"] for entry in read_entries(files[0].read_bytes())
-                      if entry.get("type") == "mini.message"
-                      and (entry["message"].get("extra") or {}).get("source") == "reviewer"
-                      for call in entry["message"].get("tool_calls") or []}
-    inserted = [index for index, message in enumerate(messages) if message["role"] == "assistant"
-                and {call["id"] for call in message.get("tool_calls") or []} & inserted_calls]
+    inserted_calls = {
+        call["id"]
+        for entry in read_entries(files[0].read_bytes())
+        if entry.get("type") == "mini.message"
+        and (entry["message"].get("extra") or {}).get("source") == "reviewer"
+        for call in entry["message"].get("tool_calls") or []
+    }
+    inserted = [
+        index
+        for index, message in enumerate(messages)
+        if message["role"] == "assistant"
+        and {call["id"] for call in message.get("tool_calls") or []} & inserted_calls
+    ]
     restored = 0
     if branch_point:
         prefix = clean_messages(training_messages(read_entries(read_prefix(branch_point["native"]))))
-        if messages[:len(prefix)] != prefix:
+        if messages[: len(prefix)] != prefix:
             raise ValueError("The exported history does not begin with the branch point's prefix")
         restored = len(prefix)
     return {"prefix_messages": restored, "inserted_messages": inserted}
@@ -155,8 +164,11 @@ def salvage_interrupted(result: dict, directory, point: dict, branch_point=None)
 
     try:
         events = journal_events(directory / "trajectory.jsonl")
-        references = [e["native_session_id"] for e in events
-                      if e.get("type") == "session.ref" and e.get("native_session_id")]
+        references = [
+            e["native_session_id"]
+            for e in events
+            if e.get("type") == "session.ref" and e.get("native_session_id")
+        ]
         session_id = result.get("native_session_id") or (references[-1] if references else None)
         messages = clean_messages(training_messages(read_entries(read_prefix(point["native"]))))
         if not any(message.get("role") == "assistant" for message in messages):
@@ -164,14 +176,23 @@ def salvage_interrupted(result: dict, directory, point: dict, branch_point=None)
         usage = [e for e in events if e.get("type") == "rollout.usage"]
         salvaged = {
             **{key: value for key, value in result.items() if key not in {"error", "training_export_error"}},
-            "status": "truncated", "stop_reason": "interrupted", "failure_kind": None,
-            "final_snapshot_id": point["snapshot_id"], "native_session_id": session_id,
-            "training_messages": messages, "training_tools": export_tools(events),
+            "status": "truncated",
+            "stop_reason": "interrupted",
+            "failure_kind": None,
+            "final_snapshot_id": point["snapshot_id"],
+            "native_session_id": session_id,
+            "training_messages": messages,
+            "training_tools": export_tools(events),
             "training_provenance": provenance(directory, session_id, messages, branch_point),
             "rollout_usage": {key: usage[-1][key] for key in ("model_calls", "tool_calls")} if usage else {},
-            "interrupted": {"status": result.get("status"), "error": result.get("error"),
-                            "failure_kind": result.get("failure_kind"), "point_id": point["id"],
-                            "tool_depth": point["tool_depth"], "message_step": point["message_step"]},
+            "interrupted": {
+                "status": result.get("status"),
+                "error": result.get("error"),
+                "failure_kind": result.get("failure_kind"),
+                "point_id": point["id"],
+                "tool_depth": point["tool_depth"],
+                "message_step": point["message_step"],
+            },
         }
         if branch_point:
             salvaged["training_origin"] = branch_origin(branch_point)
@@ -190,42 +211,65 @@ def complete_message_result(result: dict, directory, slot: str, recovery=None, b
     events = journal_events(directory / "trajectory.jsonl")
     stopped_by_limit = result.get("stop_reason") in LIMIT_STOP_REASONS
     unsafe = any(event.get("type") == "execution.uncertain" for event in events)
-    if (stopped_by_limit and not unsafe and result.get("final_snapshot_id")
-            and failure_kind(result) not in {"configuration", "infrastructure"}):
+    if (
+        stopped_by_limit
+        and not unsafe
+        and result.get("final_snapshot_id")
+        and failure_kind(result) not in {"configuration", "infrastructure"}
+    ):
         result.update(agent_status=result["status"], status="truncated", failure_kind=None)
-    references = [e["native_session_id"] for e in events
-                  if e.get("type") == "session.ref" and e.get("native_session_id")]
+    references = [
+        e["native_session_id"]
+        for e in events
+        if e.get("type") == "session.ref" and e.get("native_session_id")
+    ]
     session_id = result.get("native_session_id") or (references[-1] if references else None)
     result["native_session_id"] = session_id
     try:
         result["training_messages"] = export_messages(
-            directory, session_id, slot, allow_incomplete_tail=is_truncated_result(result))
+            directory, session_id, slot, allow_incomplete_tail=is_truncated_result(result)
+        )
         result["training_tools"] = export_tools(events)
         if branch_point:
             result["training_origin"] = branch_origin(branch_point)
         usage = [e for e in events if e.get("type") == "rollout.usage"]
-        result["rollout_usage"] = {
-            key: usage[-1][key] for key in ("model_calls", "tool_calls")
-        } if usage else {}
+        result["rollout_usage"] = (
+            {key: usage[-1][key] for key in ("model_calls", "tool_calls")} if usage else {}
+        )
     except (ValueError, KeyError, TypeError, OSError) as error:
         result["training_export_error"] = str(error)
         if slot == "mini-swe-agent" and is_truncated_result(result) and not unsafe:
             # A timeout between two actions in one response cannot train the
             # half response against the later disk. Keep a proven earlier pair.
-            from sprout.harness_agents.mini_swe.history import index_mini, read_entries, read_prefix, training_messages
+            from sprout.harness_agents.mini_swe.history import (
+                index_mini,
+                read_entries,
+                read_prefix,
+                training_messages,
+            )
 
             files = list((directory / "native-home").glob(f"**/*{session_id}.jsonl"))
             try:
-                points = (index_mini(directory / "trajectory.jsonl", files[0], session_id,
-                                     events=events, inherited_native=(recovery or {}).get("native"))
-                          if len(files) == 1 else [])
+                points = (
+                    index_mini(
+                        directory / "trajectory.jsonl",
+                        files[0],
+                        session_id,
+                        events=events,
+                        inherited_native=(recovery or {}).get("native"),
+                    )
+                    if len(files) == 1
+                    else []
+                )
                 if points:
                     point = points[-1]
                     result["training_messages"] = clean_messages(
-                        training_messages(read_entries(read_prefix(point.native))))
+                        training_messages(read_entries(read_prefix(point.native)))
+                    )
                     result["training_tools"] = export_tools(events)
                     result["timeout_fallback"] = {
-                        "tool_depth": point.tool_depth, "message_step": point.message_step,
+                        "tool_depth": point.tool_depth,
+                        "message_step": point.message_step,
                         "native_prefix": point.native,
                         "discarded_final_snapshot_id": result["final_snapshot_id"],
                     }
@@ -234,15 +278,16 @@ def complete_message_result(result: dict, directory, slot: str, recovery=None, b
                     if branch_point:
                         result["training_origin"] = branch_origin(branch_point)
                     usage = [e for e in events if e.get("type") == "rollout.usage"]
-                    result["rollout_usage"] = {
-                        key: usage[-1][key] for key in ("model_calls", "tool_calls")
-                    } if usage else {}
+                    result["rollout_usage"] = (
+                        {key: usage[-1][key] for key in ("model_calls", "tool_calls")} if usage else {}
+                    )
             except (ValueError, KeyError, TypeError, OSError) as fallback_error:
                 result["training_export_error"] += f"; mini prefix recovery: {fallback_error}"
     if result.get("training_messages") is not None and not result.get("training_export_error"):
         try:
-            result["training_provenance"] = provenance(directory, session_id, result["training_messages"],
-                                                       branch_point)
+            result["training_provenance"] = provenance(
+                directory, session_id, result["training_messages"], branch_point
+            )
         except (ValueError, KeyError, TypeError, OSError) as error:
             # Messages whose authorship cannot be told apart are not training data.
             result["training_export_error"] = f"training provenance: {error}"

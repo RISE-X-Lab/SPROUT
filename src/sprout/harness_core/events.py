@@ -25,46 +25,46 @@ from dataclasses import asdict, dataclass
 JOURNAL_SCHEMA_VERSION = 2
 
 # --- run lifecycle ---------------------------------------------------------
-RUN_STARTED = "run.started"          # {slot, slot_version, model, task_prompt, cwd, config}
-RUN_FINISHED = "run.finished"        # {status, usage, error}
-RUN_RESULT = "run.result"            # {text, native}  final answer as reported by the agent
+RUN_STARTED = "run.started"  # {slot, slot_version, model, task_prompt, cwd, config}
+RUN_FINISHED = "run.finished"  # {status, usage, error}
+RUN_RESULT = "run.result"  # {text, native}  final answer as reported by the agent
 
 # --- agent output ----------------------------------------------------------
-AGENT_MESSAGE = "agent.message"      # {text, partial?, part_id?}
-AGENT_THINKING = "agent.thinking"    # {text, part_id?}
+AGENT_MESSAGE = "agent.message"  # {text, partial?, part_id?}
+AGENT_THINKING = "agent.thinking"  # {text, part_id?}
 
 # --- tools (aligned with v1 tool.started/tool.finished) --------------------
-TOOL_STARTED = "tool.started"        # {call_id, name, args, parent_call_id?}
-TOOL_FINISHED = "tool.finished"      # {call_id, name?, status: ok|error, output, exit_code?, duration_ms?}
+TOOL_STARTED = "tool.started"  # {call_id, name, args, parent_call_id?}
+TOOL_FINISHED = "tool.finished"  # {call_id, name?, status: ok|error, output, exit_code?, duration_ms?}
 
 # --- turn / usage ----------------------------------------------------------
 # One disk snapshot per model turn, taken once the turn has closed
 # (harness_tools/access.py); a closed turn with its snapshot is a branch point
 # (harness_checkpoint/rollback.py): between turn.completed and the next
 # turn.started there is no in-flight call.
-TURN_STARTED = "turn.started"        # {turn?}
+TURN_STARTED = "turn.started"  # {turn?}
 #: A turn boundary, and *only* that. Anything that is not a boundary must not use
 #: it -- a mid-turn usage report emitted here once produced a checkpoint per
 #: token update.
-TURN_COMPLETED = "turn.completed"    # {turn?, usage?: Usage.as_dict()}
+TURN_COMPLETED = "turn.completed"  # {turn?, usage?: Usage.as_dict()}
 #: Interim accounting. ``cumulative`` marks a total-for-the-thread figure that
 #: replaces earlier ones; without it a consumer summing every report multiplies
 #: a run's real token count by the number of updates.
-USAGE_UPDATED = "usage.updated"      # {usage: Usage.as_dict(), cumulative?: bool}
+USAGE_UPDATED = "usage.updated"  # {usage: Usage.as_dict(), cumulative?: bool}
 
 # --- session & rollback ----------------------------------------------------
-SESSION_REF = "session.ref"          # {native_session_id, transcript_path?, capabilities?}
+SESSION_REF = "session.ref"  # {native_session_id, transcript_path?, capabilities?}
 CHECKPOINT_CAPTURED = "checkpoint.captured"  # {step, snapshot_id, reason, disk_only, session_ckpt?}
 #: A full (memory) snapshot taken after the final disk one, when the run asked
 #: for it. Not a branch point; a benchmark may release it after grading.
-SNAPSHOT_MEMORY = "snapshot.memory"          # {step, turn_id, snapshot_id, captured, after}
+SNAPSHOT_MEMORY = "snapshot.memory"  # {step, turn_id, snapshot_id, captured, after}
 
 # --- sandbox ---------------------------------------------------------------
 #: The sandbox this run owns and the backend that made it. ``harness sweep``
 #: reads ``backend``: a podman run's snapshot ids are btrfs subvolume names in
 #: ``store`` (recorded for podman only), and sending them to AgentENV would
 #: count every 404 as a deletion.
-SANDBOX_CREATED = "sandbox.created"          # {sandbox_id, backend, image, store?}
+SANDBOX_CREATED = "sandbox.created"  # {sandbox_id, backend, image, store?}
 
 
 @dataclass

@@ -33,8 +33,20 @@ OWNED_BACKENDS = ("podman", "microvm")
 #: What of the worker's environment an attempt child inherits: the system basics, and the
 #: podman and store every entry point resolves (sprout_sandbox.podman.default_podman_bin), so
 #: the child builds its sandboxes on the podman the worker later asks about them.
-CHILD_ENV_PASSTHROUGH = frozenset({"PATH", "HOME", "USER", "LANG", "LC_ALL", "LD_LIBRARY_PATH", "SSL_CERT_FILE",
-                                   "SSL_CERT_DIR", "SPROUT_PODMAN_BIN", "SPROUT_PODMAN_STORE"})
+CHILD_ENV_PASSTHROUGH = frozenset(
+    {
+        "PATH",
+        "HOME",
+        "USER",
+        "LANG",
+        "LC_ALL",
+        "LD_LIBRARY_PATH",
+        "SSL_CERT_FILE",
+        "SSL_CERT_DIR",
+        "SPROUT_PODMAN_BIN",
+        "SPROUT_PODMAN_STORE",
+    }
+)
 
 
 def owned_backend(kind: str, effective: dict) -> str:
@@ -43,7 +55,9 @@ def owned_backend(kind: str, effective: dict) -> str:
         raise ValueError("A queued rollout needs a sandbox_image")
     name = backend_name(effective.get("backend") or {})
     if name not in OWNED_BACKENDS:
-        raise ValueError(f"Queued jobs run on an owned sandbox, podman (the default) or microvm, not {name!r}")
+        raise ValueError(
+            f"Queued jobs run on an owned sandbox, podman (the default) or microvm, not {name!r}"
+        )
     return name
 
 
@@ -87,10 +101,13 @@ def podman_reclaimed(claims: dict, backend: dict) -> bool:
     section = backend.get("podman") or {}
     default = snapshot_store(backend) or default_podman_store()
     for identifier, store in sorted(claims.items()):
-        client = PodmanClient(podman_bin=section.get("podman_bin") or default_podman_bin(),
-                              stores=[path for path in (store, default) if path])
-        if client.leftovers(identifier) and (not client.delete_sandbox(identifier)
-                                             or client.leftovers(identifier)):
+        client = PodmanClient(
+            podman_bin=section.get("podman_bin") or default_podman_bin(),
+            stores=[path for path in (store, default) if path],
+        )
+        if client.leftovers(identifier) and (
+            not client.delete_sandbox(identifier) or client.leftovers(identifier)
+        ):
             return False
     return True
 
@@ -120,8 +137,11 @@ def process_identity(pid: int) -> dict | None:
         fields = Path(f"/proc/{pid}/stat").read_text().rsplit(") ", 1)[1].split()
         if fields[0] == "Z":
             return None
-        return {"pid": pid, "start_ticks": fields[19],
-                "boot_id": Path("/proc/sys/kernel/random/boot_id").read_text().strip()}
+        return {
+            "pid": pid,
+            "start_ticks": fields[19],
+            "boot_id": Path("/proc/sys/kernel/random/boot_id").read_text().strip(),
+        }
     except (OSError, IndexError):
         return None
 
@@ -174,8 +194,15 @@ def stop_process(identity: dict | None) -> bool:
 
 
 class Worker:
-    def __init__(self, store: Store, config: dict, *, worker_id: str | None = None,
-                 lease_s: float = 60, snapshot_valid=None) -> None:
+    def __init__(
+        self,
+        store: Store,
+        config: dict,
+        *,
+        worker_id: str | None = None,
+        lease_s: float = 60,
+        snapshot_valid=None,
+    ) -> None:
         self.store = store
         self.config = config
         self.root = Path(config["artifact_root"]).expanduser().resolve()
@@ -186,18 +213,25 @@ class Worker:
 
     def _scope(self, request: dict, envelope: dict | None = None) -> dict:
         recovery = (envelope or {}).get("recovery") or {}
-        return {"context": request["context"], "run_spec_hash": digest(request["spec"]),
-                "parent_point": request.get("parent_point"), "profile_hash": request.get("profile_hash"),
-                "recovery_snapshot": recovery.get("snapshot_id"),
-                "native_prefix_hash": recovery.get("native", {}).get("sha256")}
+        return {
+            "context": request["context"],
+            "run_spec_hash": digest(request["spec"]),
+            "parent_point": request.get("parent_point"),
+            "profile_hash": request.get("profile_hash"),
+            "recovery_snapshot": recovery.get("snapshot_id"),
+            "native_prefix_hash": recovery.get("native", {}).get("sha256"),
+        }
 
     def _ingest(self, job: dict, directory: Path, envelope: dict) -> list[dict]:
         events = journal_events(directory / "trajectory.jsonl")
         if not events:
             return []
         self.store.append_events(job["id"], job["lease_token"], events)
-        refs = [event["native_session_id"] for event in events
-                if event.get("type") == "session.ref" and event.get("native_session_id")]
+        refs = [
+            event["native_session_id"]
+            for event in events
+            if event.get("type") == "session.ref" and event.get("native_session_id")
+        ]
         points = []
         if refs:
             session_id = refs[-1]
@@ -206,18 +240,28 @@ class Worker:
             transcripts = list(home.glob(f"**/*{session_id}.jsonl"))
             if len(transcripts) == 1:
                 try:
-                    points = index_native(directory / "trajectory.jsonl", transcripts[0], slot, session_id,
-                                          events=events,
-                                          inherited_native=(envelope.get("recovery") or {}).get("native"))
+                    points = index_native(
+                        directory / "trajectory.jsonl",
+                        transcripts[0],
+                        slot,
+                        session_id,
+                        events=events,
+                        inherited_native=(envelope.get("recovery") or {}).get("native"),
+                    )
                 except (ValueError, OSError) as error:
                     write_json(directory / "index-error.json", {"error": str(error), "slot": slot})
-        self.index.project(job["id"], job["lease_token"], self._scope(job["request"], envelope), events, points)
+        self.index.project(
+            job["id"], job["lease_token"], self._scope(job["request"], envelope), events, points
+        )
         return events
 
     def _cleanup(self, directory: Path, effective: dict) -> bool:
         records = journal_events(directory / "resources.jsonl")
-        claims = {row["id"]: row.get("store") for row in records
-                  if row.get("event") == "claim" and row.get("kind") == "sandbox"}
+        claims = {
+            row["id"]: row.get("store")
+            for row in records
+            if row.get("event") == "claim" and row.get("kind") == "sandbox"
+        }
         started = sum(row.get("event") == "allocation_started" for row in records)
         if any(row.get("event") == "allocation_unknown" for row in records) or started > len(claims):
             return False
@@ -236,7 +280,11 @@ class Worker:
         result = {**result, "failure_kind": None if truncated else failure_kind(result)}
         events = self._ingest(job, directory, envelope)
         if not self._cleanup(directory, effective):
-            result = {**result, "error": "Owned allocation or cleanup needs reconciliation", "failure_kind": "infrastructure"}
+            result = {
+                **result,
+                "error": "Owned allocation or cleanup needs reconciliation",
+                "failure_kind": "infrastructure",
+            }
             self.store.finish(job["id"], job["lease_token"], result, state="quarantined")
             return
         if result.get("status") == "completed" or truncated:
@@ -249,8 +297,14 @@ class Worker:
         retry = result.get("failure_kind") == "infrastructure"
         if retry and job["kind"] == "rollout":
             remaining = effective.get("timeout_s", 3600) - result.get("elapsed_s", 0)
-            point = next((point for point in reversed(self.index.points(job["active_attempt"]))
-                          if self.index.valid(point)), None)
+            point = next(
+                (
+                    point
+                    for point in reversed(self.index.points(job["active_attempt"]))
+                    if self.index.valid(point)
+                ),
+                None,
+            )
             if point and remaining > 0:
                 recovery = {"point_id": point["id"], "timeout_s": remaining}
                 budget = effective.get("budget_usd")
@@ -268,7 +322,9 @@ class Worker:
             if salvaged is not None:
                 self.store.finish(job["id"], job["lease_token"], salvaged)
                 return
-        self.store.finish(job["id"], job["lease_token"], result, state="failed", retry=retry, recovery=recovery)
+        self.store.finish(
+            job["id"], job["lease_token"], result, state="failed", retry=retry, recovery=recovery
+        )
 
     def _salvage(self, job: dict, directory: Path, result: dict, envelope: dict) -> dict | None:
         """A message-export rollout that will not run again, cut back to its last valid point.
@@ -279,10 +335,20 @@ class Worker:
         from sprout.runstore.messages import salvage_interrupted
 
         contract = envelope["effective_spec"].get("extra", {}).get("rollout_contract", {})
-        if job["kind"] != "rollout" or not contract.get("message_export") or result.get("failure_kind") == "configuration":
+        if (
+            job["kind"] != "rollout"
+            or not contract.get("message_export")
+            or result.get("failure_kind") == "configuration"
+        ):
             return None
-        point = next((point for point in reversed(self.index.points(job["active_attempt"]))
-                      if self.index.valid(point)), None)
+        point = next(
+            (
+                point
+                for point in reversed(self.index.points(job["active_attempt"]))
+                if self.index.valid(point)
+            ),
+            None,
+        )
         return salvage_interrupted(result, directory, point, envelope.get("branch_point")) if point else None
 
     def run_claimed(self, job: dict, *, stop: Event | None = None) -> str:
@@ -325,18 +391,29 @@ class Worker:
                 effective["timeout_s"] = remaining_timeout(rollout_contract, effective.get("timeout_s", 3600))
                 if rollout_contract.get("message_export"):
                     # The soft deadline also covers this actor's own time cap.
-                    effective["extra"] = {**effective["extra"], "rollout_contract": {
-                        **rollout_contract,
-                        "deadline_at": min(rollout_contract["deadline_at"],
-                                           time.time() + effective["timeout_s"]),
-                    }}
-            envelope = {"version": 1, "job_id": job["id"],
-                        "attempt_id": job["active_attempt"], "kind": job["kind"],
-                        "effective_spec": effective, "profile_config": profile, "recovery": recovery,
-                        "continuation": continuation if recovery else None,
-                        # Where this job branched from, which a retry's recovery no longer says.
-                        "branch_point": (self.index.get_point(request["parent_point"])
-                                         if request.get("parent_point") else None)}
+                    effective["extra"] = {
+                        **effective["extra"],
+                        "rollout_contract": {
+                            **rollout_contract,
+                            "deadline_at": min(
+                                rollout_contract["deadline_at"], time.time() + effective["timeout_s"]
+                            ),
+                        },
+                    }
+            envelope = {
+                "version": 1,
+                "job_id": job["id"],
+                "attempt_id": job["active_attempt"],
+                "kind": job["kind"],
+                "effective_spec": effective,
+                "profile_config": profile,
+                "recovery": recovery,
+                "continuation": continuation if recovery else None,
+                # Where this job branched from, which a retry's recovery no longer says.
+                "branch_point": (
+                    self.index.get_point(request["parent_point"]) if request.get("parent_point") else None
+                ),
+            }
             envelope = self.store.freeze_payload(job["id"], job["lease_token"], envelope)
             effective = envelope["effective_spec"]
             profile = envelope["profile_config"]
@@ -355,30 +432,59 @@ class Worker:
                     from sprout.runstore.messages import TERMINATION_GRACE_SECONDS
 
                     timeout += TERMINATION_GRACE_SECONDS
-                process = subprocess.Popen([profile.get("python", sys.executable), "-m", "sprout.runstore.child",
-                                            str(directory), digest(envelope)], cwd=repo, env=env,
-                                           stdin=subprocess.PIPE, bufsize=0,
-                                           stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+                process = subprocess.Popen(
+                    [
+                        profile.get("python", sys.executable),
+                        "-m",
+                        "sprout.runstore.child",
+                        str(directory),
+                        digest(envelope),
+                    ],
+                    cwd=repo,
+                    env=env,
+                    stdin=subprocess.PIPE,
+                    bufsize=0,
+                    stdout=log,
+                    stderr=subprocess.STDOUT,
+                    start_new_session=True,
+                )
                 identity = process_identity(process.pid)
                 if identity is None:
                     raise RuntimeError("Attempt child exited before process registration")
                 watchdog.arm(identity, started + timeout, running=lambda: process.poll() is None)
                 heartbeat_started = time.monotonic()
-                self.store.heartbeat(job["id"], job["lease_token"], lease_s=self.lease_s, phase="starting",
-                                     execution={"directory": str(directory), "process": identity,
-                                                "request_hash": digest(envelope), "scope": self._scope(request, envelope)})
+                self.store.heartbeat(
+                    job["id"],
+                    job["lease_token"],
+                    lease_s=self.lease_s,
+                    phase="starting",
+                    execution={
+                        "directory": str(directory),
+                        "process": identity,
+                        "request_hash": digest(envelope),
+                        "scope": self._scope(request, envelope),
+                    },
+                )
                 watchdog.renew(heartbeat_started)
-                send_payload(process.stdin, payload, timeout_s=min(30, self.lease_s / 4,
-                                                                  timeout - (time.monotonic() - started)))
+                send_payload(
+                    process.stdin,
+                    payload,
+                    timeout_s=min(30, self.lease_s / 4, timeout - (time.monotonic() - started)),
+                )
                 while process.poll() is None:
                     events = self._ingest(job, directory, envelope)
                     progress = read_json(directory / "progress.json") or {}
                     heartbeat_started = time.monotonic()
                     stop_requested = self.store.heartbeat(
-                        job["id"], job["lease_token"], lease_s=self.lease_s,
+                        job["id"],
+                        job["lease_token"],
+                        lease_s=self.lease_s,
                         phase=progress.get("phase", "grading" if job["kind"] == "grade" else "rollout"),
-                        execution={"last_seq": events[-1]["seq"] if events else 0,
-                                   "tool_step": sum(event.get("type") == "tool.started" for event in events)})
+                        execution={
+                            "last_seq": events[-1]["seq"] if events else 0,
+                            "tool_step": sum(event.get("type") == "tool.started" for event in events),
+                        },
+                    )
                     if stop_requested:
                         watchdog.request_stop("stopped")
                     if watchdog.reason is not None:
@@ -387,13 +493,20 @@ class Worker:
                     time.sleep(min(1, self.lease_s / 4))
                 process.wait(timeout=5)
             result = read_json(directory / "outcome.json") or {
-                "status": "error", "failure_kind": "infrastructure", "error": "Attempt process exited without outcome",
-                "elapsed_s": time.monotonic() - started}
+                "status": "error",
+                "failure_kind": "infrastructure",
+                "error": "Attempt process exited without outcome",
+                "elapsed_s": time.monotonic() - started,
+            }
             if watchdog.reason is not None:
                 # A requested stop is nobody's failure and is never retried.
-                result = {**result, "status": "timeout" if watchdog.reason == "timeout" else "error",
-                          "failure_kind": "stopped" if watchdog.reason == "stopped" else "infrastructure",
-                          "error": f"Attempt stopped: {watchdog.reason}", "stop_reason": watchdog.reason}
+                result = {
+                    **result,
+                    "status": "timeout" if watchdog.reason == "timeout" else "error",
+                    "failure_kind": "stopped" if watchdog.reason == "stopped" else "infrastructure",
+                    "error": f"Attempt stopped: {watchdog.reason}",
+                    "stop_reason": watchdog.reason,
+                }
             self._publish(job, directory, result, envelope)
         except BaseException as error:
             if process is not None:
@@ -402,12 +515,17 @@ class Worker:
                 stop_process(identity)
                 process.wait(timeout=5)
             try:
-                self.store.finish(job["id"], job["lease_token"], {
-                    "status": "timeout" if watchdog.reason == "timeout" else "error",
-                    "failure_kind": "actor" if watchdog.reason == "timeout" else "infrastructure",
-                    "stop_reason": watchdog.reason,
-                    "error": f"{type(error).__name__}: {error}"},
-                                  state="quarantined" if process is not None else "failed")
+                self.store.finish(
+                    job["id"],
+                    job["lease_token"],
+                    {
+                        "status": "timeout" if watchdog.reason == "timeout" else "error",
+                        "failure_kind": "actor" if watchdog.reason == "timeout" else "infrastructure",
+                        "stop_reason": watchdog.reason,
+                        "error": f"{type(error).__name__}: {error}",
+                    },
+                    state="quarantined" if process is not None else "failed",
+                )
             except Exception:
                 pass
             if isinstance(error, (KeyboardInterrupt, SystemExit)):
@@ -436,13 +554,20 @@ class Worker:
             if not stop_process(execution.get("process")):
                 raise RuntimeError("Old process remains active")
             result = read_json(directory / "outcome.json") or {
-                "status": "error", "failure_kind": "infrastructure", "error": "Interrupted attempt reconciled",
-                "elapsed_s": (time.time() - attempts[-1]["started_at"].timestamp())}
+                "status": "error",
+                "failure_kind": "infrastructure",
+                "error": "Interrupted attempt reconciled",
+                "elapsed_s": (time.time() - attempts[-1]["started_at"].timestamp()),
+            }
             self._publish(job, directory, result, envelope)
             return self.store.get(job_id)["state"] != "quarantined"
         except Exception as error:
-            self.store.finish(job_id, job["lease_token"], {"error": f"Recovery failed: {type(error).__name__}: {error}"},
-                              state="quarantined")
+            self.store.finish(
+                job_id,
+                job["lease_token"],
+                {"error": f"Recovery failed: {type(error).__name__}: {error}"},
+                state="quarantined",
+            )
             return False
 
 
@@ -503,12 +628,15 @@ class Watchdog:
         while not self.finished.wait(0.05):
             now = time.monotonic()
             with self.lock:
-                if self.reason is not None:   # stopped on request already
+                if self.reason is not None:  # stopped on request already
                     return
                 if self.stop.is_set():
                     reason = "worker_shutdown"
-                elif (self.deadline is not None and now >= self.deadline
-                      and (self.running is None or self.running())):
+                elif (
+                    self.deadline is not None
+                    and now >= self.deadline
+                    and (self.running is None or self.running())
+                ):
                     reason = "timeout"
                 elif now >= self.lease_deadline:
                     reason = "lease_expired"

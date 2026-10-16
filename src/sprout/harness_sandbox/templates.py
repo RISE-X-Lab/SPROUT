@@ -55,8 +55,10 @@ MAX_TEMPLATE_ATTEMPTS = 6
 #: (grep_files runs the copy embedded in the runtime, not this one).
 RIPGREP_PATH = "/usr/local/bin/rg"
 RIPGREP_VERSION = "14.1.1"
-RIPGREP_URL = ("https://github.com/BurntSushi/ripgrep/releases/download/"
-               f"{RIPGREP_VERSION}/ripgrep-{RIPGREP_VERSION}-x86_64-unknown-linux-musl.tar.gz")
+RIPGREP_URL = (
+    "https://github.com/BurntSushi/ripgrep/releases/download/"
+    f"{RIPGREP_VERSION}/ripgrep-{RIPGREP_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+)
 
 #: Poll interval and ceiling for a build. A cold image pull plus conversion is
 #: the slow part; the ceiling exists so a stuck build fails the run instead of
@@ -83,8 +85,9 @@ def _could_be_snapshot_name(name: str) -> bool:
     return bool(name) and all(c.isalnum() or c in "-_" for c in name)
 
 
-def template_name(image: str, runtime_fingerprint: str, port: int,
-                  resources: "Optional[dict]" = None, salt: str = "") -> str:
+def template_name(
+    image: str, runtime_fingerprint: str, port: int, resources: "Optional[dict]" = None, salt: str = ""
+) -> str:
     """A stable, legal template name for one (image, runtime, port, shape).
 
     Content-addressed rather than derived from the image name: template names
@@ -140,6 +143,7 @@ def find_regctl() -> Optional[Path]:
     import glob
     import os
     import shutil
+
     candidate = os.environ.get("SPROUT_REGCTL")
     if candidate and Path(candidate).is_file():
         return Path(candidate)
@@ -156,15 +160,19 @@ def image_config_env(image: str, regctl: Path, timeout: float = 120.0) -> "list[
     """``KEY=VALUE`` entries of the image's OCI config ``Env``, in order."""
     import json
     import subprocess
+
     try:
         proc = subprocess.run(
             [str(regctl), "image", "config", image, "--format", "{{json .Config.Env}}"],
-            capture_output=True, text=True, timeout=timeout, check=False)
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+        )
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise TemplateError(f"could not read {image}'s config with regctl: {exc}") from exc
     if proc.returncode != 0:
-        raise TemplateError(
-            f"regctl could not read {image}'s config: {proc.stderr.strip()[:300]}")
+        raise TemplateError(f"regctl could not read {image}'s config: {proc.stderr.strip()[:300]}")
     try:
         env = json.loads(proc.stdout.strip() or "null") or []
     except ValueError as exc:
@@ -181,6 +189,7 @@ def start_command(port: int, env: "Optional[list[str]]" = None) -> str:
     HOME) is lost -- only the listed keys are overridden.
     """
     import shlex
+
     base = f"{RUNTIME_PATH} --port {port}"
     if not env:
         return base
@@ -243,7 +252,8 @@ class TemplateBuilder:
             raise TemplateError(
                 f"runtime binary not found at {self.runtime_bin}; "
                 "build it (cd runtime && go generate ./... && go build -o sprout-runtime .) or point "
-                "microvm.runtime_bin at one")
+                "microvm.runtime_bin at one"
+            )
         self._fingerprint = runtime_fingerprint(self.runtime_bin)
         if self.ripgrep_bin is not None:
             self.ripgrep_bin = Path(self.ripgrep_bin)
@@ -254,8 +264,7 @@ class TemplateBuilder:
         if self.ripgrep_bin is not None:
             self._fingerprint += ":" + runtime_fingerprint(self.ripgrep_bin)
 
-    def template_for(self, image: str,
-                     resources: "Optional[dict]" = None) -> str:
+    def template_for(self, image: str, resources: "Optional[dict]" = None) -> str:
         """The name of a template built from ``image``, building if needed.
 
         A name the backend already knows -- a checkpoint snapshot a replay
@@ -268,8 +277,9 @@ class TemplateBuilder:
             return self._resolved[image]
 
         env = self._env_for(image)
-        base = template_name(image, self._fingerprint, self.runtime_port,
-                             resources, salt=env_salt(env) if env else "")
+        base = template_name(
+            image, self._fingerprint, self.runtime_port, resources, salt=env_salt(env) if env else ""
+        )
         name = base
         with self._client() as client:
             if _could_be_snapshot_name(image) and self._known(client, image):
@@ -285,9 +295,9 @@ class TemplateBuilder:
     # --- internals ---
 
     def _client(self) -> httpx.Client:
-        return httpx.Client(base_url=self.server_url,
-                            headers={"X-API-Key": self.api_key},
-                            timeout=self.request_timeout)
+        return httpx.Client(
+            base_url=self.server_url, headers={"X-API-Key": self.api_key}, timeout=self.request_timeout
+        )
 
     def _known(self, client: httpx.Client, name: str) -> bool:
         """Whether the backend already knows ``name`` as something launchable.
@@ -295,11 +305,11 @@ class TemplateBuilder:
         Sandbox-sourced snapshots (a replay's checkpoint id) and built
         templates live behind different lookup endpoints, so both are asked.
         """
-        return (self._lookup(client, f"/snapshots/{name}", name)
-                or self._template_exists(client, name))
+        return self._lookup(client, f"/snapshots/{name}", name) or self._template_exists(client, name)
 
-    def _usable_template(self, client: httpx.Client, base: str, image: str,
-                         resources: "Optional[dict]") -> str:
+    def _usable_template(
+        self, client: httpx.Client, base: str, image: str, resources: "Optional[dict]"
+    ) -> str:
         """The name of a usable template for ``image``, building if needed.
 
         Tries the content-addressed name first, then suffixed variants. The
@@ -315,8 +325,7 @@ class TemplateBuilder:
             name = base if attempt == 0 else f"{base}-r{attempt}"
             if self._template_exists(client, name):
                 if attempt:
-                    logging.getLogger(__name__).warning(
-                        "template %s was unusable; using %s", base, name)
+                    logging.getLogger(__name__).warning("template %s was unusable; using %s", base, name)
                 return name
             if not self._name_taken(client, name):
                 staged = self._stage_runtime(client, image, name, resources)
@@ -324,11 +333,12 @@ class TemplateBuilder:
                 return name
             # Taken but unusable: a failed build owns this name for good.
             logging.getLogger(__name__).warning(
-                "template %s exists but its build failed; trying the next name",
-                name)
+                "template %s exists but its build failed; trying the next name", name
+            )
         raise TemplateError(
             f"no usable template name for {image}: {MAX_TEMPLATE_ATTEMPTS} "
-            f"variants of {base} are taken by failed builds")
+            f"variants of {base} are taken by failed builds"
+        )
 
     def _name_taken(self, client: httpx.Client, name: str) -> bool:
         """Whether the alias resolves at all, usable or not."""
@@ -352,9 +362,7 @@ class TemplateBuilder:
         if resp.status_code == 404:
             return False
         if resp.status_code != 200:
-            raise TemplateError(
-                f"could not check {name}: HTTP {resp.status_code} "
-                f"{resp.text[:200]}")
+            raise TemplateError(f"could not check {name}: HTTP {resp.status_code} {resp.text[:200]}")
         template_id = (resp.json() or {}).get("templateID")
         if not template_id:
             # The alias resolves but does not say to what. Not evidence of a
@@ -375,15 +383,13 @@ class TemplateBuilder:
         spawn instead of silently multiplying template names.
         """
         try:
-            resp = client.get(
-                f"/templates/{template_id}/builds/{template_id}/status")
+            resp = client.get(f"/templates/{template_id}/builds/{template_id}/status")
         except Exception:
             return True
         if resp.status_code != 200:
             return True
         status = str((resp.json() or {}).get("status") or "").lower()
-        return status not in ("error", "failed", "failure", "cancelled",
-                             "canceled")
+        return status not in ("error", "failed", "failure", "cancelled", "canceled")
 
     def _lookup(self, client: httpx.Client, path: str, name: str) -> bool:
         resp = client.get(path)
@@ -391,11 +397,11 @@ class TemplateBuilder:
             return True
         if resp.status_code == 404:
             return False
-        raise TemplateError(
-            f"could not check {name}: HTTP {resp.status_code} {resp.text[:200]}")
+        raise TemplateError(f"could not check {name}: HTTP {resp.status_code} {resp.text[:200]}")
 
-    def _stage_runtime(self, client: httpx.Client, image: str, name: str,
-                       resources: "Optional[dict]" = None) -> str:
+    def _stage_runtime(
+        self, client: httpx.Client, image: str, name: str, resources: "Optional[dict]" = None
+    ) -> str:
         """Cold-start ``image``, install the runtime, and snapshot it.
 
         Returns the staged snapshot's id. Uses the backend's file service
@@ -417,13 +423,13 @@ class TemplateBuilder:
                 payload["memoryMB"] = int(resources["memory_mb"])
             if resources.get("disk_size_mb"):
                 payload["diskSizeMB"] = int(resources["disk_size_mb"])
-        created = client.post("/sandboxes-cold", json=payload,
-                              timeout=max(self.request_timeout,
-                                          COLD_START_TIMEOUT_SECONDS))
+        created = client.post(
+            "/sandboxes-cold", json=payload, timeout=max(self.request_timeout, COLD_START_TIMEOUT_SECONDS)
+        )
         if created.status_code != 201:
             raise TemplateError(
-                f"could not cold-start {image}: "
-                f"HTTP {created.status_code} {created.text[:200]}")
+                f"could not cold-start {image}: HTTP {created.status_code} {created.text[:200]}"
+            )
         sandbox_id = created.json()["sandboxID"]
         try:
             self._upload(client, sandbox_id, self.runtime_bin, RUNTIME_PATH)
@@ -432,40 +438,49 @@ class TemplateBuilder:
             # Deliberately unnamed: the build consumes it by id, and an alias
             # would make a retry after a half-failed build collide with the
             # previous attempt's leftover.
-            snapshot = client.post(f"/sandboxes/{sandbox_id}/snapshots",
-                                   json={"diskOnly": True})
+            snapshot = client.post(f"/sandboxes/{sandbox_id}/snapshots", json={"diskOnly": True})
             if snapshot.status_code != 201:
                 raise TemplateError(
                     f"could not snapshot the staged runtime for {image}: "
-                    f"HTTP {snapshot.status_code} {snapshot.text[:200]}")
+                    f"HTTP {snapshot.status_code} {snapshot.text[:200]}"
+                )
             return snapshot.json()["snapshotID"]
         finally:
             # The staging sandbox has served its purpose either way; leaving it
             # running would hold a VM for the rest of the run.
             client.delete(f"/sandboxes/{sandbox_id}")
 
-    def _upload(self, client: httpx.Client, sandbox_id: str,
-                source: Path, dest: str) -> None:
+    def _upload(self, client: httpx.Client, sandbox_id: str, source: Path, dest: str) -> None:
         # The backend's file service listens on its own port inside the guest,
         # reached through the same proxy as the runtime.
-        headers = {MicroVMPool.SANDBOX_ID_HEADER: sandbox_id,
-                   MicroVMPool.TARGET_PORT_HEADER: MicroVMPool.ENVD_PORT}
+        headers = {
+            MicroVMPool.SANDBOX_ID_HEADER: sandbox_id,
+            MicroVMPool.TARGET_PORT_HEADER: MicroVMPool.ENVD_PORT,
+        }
         with open(source, "rb") as handle:
             resp = client.post(
-                "/files", params={"path": dest}, headers=headers,
-                files={"file": (source.name, handle,
-                                "application/octet-stream")},
-                timeout=max(self.request_timeout, 300.0))
+                "/files",
+                params={"path": dest},
+                headers=headers,
+                files={"file": (source.name, handle, "application/octet-stream")},
+                timeout=max(self.request_timeout, 300.0),
+            )
         if resp.status_code not in (200, 201, 204):
             raise TemplateError(
-                f"could not upload {source.name} to {sandbox_id}: "
-                f"HTTP {resp.status_code} {resp.text[:200]}")
+                f"could not upload {source.name} to {sandbox_id}: HTTP {resp.status_code} {resp.text[:200]}"
+            )
         # The executable bit does not survive the upload; the build below
         # restores it with a RUN step, which is also the reason the build has
         # any steps at all.
 
-    def _build_from(self, client: httpx.Client, name: str, image: str,
-                    staged_snapshot: str, resources: "Optional[dict]" = None) -> None:
+    def _build_from(
+        self,
+        client: httpx.Client,
+        name: str,
+        image: str,
+        staged_snapshot: str,
+        resources: "Optional[dict]" = None,
+    ) -> None:
         # The template's declared shape must match the staged snapshot's: a
         # snapshot-based build resumes a committed VM, so the backend refuses
         # one whose CPU or memory would differ ("snapshot-based build cannot
@@ -481,15 +496,15 @@ class TemplateBuilder:
             if resources.get("disk_size_mb"):
                 payload["diskSizeMB"] = int(resources["disk_size_mb"])
         created = client.post("/v3/templates", json=payload)
-        if created.status_code == 409 or (
-                created.status_code == 400 and "already points" in created.text):
+        if created.status_code == 409 or (created.status_code == 400 and "already points" in created.text):
             # Another worker (or an earlier attempt) got there first; its
             # build is the one to use.
             return
         if created.status_code != 202:
             raise TemplateError(
                 f"could not create template {name} for {image}: "
-                f"HTTP {created.status_code} {created.text[:200]}")
+                f"HTTP {created.status_code} {created.text[:200]}"
+            )
         body = created.json()
         template_id, build_id = body["templateID"], body["buildID"]
 
@@ -499,42 +514,47 @@ class TemplateBuilder:
                 "fromTemplate": staged_snapshot,
                 # One step, to make the uploaded binary executable: uploads do
                 # not carry the mode bit.
-                "steps": [{"type": "RUN", "args": [
-                    f"chmod +x {RUNTIME_PATH}; chmod +x {RIPGREP_PATH} 2>/dev/null || true"]}],
+                "steps": [
+                    {
+                        "type": "RUN",
+                        "args": [f"chmod +x {RUNTIME_PATH}; chmod +x {RIPGREP_PATH} 2>/dev/null || true"],
+                    }
+                ],
                 "startCmd": start_command(self.runtime_port, self._env_for(image)),
                 # Cold boots re-run startCmd, so readiness has to mean "the
                 # runtime is accepting connections", not "the process exists".
                 "readyCmd": f"timeout 1 bash -c '</dev/tcp/127.0.0.1/{self.runtime_port}'",
-            })
+            },
+        )
         if started.status_code not in (200, 202, 204):
             raise TemplateError(
-                f"could not start build for {name} ({image}): "
-                f"HTTP {started.status_code} {started.text[:200]}")
+                f"could not start build for {name} ({image}): HTTP {started.status_code} {started.text[:200]}"
+            )
 
         self._await_build(client, template_id, build_id, name, image)
 
-    def _await_build(self, client: httpx.Client, template_id: str,
-                     build_id: str, name: str, image: str) -> None:
+    def _await_build(
+        self, client: httpx.Client, template_id: str, build_id: str, name: str, image: str
+    ) -> None:
         deadline = time.monotonic() + self.build_timeout
         last = ""
         while time.monotonic() < deadline:
             resp = client.get(f"/templates/{template_id}/builds/{build_id}/status")
             if resp.status_code != 200:
                 raise TemplateError(
-                    f"could not read build status for {name}: "
-                    f"HTTP {resp.status_code} {resp.text[:200]}")
+                    f"could not read build status for {name}: HTTP {resp.status_code} {resp.text[:200]}"
+                )
             status = str(resp.json().get("status") or "")
             last = status
             if status == "ready":
                 return
             if status in ("error", "failed"):
-                raise TemplateError(
-                    f"template build failed for {name} ({image}): "
-                    f"{resp.text[:400]}")
+                raise TemplateError(f"template build failed for {name} ({image}): {resp.text[:400]}")
             time.sleep(BUILD_POLL_SECONDS)
         raise TemplateError(
             f"template build for {name} ({image}) did not finish in "
-            f"{self.build_timeout:.0f}s (last status: {last or 'unknown'})")
+            f"{self.build_timeout:.0f}s (last status: {last or 'unknown'})"
+        )
 
 
 def ensure_ripgrep(cache_dir: Optional[Path] = None) -> Optional[Path]:
@@ -550,14 +570,14 @@ def ensure_ripgrep(cache_dir: Optional[Path] = None) -> Optional[Path]:
         return binary
     import io
     import tarfile
+
     try:
         cache_dir.mkdir(parents=True, exist_ok=True)
         with httpx.Client(follow_redirects=True, timeout=120.0) as client:
             payload = client.get(RIPGREP_URL)
             payload.raise_for_status()
         with tarfile.open(fileobj=io.BytesIO(payload.content), mode="r:gz") as tar:
-            member = next(m for m in tar.getmembers()
-                          if m.name.endswith("/rg") and m.isfile())
+            member = next(m for m in tar.getmembers() if m.name.endswith("/rg") and m.isfile())
             extracted = tar.extractfile(member)
             assert extracted is not None
             tmp = binary.with_suffix(".tmp")
@@ -566,8 +586,10 @@ def ensure_ripgrep(cache_dir: Optional[Path] = None) -> Optional[Path]:
             tmp.rename(binary)
         return binary
     except Exception as exc:  # noqa: BLE001 -- optional asset, never fatal
-        print(f"note: could not fetch ripgrep to bake into templates ({exc}); "
-              "sandboxes built from these templates have no rg on PATH")
+        print(
+            f"note: could not fetch ripgrep to bake into templates ({exc}); "
+            "sandboxes built from these templates have no rg on PATH"
+        )
         return None
 
 
@@ -595,13 +617,15 @@ def builder_from_backend(backend: dict) -> Optional[TemplateBuilder]:
     if not server_url:
         raise TemplateError(
             "microvm.runtime_bin is set but no microvm.server_url and no "
-            "AENV_SERVER_URL: a per-image template has to be built somewhere")
+            "AENV_SERVER_URL: a per-image template has to be built somewhere"
+        )
     image_env = bool(section.get("image_env"))
     regctl = find_regctl() if image_env else None
     if image_env and regctl is None:
         raise TemplateError(
             "microvm.image_env is set but no regctl was found (SPROUT_REGCTL, PATH, "
-            f"or {REGCTL_DEPS_GLOB}); the image's ENV cannot be read")
+            f"or {REGCTL_DEPS_GLOB}); the image's ENV cannot be read"
+        )
     return TemplateBuilder(
         server_url=str(server_url).rstrip("/"),
         api_key=api_key,

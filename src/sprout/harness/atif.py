@@ -134,9 +134,7 @@ def journal_to_atif(
     for step in steps:
         for key in ("prompt_tokens", "completion_tokens", "cached_tokens"):
             total[key] += step["metrics"].get(key) or 0
-        total["cost_usd"] = (total.get("cost_usd") or 0.0) + (
-            step["metrics"].get("cost_usd") or 0.0
-        )
+        total["cost_usd"] = (total.get("cost_usd") or 0.0) + (step["metrics"].get("cost_usd") or 0.0)
 
     document = {
         "schema_version": ATIF_VERSION,

@@ -30,9 +30,13 @@ def referenced(target: PurePosixPath, documents: list[PurePosixPath]) -> bool:
 
 
 def main() -> int:
-    tracked = [PurePosixPath(p) for p in subprocess.run(
-        ["git", "ls-files", "-z"], cwd=REPO, check=True, capture_output=True,
-        text=True).stdout.split("\0") if p and (REPO / p).is_file()]
+    tracked = [
+        PurePosixPath(p)
+        for p in subprocess.run(
+            ["git", "ls-files", "-z"], cwd=REPO, check=True, capture_output=True, text=True
+        ).stdout.split("\0")
+        if p and (REPO / p).is_file()
+    ]
     docs = [p for p in tracked if p.parts[0] == "docs"]
     markdown = [p for p in docs if p.suffix == ".md"]
     readme = [PurePosixPath("README.md")]

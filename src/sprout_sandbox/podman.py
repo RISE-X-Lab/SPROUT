@@ -173,6 +173,7 @@ def default_podman_bin() -> str:
         return str(installed)
     return "podman"
 
+
 _HEX_ID = re.compile(r"^(?:sha256:)?([0-9a-f]{64})$")
 _UNSAFE = re.compile(r"[^A-Za-z0-9._-]+")
 #: The ids this pool mints for snapshots: ``<sandbox id>-<counter>[-<name>]``.
@@ -194,8 +195,12 @@ async def _command(argv: "list[str]", *, timeout: float, cwd: "str | Path | None
     therefore never runs podman from the caller's directory.
     """
     process = await asyncio.create_subprocess_exec(
-        *argv, stdin=asyncio.subprocess.DEVNULL, cwd=None if cwd is None else str(cwd),
-        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        *argv,
+        stdin=asyncio.subprocess.DEVNULL,
+        cwd=None if cwd is None else str(cwd),
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
     try:
         stdout, stderr = await asyncio.wait_for(process.communicate(), timeout)
     except asyncio.TimeoutError:
@@ -203,9 +208,10 @@ async def _command(argv: "list[str]", *, timeout: float, cwd: "str | Path | None
         await process.wait()
         raise PodmanError("%s did not finish within %.0f s" % (_words(argv), timeout))
     if process.returncode != 0:
-        raise PodmanError("%s failed (exit %d): %s" % (
-            _words(argv), process.returncode,
-            stderr.decode(errors="replace").strip() or "(no stderr)"))
+        raise PodmanError(
+            "%s failed (exit %d): %s"
+            % (_words(argv), process.returncode, stderr.decode(errors="replace").strip() or "(no stderr)")
+        )
     return stdout.decode(errors="replace")
 
 
@@ -224,8 +230,10 @@ class BtrfsStore:
         self.path = Path(path).resolve()
         self.timeout = float(timeout)
         if not self.path.is_dir():
-            raise ValueError("store does not exist: %s (create one with "
-                             "sudo ops/btrfs_store.sh <mount point> <image file> <size>)" % self.path)
+            raise ValueError(
+                "store does not exist: %s (create one with "
+                "sudo ops/btrfs_store.sh <mount point> <image file> <size>)" % self.path
+            )
         self._probe()
         self.bases = self.path / "bases"
         self.sandboxes = self.path / "sandboxes"
@@ -242,8 +250,10 @@ class BtrfsStore:
         missing mount option, the first destroy -- failing.
         """
         if shutil.which("btrfs") is None:
-            raise ValueError("btrfs-progs is not installed (no `btrfs` on PATH); "
-                             "the podman backend keeps its sandboxes in btrfs subvolumes")
+            raise ValueError(
+                "btrfs-progs is not installed (no `btrfs` on PATH); "
+                "the podman backend keeps its sandboxes in btrfs subvolumes"
+            )
         problem = mount_problem(self.path)
         if problem:
             raise ValueError(problem)
@@ -285,8 +295,10 @@ class BtrfsStore:
         second on a 100k-inode rootfs.
         """
         podman_bin = podman_bin or default_podman_bin()
-        raw = await _command([podman_bin, "unshare", "find", str(rootfs), "-mindepth", "1", "-inum", "256"],
-                             timeout=self.timeout)
+        raw = await _command(
+            [podman_bin, "unshare", "find", str(rootfs), "-mindepth", "1", "-inum", "256"],
+            timeout=self.timeout,
+        )
         found = [Path(line) for line in raw.splitlines() if line.strip()]
         return sorted(found, key=lambda path: len(path.parts), reverse=True)
 
@@ -301,10 +313,13 @@ class BtrfsStore:
         podman_bin = podman_bin or default_podman_bin()
         if rootfs.is_dir():
             for nested in await self.nested_subvolumes(rootfs, podman_bin=podman_bin):
-                await _command([podman_bin, "unshare", "btrfs", "property", "set", str(nested), "ro", "false"],
-                               timeout=self.timeout)
-                await _command([podman_bin, "unshare", "btrfs", "subvolume", "delete", str(nested)],
-                               timeout=self.timeout)
+                await _command(
+                    [podman_bin, "unshare", "btrfs", "property", "set", str(nested), "ro", "false"],
+                    timeout=self.timeout,
+                )
+                await _command(
+                    [podman_bin, "unshare", "btrfs", "subvolume", "delete", str(nested)], timeout=self.timeout
+                )
         await self.discard(rootfs)
 
     async def delete_snapshot(self, snapshot_id: str) -> None:
@@ -342,9 +357,15 @@ class PodmanPool:
     #: ``timeout`` bounds the rest.
     BULK_TIMEOUT_S = 1800.0
 
-    def __init__(self, store: "str | Path", runtime_bin: "str | Path",
-                 podman_bin: "str | None" = None, allow_internet: "bool | None" = None,
-                 socket_dir: "str | Path | None" = None, timeout: float = 120):
+    def __init__(
+        self,
+        store: "str | Path",
+        runtime_bin: "str | Path",
+        podman_bin: "str | None" = None,
+        allow_internet: "bool | None" = None,
+        socket_dir: "str | Path | None" = None,
+        timeout: float = 120,
+    ):
         """
         Args:
             store: A directory on a btrfs filesystem mounted with
@@ -371,8 +392,10 @@ class PodmanPool:
         # rather than a host file.
         self.runtime_bin = Path(runtime_bin).resolve()
         if not self.runtime_bin.is_file():
-            raise ValueError("runtime_bin does not exist: %s (cd runtime && go generate ./... "
-                             "&& go build -o sprout-runtime .)" % self.runtime_bin)
+            raise ValueError(
+                "runtime_bin does not exist: %s (cd runtime && go generate ./... "
+                "&& go build -o sprout-runtime .)" % self.runtime_bin
+            )
         self.timeout = float(timeout)
         self.store = BtrfsStore(store, timeout=self.timeout)
         self.podman_bin = podman_bin or default_podman_bin()
@@ -401,11 +424,11 @@ class PodmanPool:
 
     # --- podman ---
 
-    async def _podman(self, *args: str, timeout: Optional[float] = None,
-                      cwd: "Path | None" = None) -> str:
+    async def _podman(self, *args: str, timeout: Optional[float] = None, cwd: "Path | None" = None) -> str:
         """Run podman from the store (or ``cwd``), never from the caller's directory (see :func:`_command`)."""
-        return await _command([self.podman_bin, *args], timeout=timeout or self.timeout,
-                              cwd=cwd or self.store.path)
+        return await _command(
+            [self.podman_bin, *args], timeout=timeout or self.timeout, cwd=cwd or self.store.path
+        )
 
     async def _remove(self, container: str) -> None:
         """``podman rm -f``; a container that is already gone is not an error."""
@@ -419,8 +442,16 @@ class PodmanPool:
 
     async def _create_network(self, sandbox_id: str) -> None:
         """The sandbox's own bridge network, named after it (module docstring)."""
-        await self._podman("network", "create", *NETWORK_OPTIONS, "--label", MANAGED_LABEL,
-                           "--label", "%s=%s" % (STORE_LABEL, self.store.path), sandbox_id)
+        await self._podman(
+            "network",
+            "create",
+            *NETWORK_OPTIONS,
+            "--label",
+            MANAGED_LABEL,
+            "--label",
+            "%s=%s" % (STORE_LABEL, self.store.path),
+            sandbox_id,
+        )
 
     async def _remove_network(self, sandbox_id: str) -> None:
         """``podman network rm``, never ``-f`` (which removes the containers on it);
@@ -433,17 +464,27 @@ class PodmanPool:
 
     # --- Host files ---
 
-    async def upload_file(self, sandbox: Sandbox, source, destination: str,
-                          timeout: Optional[float] = None) -> None:
+    async def upload_file(
+        self, sandbox: Sandbox, source, destination: str, timeout: Optional[float] = None
+    ) -> None:
         """``podman cp`` a host file into the container, bypassing the runtime."""
-        await self._podman("cp", str(source), "%s:%s" % (sandbox.require_id(), destination),
-                           timeout=timeout or self.BULK_TIMEOUT_S)
+        await self._podman(
+            "cp",
+            str(source),
+            "%s:%s" % (sandbox.require_id(), destination),
+            timeout=timeout or self.BULK_TIMEOUT_S,
+        )
 
-    async def download_file(self, sandbox: Sandbox, source: str, destination,
-                            timeout: Optional[float] = None) -> None:
+    async def download_file(
+        self, sandbox: Sandbox, source: str, destination, timeout: Optional[float] = None
+    ) -> None:
         """``podman cp`` a container file to the host, outside the runtime."""
-        await self._podman("cp", "%s:%s" % (sandbox.require_id(), source), str(destination),
-                           timeout=timeout or self.BULK_TIMEOUT_S)
+        await self._podman(
+            "cp",
+            "%s:%s" % (sandbox.require_id(), source),
+            str(destination),
+            timeout=timeout or self.BULK_TIMEOUT_S,
+        )
 
     # --- Lifecycle ---
 
@@ -451,8 +492,13 @@ class PodmanPool:
         """Sandboxes this pool currently holds."""
         return list(self._sandboxes.values())
 
-    async def spawn(self, image: str, env: "dict[str, str] | None" = None,
-                    agent_id: str = "", resources: "dict | None" = None) -> Sandbox:
+    async def spawn(
+        self,
+        image: str,
+        env: "dict[str, str] | None" = None,
+        agent_id: str = "",
+        resources: "dict | None" = None,
+    ) -> Sandbox:
         """Start a container from an image reference or a snapshot id.
 
         Both name a read-only subvolume to give the container a writable
@@ -466,8 +512,9 @@ class PodmanPool:
         """
         return await self._start(image, env=env, agent_id=agent_id, resources=resources)
 
-    async def spawn_from_image(self, image: str, agent_id: str = "",
-                               resources: "dict | None" = None) -> Sandbox:
+    async def spawn_from_image(
+        self, image: str, agent_id: str = "", resources: "dict | None" = None
+    ) -> Sandbox:
         """The same as :meth:`spawn`: a reference or a snapshot id, with a shape.
 
         ``resources`` maps ``cpu`` to ``--cpus`` and ``memory_mb`` to
@@ -491,8 +538,14 @@ class PodmanPool:
         """
         return await self._base_for(image)
 
-    async def _start(self, image: str, *, env: "dict[str, str] | None" = None,
-                     agent_id: str = "", resources: "dict | None" = None) -> Sandbox:
+    async def _start(
+        self,
+        image: str,
+        *,
+        env: "dict[str, str] | None" = None,
+        agent_id: str = "",
+        resources: "dict | None" = None,
+    ) -> Sandbox:
         if not image:
             raise ValueError("spawn needs an image reference or a snapshot id")
         source = await self._source_for(image)
@@ -532,8 +585,15 @@ class PodmanPool:
         self._online[sandbox_id] = online
         return sandbox
 
-    def _run_argv(self, sandbox_id: str, rootfs: Path, socket_dir: Path, config: dict,
-                  env: "dict[str, str] | None", resources: "dict | None") -> list[str]:
+    def _run_argv(
+        self,
+        sandbox_id: str,
+        rootfs: Path,
+        socket_dir: Path,
+        config: dict,
+        env: "dict[str, str] | None",
+        resources: "dict | None",
+    ) -> list[str]:
         """Everything after ``podman run -d`` / ``podman create``.
 
         Options first: ``--rootfs`` is a flag and the path takes the image's
@@ -541,11 +601,22 @@ class PodmanPool:
         ``User`` is deliberately absent: the runtime runs as the container's
         root and the harness drops to that user per command (module docstring).
         """
-        argv = ["--name", sandbox_id, "--network", sandbox_id,
-                "--label", MANAGED_LABEL, "--label", "%s=%s" % (STORE_LABEL, self.store.path),
-                "-v", "%s:%s" % (socket_dir, SOCKET_MOUNT),
-                "-v", "%s:%s:ro" % (self.runtime_bin, RUNTIME_PATH),
-                "--entrypoint", RUNTIME_PATH]
+        argv = [
+            "--name",
+            sandbox_id,
+            "--network",
+            sandbox_id,
+            "--label",
+            MANAGED_LABEL,
+            "--label",
+            "%s=%s" % (STORE_LABEL, self.store.path),
+            "-v",
+            "%s:%s" % (socket_dir, SOCKET_MOUNT),
+            "-v",
+            "%s:%s:ro" % (self.runtime_bin, RUNTIME_PATH),
+            "--entrypoint",
+            RUNTIME_PATH,
+        ]
         for entry in config.get("Env") or []:
             argv += ["-e", entry]
         for key, value in (env or {}).items():
@@ -568,8 +639,10 @@ class PodmanPool:
             if snapshot.is_dir():
                 return snapshot
             if _SNAPSHOT_ID.match(image):
-                raise PodmanError("no snapshot %r in %s (deleted, swept, or taken on another store)"
-                                  % (image, self.store.snapshots))
+                raise PodmanError(
+                    "no snapshot %r in %s (deleted, swept, or taken on another store)"
+                    % (image, self.store.snapshots)
+                )
         return await self._base_for(image)
 
     async def _base_for(self, image: str) -> Path:
@@ -585,8 +658,9 @@ class PodmanPool:
         own subvolumes and keep what they have.
         """
         image = docker_reference(image)
-        info = await image_info(image, podman_bin=self.podman_bin, timeout=self.BULK_TIMEOUT_S,
-                                cwd=self.store.path)
+        info = await image_info(
+            image, podman_bin=self.podman_bin, timeout=self.BULK_TIMEOUT_S, cwd=self.store.path
+        )
         digest = _image_digest(info.get("Id") or "")
         base = self.store.bases / digest
         if base.is_dir() and _extraction_format(base) == EXTRACTION_FORMAT:
@@ -606,11 +680,16 @@ class PodmanPool:
             # then an image's non-root user cannot reach a single file).
             os.chmod(partial, 0o755)
             oci = info.get("Config") or {}
-            _write_config(partial, {
-                "image": image, "digest": digest, "extract": EXTRACTION_FORMAT,
-                "repo_digests": list(info.get("RepoDigests") or []),
-                "config": {key: oci.get(key) for key in CONFIG_KEYS},
-            })
+            _write_config(
+                partial,
+                {
+                    "image": image,
+                    "digest": digest,
+                    "extract": EXTRACTION_FORMAT,
+                    "repo_digests": list(info.get("RepoDigests") or []),
+                    "config": {key: oci.get(key) for key in CONFIG_KEYS},
+                },
+            )
             os.replace(_config_path(partial), _config_path(base))
             try:
                 os.rename(partial, base)
@@ -644,21 +723,37 @@ class PodmanPool:
         export = extract = None
         try:
             export = await asyncio.create_subprocess_exec(
-                self.podman_bin, "export", container, cwd=str(self.store.path),
-                stdin=asyncio.subprocess.DEVNULL, stdout=write_end,
-                stderr=asyncio.subprocess.PIPE)
+                self.podman_bin,
+                "export",
+                container,
+                cwd=str(self.store.path),
+                stdin=asyncio.subprocess.DEVNULL,
+                stdout=write_end,
+                stderr=asyncio.subprocess.PIPE,
+            )
             os.close(write_end)
             write_end = -1
             extract = await asyncio.create_subprocess_exec(
-                self.podman_bin, "unshare", "tar", "-x", "--numeric-owner", "--xattrs", "--xattrs-include=*",
-                "--acls", "-C", str(destination), cwd=str(self.store.path),
-                stdin=read_end, stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.PIPE)
+                self.podman_bin,
+                "unshare",
+                "tar",
+                "-x",
+                "--numeric-owner",
+                "--xattrs",
+                "--xattrs-include=*",
+                "--acls",
+                "-C",
+                str(destination),
+                cwd=str(self.store.path),
+                stdin=read_end,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.PIPE,
+            )
             os.close(read_end)
             read_end = -1
             (_, export_err), (_, extract_err) = await asyncio.wait_for(
-                asyncio.gather(export.communicate(), extract.communicate()),
-                self.BULK_TIMEOUT_S)
+                asyncio.gather(export.communicate(), extract.communicate()), self.BULK_TIMEOUT_S
+            )
         except BaseException:
             for process in (export, extract):
                 if process is not None and process.returncode is None:
@@ -672,11 +767,14 @@ class PodmanPool:
         # Both, when both failed: a tar that dies takes the export with it
         # (broken pipe), and the cause is in whichever stderr is not that.
         failures = [
-            "podman %s failed (exit %d): %s" % (
-                command, process.returncode, err.decode(errors="replace").strip() or "(no stderr)")
-            for command, process, err in (("export", export, export_err),
-                                          ("unshare tar", extract, extract_err))
-            if process.returncode != 0]
+            "podman %s failed (exit %d): %s"
+            % (command, process.returncode, err.decode(errors="replace").strip() or "(no stderr)")
+            for command, process, err in (
+                ("export", export, export_err),
+                ("unshare tar", extract, extract_err),
+            )
+            if process.returncode != 0
+        ]
         if failures:
             raise PodmanError("; ".join(failures))
 
@@ -702,19 +800,29 @@ class PodmanPool:
                 last_error = error
             state = await self._container_state(sandbox_id)
             if state.startswith(("exited", "stopped")):
-                raise PodmanError("runtime in %s exited before answering; %s" % (
-                    sandbox_id, await self._diagnosis(sandbox_id)))
+                raise PodmanError(
+                    "runtime in %s exited before answering; %s"
+                    % (sandbox_id, await self._diagnosis(sandbox_id))
+                )
             if asyncio.get_running_loop().time() >= deadline:
                 break
             await asyncio.sleep(self.READY_POLL_S)
-        raise PodmanError("runtime in %s did not answer within %.0f s (%s); %s" % (
-            sandbox_id, self.READY_TIMEOUT_S, last_error, await self._diagnosis(sandbox_id)))
+        raise PodmanError(
+            "runtime in %s did not answer within %.0f s (%s); %s"
+            % (sandbox_id, self.READY_TIMEOUT_S, last_error, await self._diagnosis(sandbox_id))
+        )
 
     async def _container_state(self, container: str) -> str:
         """``"<status> (exit <code>)"`` from one inspect, or what went wrong."""
         try:
-            raw = await self._podman("inspect", "--type", "container", "--format",
-                                     "{{.State.Status}} {{.State.ExitCode}}", container)
+            raw = await self._podman(
+                "inspect",
+                "--type",
+                "container",
+                "--format",
+                "{{.State.Status}} {{.State.ExitCode}}",
+                container,
+            )
         except PodmanError as error:
             return "state unknown (%s)" % error
         status, _, code = raw.strip().partition(" ")
@@ -727,10 +835,16 @@ class PodmanPool:
             logs = await self._podman("logs", "--tail", "20", container)
         except PodmanError:
             pass
-        oom = ("; a process in it was OOM-killed (conmon's %s marker)" % OOM_MARKER
-               if self.oom_killed(container) else "")
-        return "container %s%s; logs: %s" % (await self._container_state(container), oom,
-                                              logs.strip() or "(none)")
+        oom = (
+            "; a process in it was OOM-killed (conmon's %s marker)" % OOM_MARKER
+            if self.oom_killed(container)
+            else ""
+        )
+        return "container %s%s; logs: %s" % (
+            await self._container_state(container),
+            oom,
+            logs.strip() or "(none)",
+        )
 
     def oom_killed(self, sandbox_id: str) -> bool:
         """Whether the memory cgroup killed a process in the container (conmon's marker, see :func:`_command`)."""
@@ -796,9 +910,10 @@ class PodmanPool:
             left.append("its rootfs %s is not (%s)" % (rootfs, error))
         shutil.rmtree(self.socket_dir / sandbox_id, ignore_errors=True)
         if left:
-            raise PodmanError("container %s is removed but %s; `harness reap --store %s` reclaims %s"
-                              % (sandbox_id, " and ".join(left), self.store.path,
-                                 "it" if len(left) == 1 else "them"))
+            raise PodmanError(
+                "container %s is removed but %s; `harness reap --store %s` reclaims %s"
+                % (sandbox_id, " and ".join(left), self.store.path, "it" if len(left) == 1 else "them")
+            )
 
     async def destroy_all(self) -> None:
         """Tear down everything this pool created; every sandbox is tried before an error is raised."""
@@ -828,8 +943,7 @@ class PodmanPool:
         if self._online.get(sandbox_id) is allow:
             return
         try:
-            await self._podman("network", "connect" if allow else "disconnect",
-                               sandbox_id, sandbox_id)
+            await self._podman("network", "connect" if allow else "disconnect", sandbox_id, sandbox_id)
         except PodmanError as error:
             settled = "already connected" if allow else "is not connected"
             if settled not in str(error):
@@ -838,8 +952,9 @@ class PodmanPool:
 
     # --- Snapshots ---
 
-    async def snapshot(self, sandbox: Sandbox, *, name: Optional[str] = None,
-                       disk_only: bool = True) -> Snapshot:
+    async def snapshot(
+        self, sandbox: Sandbox, *, name: Optional[str] = None, disk_only: bool = True
+    ) -> Snapshot:
         """A read-only snapshot of the sandbox's rootfs; the container keeps running.
 
         Milliseconds, whatever the rootfs holds: a btrfs snapshot shares every
@@ -854,13 +969,16 @@ class PodmanPool:
         """
         if not disk_only:
             raise NotImplementedError(
-                "podman snapshots are disk-only: a btrfs snapshot holds files, not processes")
+                "podman snapshots are disk-only: a btrfs snapshot holds files, not processes"
+            )
         sandbox_id = sandbox.require_id()
         rootfs = self.store.sandboxes / sandbox_id
         nested = await self.store.nested_subvolumes(rootfs, podman_bin=self.podman_bin)
         if nested:
-            raise PodmanError("rootfs of %s holds nested subvolumes (%s); a snapshot would omit their contents"
-                              % (sandbox_id, ", ".join("/" + str(path.relative_to(rootfs)) for path in nested)))
+            raise PodmanError(
+                "rootfs of %s holds nested subvolumes (%s); a snapshot would omit their contents"
+                % (sandbox_id, ", ".join("/" + str(path.relative_to(rootfs)) for path in nested))
+            )
         count = self._snapshots_taken.get(sandbox_id, 0) + 1
         snapshot_id = "%s-%04d" % (sandbox_id, count)
         if name:
@@ -881,8 +999,10 @@ class PodmanPool:
         return self.socket_dir / sandbox_id / SOCKET_FILE
 
     def _handle(self, sandbox_id: str, agent_id: str) -> Sandbox:
-        sb = Sandbox(backend=HttpBackend("http://sprout-runtime", uds=str(self._socket_path(sandbox_id))),
-                     agent_id=agent_id)
+        sb = Sandbox(
+            backend=HttpBackend("http://sprout-runtime", uds=str(self._socket_path(sandbox_id))),
+            agent_id=agent_id,
+        )
         sb._container_id = sandbox_id
         return sb
 
@@ -899,8 +1019,9 @@ def docker_reference(image: str) -> str:
     return ("docker.io/" if slash else "docker.io/library/") + image
 
 
-async def image_info(image: str, *, podman_bin: "str | None" = None, timeout: float = 1800.0,
-                     cwd: "str | Path | None" = None) -> dict:
+async def image_info(
+    image: str, *, podman_bin: "str | None" = None, timeout: float = 1800.0, cwd: "str | Path | None" = None
+) -> dict:
     """``podman image inspect`` of ``image`` as one record, pulled first when it is not local.
 
     One command answers both questions asked of an image: what the pool keys a
@@ -942,8 +1063,10 @@ def digest_reference(image: str, info: dict) -> str:
         named = candidate.split("@", 1)[0]
         if named == repository or named.endswith("/" + repository):
             return candidate
-    raise PodmanError("image %s has no repository digest to pin to (RepoDigests: %s); "
-                      "runs record the digest they ran against" % (image, info.get("RepoDigests")))
+    raise PodmanError(
+        "image %s has no repository digest to pin to (RepoDigests: %s); "
+        "runs record the digest they ran against" % (image, info.get("RepoDigests"))
+    )
 
 
 def mount_problem(path: "str | Path") -> Optional[str]:
@@ -955,19 +1078,27 @@ def mount_problem(path: "str | Path") -> Optional[str]:
     pool refuses.
     """
     try:
-        completed = subprocess.run(["findmnt", "-no", "FSTYPE,OPTIONS", "--target", str(path)],
-                                   capture_output=True, text=True, timeout=30)
+        completed = subprocess.run(
+            ["findmnt", "-no", "FSTYPE,OPTIONS", "--target", str(path)],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
     except FileNotFoundError:
         return "findmnt (util-linux) is not installed; it is how the store's mount is checked"
     fields = completed.stdout.split()
     if completed.returncode != 0 or len(fields) < 2:
         return "findmnt cannot tell what %s is mounted on: %s" % (
-            path, completed.stderr.strip() or "(no output)")
+            path,
+            completed.stderr.strip() or "(no output)",
+        )
     fstype, options = fields[0], fields[1]
     if fstype != "btrfs" or REQUIRED_MOUNT_OPTION not in options.split(","):
-        return ("store %s is on %s mounted with %s; the podman backend needs btrfs mounted with %s "
-                "(sudo ops/btrfs_store.sh <mount point> <image file> <size>)"
-                % (path, fstype, options, REQUIRED_MOUNT_OPTION))
+        return (
+            "store %s is on %s mounted with %s; the podman backend needs btrfs mounted with %s "
+            "(sudo ops/btrfs_store.sh <mount point> <image file> <size>)"
+            % (path, fstype, options, REQUIRED_MOUNT_OPTION)
+        )
     return None
 
 

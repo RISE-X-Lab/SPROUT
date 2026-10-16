@@ -45,12 +45,18 @@ def load_checkpoints(journal_path, *, events=None) -> List[Checkpoint]:
     for record in read_journal(journal_path) if events is None else events:
         if record.get("type") != CHECKPOINT_CAPTURED:
             continue
-        out.append(Checkpoint(
-            step=record.get("step") or 0, seq=record.get("seq") or 0,
-            snapshot_id=record.get("snapshot_id"), session_ckpt=record.get("session_ckpt"),
-            reason=record.get("reason") or "captured", turn_id=record.get("turn_id"),
-            final=bool(record.get("final")), delta_empty=record.get("delta_empty"),
-        ))
+        out.append(
+            Checkpoint(
+                step=record.get("step") or 0,
+                seq=record.get("seq") or 0,
+                snapshot_id=record.get("snapshot_id"),
+                session_ckpt=record.get("session_ckpt"),
+                reason=record.get("reason") or "captured",
+                turn_id=record.get("turn_id"),
+                final=bool(record.get("final")),
+                delta_empty=record.get("delta_empty"),
+            )
+        )
     return out
 
 
@@ -60,16 +66,23 @@ def closed_turns(events) -> Dict[str, dict]:
 
     Conversation grouping only; snapshot availability is ``branch_checkpoints``.
     """
-    steps = {e["call_id"]: e["step"] for e in events
-             if e.get("type") == "tool.started" and e.get("call_id") and type(e.get("step")) is int}
+    steps = {
+        e["call_id"]: e["step"]
+        for e in events
+        if e.get("type") == "tool.started" and e.get("call_id") and type(e.get("step")) is int
+    }
     finished = {e.get("call_id") for e in events if e.get("type") == "tool.finished"}
     closed = {}
     for event in events:
         if event.get("type") != "model.turn.completed":
             continue
         calls = event.get("call_ids") or []
-        if (calls and set(calls) <= finished and set(calls) <= steps.keys()
-                and event.get("step") == max(steps[c] for c in calls)):
+        if (
+            calls
+            and set(calls) <= finished
+            and set(calls) <= steps.keys()
+            and event.get("step") == max(steps[c] for c in calls)
+        ):
             closed[event.get("turn_id")] = {"step": event["step"], "call_ids": list(calls)}
     return closed
 
@@ -88,8 +101,12 @@ def branch_checkpoints(journal_path, *, events=None) -> Dict[int, Checkpoint]:
             continue
         if checkpoint.final:
             uncertain = any(e.get("type") == "execution.uncertain" for e in events)
-        if (not uncertain and checkpoint.is_complete() and checkpoint.turn_id in turns
-                and turns[checkpoint.turn_id]["step"] == checkpoint.step):
+        if (
+            not uncertain
+            and checkpoint.is_complete()
+            and checkpoint.turn_id in turns
+            and turns[checkpoint.turn_id]["step"] == checkpoint.step
+        ):
             eligible[checkpoint.step] = checkpoint
     return eligible
 
@@ -99,4 +116,3 @@ def uncaptured_turns(journal_path) -> List[str]:
     events = list(read_journal(journal_path))
     covered = {c.turn_id for c in load_checkpoints(journal_path, events=events) if c.snapshot_id}
     return sorted(t for t in closed_turns(events) if t not in covered)
-

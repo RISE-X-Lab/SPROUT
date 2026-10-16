@@ -65,8 +65,13 @@ def validate_request(body: dict) -> dict:
                 raise ValueError("grade must be a GradeSpec job template")
             if "snapshot_id" in grade["spec"]:
                 raise ValueError("grade snapshot_id is selected from the actor's exact final boundary")
-            job = JobSpec.from_dict({**grade, "kind": "grade",
-                                     "spec": {**grade["spec"], "snapshot_id": "driver-pending-snapshot"}})
+            job = JobSpec.from_dict(
+                {
+                    **grade,
+                    "kind": "grade",
+                    "spec": {**grade["spec"], "snapshot_id": "driver-pending-snapshot"},
+                }
+            )
             if grade.get("kind", "grade") != "grade" or job.parent_point:
                 raise ValueError("grade must be an independent grading job")
             sample["grade"] = job.validate()
@@ -83,8 +88,12 @@ def submission_key(group_id: str, sample_id: str, phase: str) -> str:
 def initial_document(request: dict) -> dict:
     samples = []
     for spec in request["samples"]:
-        actor = {"state": "planned", "job_id": None, "attempt_id": None,
-                 "operation": "branch" if "branch" in spec else "run"}
+        actor = {
+            "state": "planned",
+            "job_id": None,
+            "attempt_id": None,
+            "operation": "branch" if "branch" in spec else "run",
+        }
         if "branch" in spec:
             actor["submission"] = spec["branch"]
             actor["origin"] = {key: spec["branch"][key] for key in ("job_id", "point_id")}
@@ -93,13 +102,32 @@ def initial_document(request: dict) -> dict:
             job["context"]["rl_driver"] = {
                 "rollout_job_id": request["rollout_job_id"],
                 "prompt_group_id": request["prompt_group_id"],
-                "sample_slot_id": spec["sample_slot_id"], "context": request["context"],
+                "sample_slot_id": spec["sample_slot_id"],
+                "context": request["context"],
             }
             actor["submission"] = job
-        samples.append({"sample_slot_id": spec["sample_slot_id"], "actor": actor,
-                        "grade": ({"state": "planned", "job_id": None, "attempt_id": None,
-                                   "operation": "grade", "template": spec["grade"]}
-                                  if "grade" in spec else None)})
-    return {"rollout_job_id": request["rollout_job_id"],
-            "prompt_group_id": request["prompt_group_id"], "status": "queued",
-            "context": request["context"], "ready": False, "samples": samples}
+        samples.append(
+            {
+                "sample_slot_id": spec["sample_slot_id"],
+                "actor": actor,
+                "grade": (
+                    {
+                        "state": "planned",
+                        "job_id": None,
+                        "attempt_id": None,
+                        "operation": "grade",
+                        "template": spec["grade"],
+                    }
+                    if "grade" in spec
+                    else None
+                ),
+            }
+        )
+    return {
+        "rollout_job_id": request["rollout_job_id"],
+        "prompt_group_id": request["prompt_group_id"],
+        "status": "queued",
+        "context": request["context"],
+        "ready": False,
+        "samples": samples,
+    }

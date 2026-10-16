@@ -63,21 +63,28 @@ def grade(body: dict, directory: Path, *, session_factory) -> dict:
     # podman (the default) disconnects them before they start, AgentENV
     # creates them offline.
     name = backend_name(spec.backend)
-    backend = {**spec.backend, name: {**spec.backend.get(name, {}),
-               "allow_internet": spec.verifier_network == "allow"}}
+    backend = {
+        **spec.backend,
+        name: {**spec.backend.get(name, {}), "allow_internet": spec.verifier_network == "allow"},
+    }
     if spec.benchmark == "swe-rebench-v2":
         return grade_swerebench(spec, selected[0], backend, directory, session_factory=session_factory)
     raise ValueError(f"Unsupported official grader {spec.benchmark!r}")
 
 
-PATH = ("/opt/miniconda3/envs/testbed/bin:/opt/miniconda3/bin:"
-        "/opt/conda/envs/testbed/bin:/opt/conda/bin:/usr/local/cargo/bin:"
-        "/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin")
+PATH = (
+    "/opt/miniconda3/envs/testbed/bin:/opt/miniconda3/bin:"
+    "/opt/conda/envs/testbed/bin:/opt/conda/bin:/usr/local/cargo/bin:"
+    "/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+)
 
 
 def load_parsers(spec):
     path = Path(spec.parser_path or "")
-    if not path.is_file() or "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest() != spec.grader_revision:
+    if (
+        not path.is_file()
+        or "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest() != spec.grader_revision
+    ):
         raise ValueError("SWE-rebench parser checksum differs from grader_revision")
     module_spec = importlib.util.spec_from_file_location("sprout_swerebench_parsers", path)
     module = importlib.util.module_from_spec(module_spec)
@@ -120,7 +127,7 @@ def progress(status_map, task):
     breaking one of them is no progress at all, and scores 0.
     """
     targets = _passed(status_map, task.get("FAIL_TO_PASS") or [])
-    if not targets:   # nothing to fix: the verdict is all there is
+    if not targets:  # nothing to fix: the verdict is all there is
         return float(resolved(status_map, task))
     if not all(_passed(status_map, task.get("PASS_TO_PASS") or [])):
         return 0.0
@@ -143,9 +150,11 @@ GRADE_FACT_KEYS = ("test_patch_paths", "touched_test_paths", "fail_to_pass")
 def patch_facts(model_patch: str, row: dict) -> dict:
     """The :data:`GRADE_FACT_KEYS` of a grade of ``model_patch`` on the task ``row``."""
     test_patch_paths = patch_paths(row["test_patch"])
-    return {"test_patch_paths": test_patch_paths,
-            "touched_test_paths": sorted(set(patch_paths(model_patch)) & set(test_patch_paths)),
-            "fail_to_pass": list(row.get("FAIL_TO_PASS") or [])}
+    return {
+        "test_patch_paths": test_patch_paths,
+        "touched_test_paths": sorted(set(patch_paths(model_patch)) & set(test_patch_paths)),
+        "fail_to_pass": list(row.get("FAIL_TO_PASS") or []),
+    }
 
 
 def patch_paths(text: str) -> list[str]:
@@ -167,14 +176,18 @@ def patch_paths(text: str) -> list[str]:
     names: list[str | None] = []
     if not any(line.startswith("diff --git ") for line in lines):
         for index, line in enumerate(lines[:-2]):
-            if line.startswith("--- ") and lines[index + 1].startswith("+++ ") and lines[index + 2].startswith("@@"):
+            if (
+                line.startswith("--- ")
+                and lines[index + 1].startswith("+++ ")
+                and lines[index + 2].startswith("@@")
+            ):
                 names += [_side(line), _side(lines[index + 1])]
         return sorted({name for name in names if name})
     in_header = False
     for line in lines:
         if line.startswith("diff --git "):
             in_header = True
-            names += _header_paths(line[len("diff --git "):])
+            names += _header_paths(line[len("diff --git ") :])
         elif not in_header:
             continue
         elif line.startswith(("@@", "GIT binary patch", "Binary files ")):
@@ -183,8 +196,8 @@ def patch_paths(text: str) -> list[str]:
             names.append(_side(line))
         else:
             for marker in _NAME_LINES:
-                if line.startswith(marker):   # no a/ or b/ on these
-                    names.append(_quoted(line[len(marker):]))
+                if line.startswith(marker):  # no a/ or b/ on these
+                    names.append(_quoted(line[len(marker) :]))
     return sorted({name for name in names if name})
 
 
@@ -214,7 +227,7 @@ def _unquote(text: str, start: int = 0) -> tuple[str | None, int]:
                 raw.append(int(octal.group(), 8))
                 index = octal.end()
                 continue
-            if text[index + 1:index + 2] in _C_ESCAPES:
+            if text[index + 1 : index + 2] in _C_ESCAPES:
                 raw.append(_C_ESCAPES[text[index + 1]])
                 index += 2
                 continue
@@ -244,18 +257,22 @@ def _header_paths(names: str) -> list[str | None]:
     """The paths of a ``diff --git`` header, when its names can be told apart."""
     if names.startswith('"'):
         first, end = _unquote(names)
-        if first is None or names[end:end + 1] != " ":
+        if first is None or names[end : end + 1] != " ":
             return []
-        pair = [first, _quoted(names[end + 1:])]
-    elif names.endswith('"') and ' "' in names:   # an unquoted name holds no quote
+        pair = [first, _quoted(names[end + 1 :])]
+    elif names.endswith('"') and ' "' in names:  # an unquoted name holds no quote
         split = names.index(' "')
         pair = [names[:split], _unquote(names, split + 1)[0]]
     else:
         middle = (len(names) - 1) // 2
-        old, new = names[:middle], names[middle + 1:]
-        if (names[middle:middle + 1] != " " or old[:2] not in ("a/", "b/") or new[:2] not in ("a/", "b/")
-                or old[2:] != new[2:]):
-            return []   # asymmetric: a rename or copy, whose own lines name both
+        old, new = names[:middle], names[middle + 1 :]
+        if (
+            names[middle : middle + 1] != " "
+            or old[:2] not in ("a/", "b/")
+            or new[:2] not in ("a/", "b/")
+            or old[2:] != new[2:]
+        ):
+            return []  # asymmetric: a rename or copy, whose own lines name both
         pair = [old, new]
     return [_unprefixed(name) for name in pair]
 
@@ -266,16 +283,20 @@ def _header_paths(names: str) -> list[str | None]:
 #: agent's doing -- a model_patch_unavailable 0 -- instead of failing the grade.
 GIT = "git -c safe.directory='*'"
 
-APPLY = (GIT + " apply -v --3way --recount --ignore-space-change --whitespace=nowarn %s"
-         " || patch --batch --fuzz=5 -p1 -i %s")
+APPLY = (
+    GIT + " apply -v --3way --recount --ignore-space-change --whitespace=nowarn %s"
+    " || patch --batch --fuzz=5 -p1 -i %s"
+)
 
 
 #: The agent's diff against the base commit, written to a file: there is no
 #: pipe, so git's own exit status is the command's. The options outvote the
 #: repository's config, which the agent could have set: no external diff,
 #: textconv, colour or fsmonitor program, and the test patch's prefixes.
-DIFF = (GIT + " -c core.fsmonitor=false add -A && " + GIT + " -c core.quotepath=off -c core.fsmonitor=false diff"
-        " --cached --binary --no-ext-diff --no-textconv --no-color --src-prefix=a/ --dst-prefix=b/ %s > %s")
+DIFF = (
+    GIT + " -c core.fsmonitor=false add -A && " + GIT + " -c core.quotepath=off -c core.fsmonitor=false diff"
+    " --cached --binary --no-ext-diff --no-textconv --no-color --src-prefix=a/ --dst-prefix=b/ %s > %s"
+)
 
 
 def guest_directory() -> str:
@@ -304,8 +325,10 @@ def _create(session, image: str, resources: dict, failure: str) -> None:
 
 def _upload(session, source: Path, destination: str) -> None:
     if not session.upload_file(source, destination):
-        raise RuntimeError(f"Could not upload {source.name} to {destination} in the grading sandbox"
-                           + _transfer_error(session))
+        raise RuntimeError(
+            f"Could not upload {source.name} to {destination} in the grading sandbox"
+            + _transfer_error(session)
+        )
 
 
 def _download(session, source: str, destination: Path) -> None:
@@ -324,12 +347,20 @@ def _apply(path: str) -> str:
 
 def _zero(reason: str, error_output: str, common: dict, **extra) -> dict:
     """A completed grade of 0 that no test verdict decided."""
-    return {"status": "completed", "resolved": False, "progress": 0.0, "reason": reason,
-            "error_output": error_output, **extra, **common}
+    return {
+        "status": "completed",
+        "resolved": False,
+        "progress": 0.0,
+        "reason": reason,
+        "error_output": error_output,
+        **extra,
+        **common,
+    }
 
 
-def model_patch(spec: GradeSpec, row: dict, backend: dict, destination: Path, *,
-                session_factory) -> tuple[bytes | None, str]:
+def model_patch(
+    spec: GradeSpec, row: dict, backend: dict, destination: Path, *, session_factory
+) -> tuple[bytes | None, str]:
     """The agent's diff against the base commit, from its final snapshot, saved at ``destination``.
 
     ``(None, git's error)`` when the snapshot's repository cannot produce one
@@ -343,8 +374,12 @@ def model_patch(spec: GradeSpec, row: dict, backend: dict, destination: Path, *,
     try:
         _create(session, spec.snapshot_id, spec.resources, "Could not restore the SWE-rebench final snapshot")
         guest_patch = _guest_directory(session) + "/model.patch"
-        _, stderr, code = shell(session, f"cd {shlex.quote(workdir)} && " + DIFF % (
-            shlex.quote(row["base_commit"]), shlex.quote(guest_patch)), int(spec.timeout_s))
+        _, stderr, code = shell(
+            session,
+            f"cd {shlex.quote(workdir)} && "
+            + DIFF % (shlex.quote(row["base_commit"]), shlex.quote(guest_patch)),
+            int(spec.timeout_s),
+        )
         if code:
             return None, stderr[-4000:] or f"exit code {code}"
         _download(session, guest_patch, destination)
@@ -373,27 +408,42 @@ def grade_swerebench(spec: GradeSpec, row: dict, backend: dict, directory: Path,
     if not spec.image:
         raise ValueError("SWE-rebench grading needs the task image")
     workdir = "/" + row["repo"].split("/", 1)[1]
-    script = ("set -uo pipefail\nexport PATH=" + shlex.quote(PATH) + "\n"
-              "export CI=1 PAGER=cat MANPAGER=cat PIP_PROGRESS_BAR=off TQDM_DISABLE=1\n"
-              "export _JAVA_OPTIONS=-Djava.net.preferIPv6Addresses=false\nFAIL=0\n"
-              + "\n".join(f"{command} || FAIL=1" for command in commands) + '\nexit "$FAIL"\n')
-    patch_file, test_file, script_file = directory / "model.patch", directory / "test.patch", directory / "eval.sh"
+    script = (
+        "set -uo pipefail\nexport PATH=" + shlex.quote(PATH) + "\n"
+        "export CI=1 PAGER=cat MANPAGER=cat PIP_PROGRESS_BAR=off TQDM_DISABLE=1\n"
+        "export _JAVA_OPTIONS=-Djava.net.preferIPv6Addresses=false\nFAIL=0\n"
+        + "\n".join(f"{command} || FAIL=1" for command in commands)
+        + '\nexit "$FAIL"\n'
+    )
+    patch_file, test_file, script_file = (
+        directory / "model.patch",
+        directory / "test.patch",
+        directory / "eval.sh",
+    )
     log = directory / "swerebench-tests.log"
     test_file.write_bytes(row["test_patch"].encode())
     script_file.write_bytes(script.encode())
     patch, error_output = model_patch(spec, row, backend, patch_file, session_factory=session_factory)
     if patch is None:
-        patch_file.write_bytes(b"")   # the path every result names; nothing was graded
+        patch_file.write_bytes(b"")  # the path every result names; nothing was graded
     # test_patch is the hidden tests as applied, a path like model_patch: for the
     # review's leak judge (methods.leak_judge) only, never shown to the analyst.
-    common = {"model_patch": str(patch_file), "test_patch": str(test_file), "grader_revision": spec.grader_revision,
-              **patch_facts((patch or b"").decode("utf-8", errors="replace"), row)}
+    common = {
+        "model_patch": str(patch_file),
+        "test_patch": str(test_file),
+        "grader_revision": spec.grader_revision,
+        **patch_facts((patch or b"").decode("utf-8", errors="replace"), row),
+    }
     if patch is None:
         return _zero("model_patch_unavailable", error_output, common)
     session = session_factory(quiet=True, backend=backend)
     try:
-        _create(session, spec.image, spec.resources,
-                "Could not start a pristine SWE-rebench sandbox from the task image")
+        _create(
+            session,
+            spec.image,
+            spec.resources,
+            "Could not start a pristine SWE-rebench sandbox from the task image",
+        )
         prefix = f"cd {shlex.quote(workdir)} && "
         checked(session, prefix + GIT + " reset -q --hard HEAD", 120)
         guest = _guest_directory(session)
@@ -409,14 +459,20 @@ def grade_swerebench(spec: GradeSpec, row: dict, backend: dict, directory: Path,
         _upload(session, script_file, guest + "/eval.sh")
         guest_log = guest + "/tests.log"
         _, stderr, code, timed_out = shell_outcome(
-            session, prefix + f"bash {shlex.quote(guest + '/eval.sh')} > {shlex.quote(guest_log)} 2>&1",
-            int(spec.timeout_s))
+            session,
+            prefix + f"bash {shlex.quote(guest + '/eval.sh')} > {shlex.quote(guest_log)} 2>&1",
+            int(spec.timeout_s),
+        )
         if timed_out:
             # The log so far shows a reviewer where the tests hung; the verdict
             # does not need it, so a failed download costs only that.
             saved = session.download_file(guest_log, log)
-            return _zero("tests_timed_out", f"the tests did not finish within {int(spec.timeout_s)} s",
-                         common, **({"log": str(log)} if saved else {}))
+            return _zero(
+                "tests_timed_out",
+                f"the tests did not finish within {int(spec.timeout_s)} s",
+                common,
+                **({"log": str(log)} if saved else {}),
+            )
         _download(session, guest_log, log)
         if code not in (0, 1):
             # The tests' own output is in the log; stderr holds only the
@@ -424,8 +480,14 @@ def grade_swerebench(spec: GradeSpec, row: dict, backend: dict, directory: Path,
             killed = f"exit code {code}" + (f"\n{stderr[-4000:]}" if stderr.strip() else "")
             return _zero("test_runner_killed", killed, common, log=str(log))
         status_map = parser(log.read_text(encoding="utf-8", errors="replace")) or {}
-        return {"status": "completed", "resolved": resolved(status_map, row),
-                "progress": progress(status_map, row), "expected_pass_share": expected_pass_share(status_map, row),
-                "test_statuses": status_map, "log": str(log), **common}
+        return {
+            "status": "completed",
+            "resolved": resolved(status_map, row),
+            "progress": progress(status_map, row),
+            "expected_pass_share": expected_pass_share(status_map, row),
+            "test_statuses": status_map,
+            "log": str(log),
+            **common,
+        }
     finally:
         session.destroy()

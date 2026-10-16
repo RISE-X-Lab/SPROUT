@@ -47,19 +47,25 @@ def runs(lines: list[int]) -> list[Span]:
 
 def python(text: str) -> tuple[Span | None, list[Span], list[int]]:
     """The module docstring, every function and class docstring, and the comment-only lines."""
+
     def docstring(node: ast.Module | ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef) -> Span | None:
         first = node.body[0] if node.body else None
-        if (isinstance(first, ast.Expr) and isinstance(first.value, ast.Constant)
-                and isinstance(first.value.value, str)):
+        if (
+            isinstance(first, ast.Expr)
+            and isinstance(first.value, ast.Constant)
+            and isinstance(first.value.value, str)
+        ):
             return first.lineno, first.end_lineno or first.lineno
         return None
 
     tree = ast.parse(text)
     definitions = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
-    defs = [span for node in ast.walk(tree)
-            if isinstance(node, definitions) and (span := docstring(node))]
-    comments = [tok.start[0] for tok in tokenize.generate_tokens(io.StringIO(text).readline)
-                if tok.type == tokenize.COMMENT and not tok.line[:tok.start[1]].strip()]
+    defs = [span for node in ast.walk(tree) if isinstance(node, definitions) and (span := docstring(node))]
+    comments = [
+        tok.start[0]
+        for tok in tokenize.generate_tokens(io.StringIO(text).readline)
+        if tok.type == tokenize.COMMENT and not tok.line[: tok.start[1]].strip()
+    ]
     return docstring(tree), defs, comments
 
 
@@ -105,19 +111,25 @@ def go_comment_lines(text: str) -> list[int]:
 
 
 def hash_comment_lines(text: str) -> list[int]:
-    return [n for n, line in enumerate(text.splitlines(), 1)
-            if line.lstrip().startswith("#") and not (n == 1 and line.startswith("#!"))]
+    return [
+        n
+        for n, line in enumerate(text.splitlines(), 1)
+        if line.lstrip().startswith("#") and not (n == 1 and line.startswith("#!"))
+    ]
 
 
-def blocks(text: str, comments: list[int], declaration: re.Pattern[str]) -> tuple[Span | None, list[Span], list[int]]:
+def blocks(
+    text: str, comments: list[int], declaration: re.Pattern[str]
+) -> tuple[Span | None, list[Span], list[int]]:
     """For Go and shell: the opening block, the blocks above a declaration, the comment lines."""
     lines = text.splitlines()
-    first = next((n for n, line in enumerate(lines, 1)
-                  if line.strip() and not (n == 1 and line.startswith("#!"))), None)
+    first = next(
+        (n for n, line in enumerate(lines, 1) if line.strip() and not (n == 1 and line.startswith("#!"))),
+        None,
+    )
     found = runs(comments)
     opening = found[0] if found and found[0][0] == first else None
-    defs = [(a, b) for a, b in found
-            if (a, b) != opening and b < len(lines) and declaration.match(lines[b])]
+    defs = [(a, b) for a, b in found if (a, b) != opening and b < len(lines) and declaration.match(lines[b])]
     return opening, defs, comments
 
 
@@ -141,21 +153,24 @@ def check(path: Path) -> list[str]:
         file_doc, def_docs, comments = blocks(text, hash_comment_lines(text), SHELL_FUNCTION)
     problems = []
     if file_doc and file_doc[1] - file_doc[0] + 1 > MAX_FILE_DOC:
-        problems.append(f"{file_doc[0]}: file docstring is {file_doc[1] - file_doc[0] + 1} lines "
-                        f"(max {MAX_FILE_DOC})")
+        problems.append(
+            f"{file_doc[0]}: file docstring is {file_doc[1] - file_doc[0] + 1} lines (max {MAX_FILE_DOC})"
+        )
     for first, last in def_docs:
         if last - first + 1 > MAX_DEF_DOC:
             problems.append(f"{first}: docstring is {last - first + 1} lines (max {MAX_DEF_DOC})")
     for span in runs(comments):
         if span != file_doc and span not in def_docs and span[1] - span[0] + 1 > MAX_COMMENT_RUN:
-            problems.append(f"{span[0]}: {span[1] - span[0] + 1} consecutive comment lines "
-                            f"(max {MAX_COMMENT_RUN})")
+            problems.append(
+                f"{span[0]}: {span[1] - span[0] + 1} consecutive comment lines (max {MAX_COMMENT_RUN})"
+            )
     return problems
 
 
 def main() -> int:
-    tracked = subprocess.run(["git", "ls-files", "-z"], cwd=REPO, check=True,
-                             capture_output=True, text=True).stdout.split("\0")
+    tracked = subprocess.run(
+        ["git", "ls-files", "-z"], cwd=REPO, check=True, capture_output=True, text=True
+    ).stdout.split("\0")
     failed = False
     for name in filter(None, tracked):
         path = REPO / name

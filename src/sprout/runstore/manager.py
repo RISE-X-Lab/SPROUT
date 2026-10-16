@@ -12,8 +12,9 @@ from sprout.runstore.worker import Worker
 
 
 class WorkerManager:
-    def __init__(self, worker: Worker, *, concurrency: int = 1, poll_s: float = 1,
-                 shutdown_s: float = 20) -> None:
+    def __init__(
+        self, worker: Worker, *, concurrency: int = 1, poll_s: float = 1, shutdown_s: float = 20
+    ) -> None:
         if type(concurrency) is not int or concurrency < 1:
             raise ValueError("concurrency must be a positive integer")
         self.worker = worker
@@ -65,20 +66,28 @@ class WorkerManager:
                     try:
                         self.worker.store.expire()
                         now = time.monotonic()
-                        self.recovery_after = {job_id: deadline for job_id, deadline in self.recovery_after.items()
-                                               if deadline > now}
+                        self.recovery_after = {
+                            job_id: deadline
+                            for job_id, deadline in self.recovery_after.items()
+                            if deadline > now
+                        }
                         excluded = tuple(set(self.active) | set(self.recovery_after))
                         for job in self.worker.store.recoverable_jobs(
-                                exclude=excluded, limit=self.concurrency - len(self.active)):
+                            exclude=excluded, limit=self.concurrency - len(self.active)
+                        ):
                             if stop.is_set():
                                 break
                             job_id = job["id"]
                             self.recovery_after[job_id] = now + 30
-                            self._start(job_id, lambda job_id=job_id: self.worker.reconcile(job_id, stop=stop))
+                            self._start(
+                                job_id, lambda job_id=job_id: self.worker.reconcile(job_id, stop=stop)
+                            )
                         while not stop.is_set() and len(self.active) < self.concurrency:
                             job = self.worker.store.claim(self.worker.worker_id, lease_s=self.worker.lease_s)
                             if job is not None:
-                                self._start(job["id"], lambda job=job: self.worker.run_claimed(job, stop=stop))
+                                self._start(
+                                    job["id"], lambda job=job: self.worker.run_claimed(job, stop=stop)
+                                )
                             if once:
                                 draining = True
                             if job is None or once:
@@ -97,4 +106,6 @@ class WorkerManager:
                 self.wake.wait(0.05)
                 self.wake.clear()
             if self.active:
-                self.log.warning("Leaving %s blocked supervisors for lease-expiry reconciliation", len(self.active))
+                self.log.warning(
+                    "Leaving %s blocked supervisors for lease-expiry reconciliation", len(self.active)
+                )

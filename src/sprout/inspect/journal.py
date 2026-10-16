@@ -17,9 +17,19 @@ import re
 
 from sprout.harness_checkpoint.rollback import branch_checkpoints
 from sprout.harness_core.events import (
-    AGENT_MESSAGE, AGENT_THINKING, CHECKPOINT_CAPTURED, RUN_FINISHED, RUN_RESULT, RUN_STARTED,
-    SANDBOX_CREATED, SNAPSHOT_MEMORY, TOOL_FINISHED, TOOL_STARTED, TURN_COMPLETED,
-    TURN_STARTED, USAGE_UPDATED,
+    AGENT_MESSAGE,
+    AGENT_THINKING,
+    CHECKPOINT_CAPTURED,
+    RUN_FINISHED,
+    RUN_RESULT,
+    RUN_STARTED,
+    SANDBOX_CREATED,
+    SNAPSHOT_MEMORY,
+    TOOL_FINISHED,
+    TOOL_STARTED,
+    TURN_COMPLETED,
+    TURN_STARTED,
+    USAGE_UPDATED,
 )
 from sprout.harness_core.journal import journal_events
 
@@ -40,8 +50,14 @@ _MINI_WRAPPER = re.compile(r"^env (?:\w+=\S* )*bash -c '(.*)'$", re.S)
 #: A leading ``set -e`` / ``set -euo pipefail`` or ``cd <dir>`` and the separator after it
 #: (``;``, ``&&`` or a line break): preamble, not what the command does.
 _PREAMBLE = re.compile(r"^(?:set -[A-Za-z]+(?: pipefail)?|cd [^\s;&]+)\s*(?:&&|;|\n)\s*")
-_USAGE_KEYS = ("input_tokens", "output_tokens", "cached_input_tokens", "cache_creation_tokens",
-               "reasoning_output_tokens", "cost_usd")
+_USAGE_KEYS = (
+    "input_tokens",
+    "output_tokens",
+    "cached_input_tokens",
+    "cache_creation_tokens",
+    "reasoning_output_tokens",
+    "cost_usd",
+)
 
 
 def load_events(path: Path) -> tuple[list[dict], bool]:
@@ -59,9 +75,9 @@ class Call:
     call_id: str
     step: int
     name: str
-    command: str            # the model's command, mini's wrapper removed
+    command: str  # the model's command, mini's wrapper removed
     args: dict
-    status: str | None      # tool.finished.status; None while running
+    status: str | None  # tool.finished.status; None while running
     exit_code: int | None
     timed_out: bool
     output: str
@@ -71,6 +87,7 @@ class Call:
 @dataclass(frozen=True)
 class Capture:
     """One ``checkpoint.captured`` (or ``snapshot.memory``) record."""
+
     seq: int
     step: int
     turn: int | None
@@ -82,14 +99,14 @@ class Capture:
     final: bool
     uncertain: bool
     delta_empty: bool | None
-    kind: str               # disk | memory
-    branch_point: bool      # closed turn with a complete pair (rollback.branch_checkpoints)
+    kind: str  # disk | memory
+    branch_point: bool  # closed turn with a complete pair (rollback.branch_checkpoints)
 
 
 @dataclass(frozen=True)
 class Turn:
     number: int
-    source: str             # actor | reviewer
+    source: str  # actor | reviewer
     turn_id: str | None
     thinking: str
     message: str
@@ -97,8 +114,10 @@ class Turn:
     calls: tuple[Call, ...]
     closed: bool
     rejected: bool
-    rejected_source: str | None   # mini.turn.rejected.source: schema_validation | malformed_tool_calls | no_tool_calls
-    step: int | None        # the turn's last call (model.turn.completed.step)
+    rejected_source: (
+        str | None
+    )  # mini.turn.rejected.source: schema_validation | malformed_tool_calls | no_tool_calls
+    step: int | None  # the turn's last call (model.turn.completed.step)
     capture: Capture | None
     started: str | None
     finished: str | None
@@ -107,6 +126,7 @@ class Turn:
 @dataclass(frozen=True)
 class Origin:
     """``fork.origin``, the first record of a branch."""
+
     parent_journal: str
     branch_step: int
     snapshot_id: str
@@ -133,7 +153,7 @@ class Trajectory:
     origin: Origin | None
     turns: tuple[Turn, ...]
     captures: tuple[Capture, ...]
-    status: str | None      # the LAST run.finished; None = live or killed
+    status: str | None  # the LAST run.finished; None = live or killed
     error: str | None
     final_text: str
     usage: dict
@@ -209,18 +229,38 @@ class _TurnDraft:
 
     def freeze(self, capture: Capture | None) -> Turn:
         calls = tuple(Call(**c) for c in self.calls)
-        return Turn(number=self.number, source=self.source, turn_id=self.turn_id,
-                    thinking="\n\n".join(self.thinking), message="\n\n".join(self.message),
-                    assistant_turn=self.assistant_turn, calls=calls, closed=self.closed,
-                    rejected=self.rejected, rejected_source=self.rejected_source, step=self.step, capture=capture,
-                    started=self.started, finished=self.finished)
+        return Turn(
+            number=self.number,
+            source=self.source,
+            turn_id=self.turn_id,
+            thinking="\n\n".join(self.thinking),
+            message="\n\n".join(self.message),
+            assistant_turn=self.assistant_turn,
+            calls=calls,
+            closed=self.closed,
+            rejected=self.rejected,
+            rejected_source=self.rejected_source,
+            step=self.step,
+            capture=capture,
+            started=self.started,
+            finished=self.finished,
+        )
 
 
 def read_trajectory(path: Path) -> Trajectory:
     path = Path(path)
     events, torn = load_events(path)
-    header: dict = {"run_id": None, "slot": None, "slot_version": None, "model": None, "task_prompt": "",
-                    "sandbox_id": None, "backend": None, "store": None, "image": None}
+    header: dict = {
+        "run_id": None,
+        "slot": None,
+        "slot_version": None,
+        "model": None,
+        "task_prompt": "",
+        "sandbox_id": None,
+        "backend": None,
+        "store": None,
+        "image": None,
+    }
     origin = None
     drafts: list[_TurnDraft] = []
     finished: list[dict] = []
@@ -246,25 +286,37 @@ def read_trajectory(path: Path) -> Trajectory:
         if header["run_id"] is None and event.get("run_id"):
             header["run_id"] = event["run_id"]
         if kind == FORK_ORIGIN:
-            origin = Origin(parent_journal=str(event.get("parent_journal") or ""),
-                            branch_step=int(event.get("branch_step") or 0),
-                            snapshot_id=str(event.get("snapshot_id") or ""),
-                            conversation_cut=str(event.get("conversation_cut") or ""),
-                            branch_guidance=str(event.get("branch_guidance") or ""),
-                            parent_journal_sha256=event.get("parent_journal_sha256"),
-                            hint=event.get("actor_hint"))
+            origin = Origin(
+                parent_journal=str(event.get("parent_journal") or ""),
+                branch_step=int(event.get("branch_step") or 0),
+                snapshot_id=str(event.get("snapshot_id") or ""),
+                conversation_cut=str(event.get("conversation_cut") or ""),
+                branch_guidance=str(event.get("branch_guidance") or ""),
+                parent_journal_sha256=event.get("parent_journal_sha256"),
+                hint=event.get("actor_hint"),
+            )
         elif kind == SANDBOX_CREATED:
-            header.update(sandbox_id=event.get("sandbox_id"), backend=event.get("backend"),
-                          store=event.get("store"), image=event.get("image"))
+            header.update(
+                sandbox_id=event.get("sandbox_id"),
+                backend=event.get("backend"),
+                store=event.get("store"),
+                image=event.get("image"),
+            )
         elif kind == RUN_STARTED:
-            header.update(slot=event.get("slot"), slot_version=event.get("slot_version"),
-                          model=event.get("model"), task_prompt=event.get("task_prompt") or "")
+            header.update(
+                slot=event.get("slot"),
+                slot_version=event.get("slot_version"),
+                model=event.get("model"),
+                task_prompt=event.get("task_prompt") or "",
+            )
         elif kind == TURN_STARTED:
             draft = open_turn(event)
             if isinstance(event.get("turn"), int):
                 draft.number = event["turn"]
         elif kind in (AGENT_MESSAGE, AGENT_THINKING) and drafts:
-            (drafts[-1].message if kind == AGENT_MESSAGE else drafts[-1].thinking).append(event.get("text") or "")
+            (drafts[-1].message if kind == AGENT_MESSAGE else drafts[-1].thinking).append(
+                event.get("text") or ""
+            )
         elif kind == BRANCH_ASSISTANT_TURN and drafts:
             drafts[-1].assistant_turn = event.get("message")
             drafts[-1].turn_id = drafts[-1].turn_id or event.get("turn_id")
@@ -272,25 +324,49 @@ def read_trajectory(path: Path) -> Trajectory:
             draft = current(event)
             draft.turn_id = draft.turn_id or event.get("turn_id")
             args = event.get("args") if isinstance(event.get("args"), dict) else {}
-            draft.calls.append({"call_id": str(event.get("call_id")), "step": event.get("step") or 0,
-                                "name": event.get("name") or "", "command": command_of(args), "args": args,
-                                "status": None, "exit_code": None, "timed_out": False, "output": "",
-                                "rejected": False})
+            draft.calls.append(
+                {
+                    "call_id": str(event.get("call_id")),
+                    "step": event.get("step") or 0,
+                    "name": event.get("name") or "",
+                    "command": command_of(args),
+                    "args": args,
+                    "status": None,
+                    "exit_code": None,
+                    "timed_out": False,
+                    "output": "",
+                    "rejected": False,
+                }
+            )
         elif kind in (TOOL_FINISHED, TOOL_REJECTED):
             call = next((c for d in reversed(drafts) if (c := d.call(str(event.get("call_id"))))), None)
             if call is None and drafts:
-                drafts[-1].calls.append(call := {
-                    "call_id": str(event.get("call_id")), "step": 0, "name": event.get("name") or "",
-                    "command": "", "args": {}, "status": None, "exit_code": None, "timed_out": False,
-                    "output": "", "rejected": False})
+                drafts[-1].calls.append(
+                    call := {
+                        "call_id": str(event.get("call_id")),
+                        "step": 0,
+                        "name": event.get("name") or "",
+                        "command": "",
+                        "args": {},
+                        "status": None,
+                        "exit_code": None,
+                        "timed_out": False,
+                        "output": "",
+                        "rejected": False,
+                    }
+                )
             if call is None:
                 continue
             if kind == TOOL_REJECTED:
                 call.update(rejected=True, output=str(event.get("feedback") or ""))
             else:
                 code, timed_out = _outcome(event)
-                call.update(status=event.get("status"), exit_code=code, timed_out=timed_out,
-                            output=unpack_output(event))
+                call.update(
+                    status=event.get("status"),
+                    exit_code=code,
+                    timed_out=timed_out,
+                    output=unpack_output(event),
+                )
         elif kind == MODEL_TURN_COMPLETED and drafts:
             drafts[-1].closed = True
             drafts[-1].turn_id = event.get("turn_id") or drafts[-1].turn_id
@@ -320,13 +396,24 @@ def read_trajectory(path: Path) -> Trajectory:
 
     eligible = {c.seq for c in branch_checkpoints(None, events=events).values()}
     turn_numbers = {d.turn_id: d.number for d in drafts if d.turn_id}
-    captures = tuple(Capture(
-        seq=e.get("seq") or 0, step=e.get("step") or 0, turn=turn_numbers.get(e.get("turn_id")),
-        turn_id=e.get("turn_id"), snapshot_id=e.get("snapshot_id"), reason=e.get("reason") or "captured",
-        captured=bool(e.get("captured", bool(e.get("snapshot_id")))), disk_only=e.get("disk_only"),
-        final=bool(e.get("final")), uncertain=bool(e.get("uncertain")), delta_empty=e.get("delta_empty"),
-        kind="memory" if e.get("type") == SNAPSHOT_MEMORY else "disk",
-        branch_point=(e.get("seq") or 0) in eligible) for e in raw_captures)
+    captures = tuple(
+        Capture(
+            seq=e.get("seq") or 0,
+            step=e.get("step") or 0,
+            turn=turn_numbers.get(e.get("turn_id")),
+            turn_id=e.get("turn_id"),
+            snapshot_id=e.get("snapshot_id"),
+            reason=e.get("reason") or "captured",
+            captured=bool(e.get("captured", bool(e.get("snapshot_id")))),
+            disk_only=e.get("disk_only"),
+            final=bool(e.get("final")),
+            uncertain=bool(e.get("uncertain")),
+            delta_empty=e.get("delta_empty"),
+            kind="memory" if e.get("type") == SNAPSHOT_MEMORY else "disk",
+            branch_point=(e.get("seq") or 0) in eligible,
+        )
+        for e in raw_captures
+    )
     by_turn: dict[str, Capture] = {}
     for capture in captures:
         if capture.kind == "disk" and capture.turn_id and capture.turn_id not in by_turn:
@@ -337,15 +424,33 @@ def read_trajectory(path: Path) -> Trajectory:
     else:
         usage = {key: sum(u.get(key) or 0 for u in usage_updates) for key in _USAGE_KEYS}
     return Trajectory(
-        path=path, run_id=header["run_id"] or path.stem, events=len(events), torn=torn,
-        slot=header["slot"], slot_version=header["slot_version"], model=header["model"],
-        task_prompt=header["task_prompt"], sandbox_id=header["sandbox_id"], backend=header["backend"],
-        store=header["store"], image=header["image"],
-        origin=origin, turns=tuple(d.freeze(by_turn.get(d.turn_id)) for d in drafts), captures=captures,
-        status=last.get("status") if last else None, error=last.get("error") if last else None,
-        final_text=final_text, usage=usage, model_calls=model_calls, tool_calls=tool_calls,
-        swept=swept, released=tuple(released), uncertain=uncertain,
-        first_ts=stamps[0] if stamps else None, last_ts=stamps[-1] if stamps else None)
+        path=path,
+        run_id=header["run_id"] or path.stem,
+        events=len(events),
+        torn=torn,
+        slot=header["slot"],
+        slot_version=header["slot_version"],
+        model=header["model"],
+        task_prompt=header["task_prompt"],
+        sandbox_id=header["sandbox_id"],
+        backend=header["backend"],
+        store=header["store"],
+        image=header["image"],
+        origin=origin,
+        turns=tuple(d.freeze(by_turn.get(d.turn_id)) for d in drafts),
+        captures=captures,
+        status=last.get("status") if last else None,
+        error=last.get("error") if last else None,
+        final_text=final_text,
+        usage=usage,
+        model_calls=model_calls,
+        tool_calls=tool_calls,
+        swept=swept,
+        released=tuple(released),
+        uncertain=uncertain,
+        first_ts=stamps[0] if stamps else None,
+        last_ts=stamps[-1] if stamps else None,
+    )
 
 
 def turn_count(trajectory: Trajectory) -> tuple[int, int]:
@@ -392,7 +497,7 @@ def clip(text: str, limit: int) -> str:
     if limit <= 0 or len(text) <= limit:
         return text
     head = limit * 2 // 3
-    return text[:head] + "\n… [%d chars elided] …\n" % (len(text) - limit) + text[-(limit - head):]
+    return text[:head] + "\n… [%d chars elided] …\n" % (len(text) - limit) + text[-(limit - head) :]
 
 
 def relocate(recorded: str, anchor: Path, *, min_parts: int = 4) -> Path | None:

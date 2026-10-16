@@ -23,6 +23,7 @@ class ToolResult:
     renders a failure as ``f"Error: {error}\\n{output}"``: the model reads the
     same bytes twice and pays for both.
     """
+
     success: bool
     output: str
     error: Optional[str] = None
@@ -48,8 +49,7 @@ class ToolResult:
         prose is presentation, and presentation belongs to the agent runtime,
         not to a type conversion.
         """
-        return cls(success=not result.is_error, output=result.output,
-                   outcome=CommandOutcome.from_sdk(result))
+        return cls(success=not result.is_error, output=result.output, outcome=CommandOutcome.from_sdk(result))
 
 
 @dataclass
@@ -62,6 +62,7 @@ class CommandOutcome:
     ``exit_code`` is ``None`` when unknown (the runtime never said). Test it
     with ``is None``; ``0`` is a real answer.
     """
+
     exit_code: Optional[int] = None
     stdout: str = ""
     stderr: str = ""
@@ -80,7 +81,7 @@ class CommandOutcome:
     def from_sdk(cls, result) -> "Optional[CommandOutcome]":
         """Lift an ``sprout_sandbox.ToolResult``'s outcome fields, or None."""
         if getattr(result, "stdout", None) is None:
-            return None          # no command outcome in this response
+            return None  # no command outcome in this response
         return cls(
             exit_code=result.exit_code,
             stdout=result.stdout or "",
@@ -92,5 +93,3 @@ class CommandOutcome:
             stdout_truncated=result.stdout_truncated,
             stderr_truncated=result.stderr_truncated,
         )
-
-

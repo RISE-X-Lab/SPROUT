@@ -25,8 +25,9 @@ class MiniSweSlot(AgentSlot):
     def run(self, task: TaskSpec, journal: JournalWriter, tools) -> SlotResult:
         installed = self.version()
         if installed != MINI_VERSION:
-            raise ValueError(f"mini-swe-agent {MINI_VERSION} required (installed: {installed}); "
-                             'pip install -e ".[mini]"')
+            raise ValueError(
+                f'mini-swe-agent {MINI_VERSION} required (installed: {installed}); pip install -e ".[mini]"'
+            )
         if tools is None:
             raise ValueError("mini-swe-agent needs the run's ToolAccess")
         if not task.model:
@@ -37,9 +38,12 @@ class MiniSweSlot(AgentSlot):
         # empty attempt-owned directory so a developer's config cannot set RL
         # credentials, model selection or process-global limits.
         with _IMPORT_LOCK:
-            settings = {"MSWEA_GLOBAL_CONFIG_DIR": str(home / "config"),
-                        "MSWEA_SILENT_STARTUP": "1",
-                        "MSWEA_GLOBAL_COST_LIMIT": "0", "MSWEA_GLOBAL_CALL_LIMIT": "0"}
+            settings = {
+                "MSWEA_GLOBAL_CONFIG_DIR": str(home / "config"),
+                "MSWEA_SILENT_STARTUP": "1",
+                "MSWEA_GLOBAL_COST_LIMIT": "0",
+                "MSWEA_GLOBAL_CALL_LIMIT": "0",
+            }
             previous = {key: os.environ.get(key) for key in settings}
             try:
                 os.environ.update(settings)

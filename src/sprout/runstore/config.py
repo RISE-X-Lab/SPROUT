@@ -53,8 +53,11 @@ def podman_snapshot_present(store: str, snapshot_id: Any) -> bool:
     """Whether the podman store still holds a snapshot: the read-only subvolume
     ``snapshots/<id>``, checked by directory listing as ``inspect snapshots``
     does (``btrfs subvolume show`` needs root)."""
-    if (not isinstance(snapshot_id, str) or snapshot_id in {"", ".", ".."}
-            or any(character in snapshot_id for character in "/\\")):
+    if (
+        not isinstance(snapshot_id, str)
+        or snapshot_id in {"", ".", ".."}
+        or any(character in snapshot_id for character in "/\\")
+    ):
         return False
     return (Path(store) / "snapshots" / snapshot_id).is_dir()
 
@@ -73,7 +76,9 @@ def snapshot_validator(store: Any, config: dict) -> Callable[[dict], bool]:
         spec = merge(profile.get("run_defaults", {}), request["spec"])
         backend = resolve(spec.get("backend", {}))
         if backend_name(backend) == "podman":
-            return podman_snapshot_present(snapshot_store(backend) or default_podman_store(), point["snapshot_id"])
+            return podman_snapshot_present(
+                snapshot_store(backend) or default_podman_store(), point["snapshot_id"]
+            )
         microvm = backend.get("microvm", {})
         url = microvm.get("server_url")
         if backend_name(backend) != "microvm" or not url:
@@ -85,19 +90,28 @@ def snapshot_validator(store: Any, config: dict) -> Callable[[dict], bool]:
             directory = Path(repository) / "snapshots" / point["snapshot_id"]
             try:
                 manifest = json.loads((directory / "firecracker-manifest.json").read_text())
-                if (manifest.get("version") != 1 or not manifest.get("rootfs", {}).get("virtualSize")
-                        or (directory / "commit").stat().st_size <= 0):
+                if (
+                    manifest.get("version") != 1
+                    or not manifest.get("rootfs", {}).get("virtualSize")
+                    or (directory / "commit").stat().st_size <= 0
+                ):
                     return False
                 if "vmState" in manifest and (directory / "vm_state.bin").stat().st_size <= 0:
                     return False
             except (OSError, ValueError, TypeError):
                 return False
         try:
-            response = httpx.get(url.rstrip("/") + "/snapshots/" + point["snapshot_id"],
-                                 headers={"X-API-Key": microvm.get("api_key", "")}, timeout=5)
+            response = httpx.get(
+                url.rstrip("/") + "/snapshots/" + point["snapshot_id"],
+                headers={"X-API-Key": microvm.get("api_key", "")},
+                timeout=5,
+            )
             metadata = response.json()
-            return (response.status_code == 200 and isinstance(metadata, dict)
-                    and metadata.get("snapshotID") == point["snapshot_id"])
+            return (
+                response.status_code == 200
+                and isinstance(metadata, dict)
+                and metadata.get("snapshotID") == point["snapshot_id"]
+            )
         except (httpx.HTTPError, ValueError):
             return False
 

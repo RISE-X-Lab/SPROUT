@@ -5,6 +5,7 @@ BPO by first-token entropy of the policy at each point, Shepherd by a meta-agent
 reading the trajectory. Neither authors guidance; siblings sample from the
 selected state.
 """
+
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
@@ -43,12 +44,15 @@ def token_entropy(token: dict) -> dict:
         raise ValueError("Reported top-token probability mass exceeds one")
     tail = max(0.0, 1.0 - mass)
     entropy = -math.fsum(p * math.log(p) for p in [*probabilities.values(), tail] if p)
-    return {"entropy_lower_bound_nats": entropy, "top_mass": mass, "tail_mass": tail,
-            "candidate_count": len(probabilities)}
+    return {
+        "entropy_lower_bound_nats": entropy,
+        "top_mass": mass,
+        "tail_mass": tail,
+        "candidate_count": len(probabilities),
+    }
 
 
-def bpo_select(scores: list[dict], budget: int = 7, min_spacing: int = 64,
-               max_points: int = 7) -> list[dict]:
+def bpo_select(scores: list[dict], budget: int = 7, min_spacing: int = 64, max_points: int = 7) -> list[dict]:
     if budget < 0 or min_spacing < 0 or max_points < 1:
         raise ValueError("Invalid BPO budget, spacing, or point limit")
     if budget == 0:
@@ -58,15 +62,16 @@ def bpo_select(scores: list[dict], budget: int = 7, min_spacing: int = 64,
     ranked = sorted(scores, key=lambda row: (-row["entropy_lower_bound_nats"], row["step"]))
     selected = []
     for score in ranked:
-        if all(abs(score["token_position"] - other["token_position"]) >= min_spacing
-               for other in selected):
+        if all(abs(score["token_position"] - other["token_position"]) >= min_spacing for other in selected):
             selected.append(score)
             if len(selected) >= min(budget, max_points):
                 break
     if not selected:
         raise ValueError("No eligible probability-scored branch points")
-    return [dict(selected[index % len(selected)],
-                 sibling_index=2 + index // len(selected)) for index in range(budget)]
+    return [
+        dict(selected[index % len(selected)], sibling_index=2 + index // len(selected))
+        for index in range(budget)
+    ]
 
 
 def shepherd_select(proposal: dict, eligible: list[int], budget: int) -> list[dict]:
@@ -76,8 +81,7 @@ def shepherd_select(proposal: dict, eligible: list[int], budget: int) -> list[di
     reason = proposal.get("reason")
     if not isinstance(reason, str) or not reason.strip():
         raise ValueError("Shepherd selection needs a nonempty reason")
-    return [{"step": step, "sibling_index": index + 2, "reason": reason}
-            for index in range(budget)]
+    return [{"step": step, "sibling_index": index + 2, "reason": reason} for index in range(budget)]
 
 
 def write_json(path: Path, value) -> None:
@@ -104,13 +108,13 @@ class ModelClient:
             attempt_record = {"attempt": attempt, "started_at": time.time()}
             record["attempts"].append(attempt_record)
             try:
-                response = httpx.post(self.url, json=payload, headers=bearer_headers(self.api_key),
-                                      timeout=self.timeout)
+                response = httpx.post(
+                    self.url, json=payload, headers=bearer_headers(self.api_key), timeout=self.timeout
+                )
                 attempt_record["http_status"] = response.status_code
                 if response.status_code != 200:
                     attempt_record["response_text"] = response.text[:4000]
-                    error = RuntimeError(
-                        f"model endpoint returned HTTP {response.status_code}")
+                    error = RuntimeError(f"model endpoint returned HTTP {response.status_code}")
                     if response.status_code not in retry_statuses:
                         raise error
                     raise httpx.TransportError(str(error))
@@ -118,8 +122,7 @@ class ModelClient:
                 record["response"] = body
                 attempt_record["usage"] = body.get("usage")
                 if body.get("error") or len(body.get("choices") or []) != 1:
-                    raise httpx.TransportError(
-                        "model endpoint returned no unique completion")
+                    raise httpx.TransportError("model endpoint returned no unique completion")
                 record["http_status"] = response.status_code
                 record["response"] = body
                 return body
@@ -141,8 +144,7 @@ class ModelClient:
                 raise
             finally:
                 attempt_record["finished_at"] = time.time()
-                attempt_record["seconds"] = (attempt_record["finished_at"]
-                                             - attempt_record["started_at"])
+                attempt_record["seconds"] = attempt_record["finished_at"] - attempt_record["started_at"]
                 record["finished_at"] = time.time()
                 record["seconds"] = record["finished_at"] - record["started_at"]
                 write_json(audit, record)
@@ -189,47 +191,63 @@ def score_point(args, client: ModelClient, journal: Path, point, token_position:
         "max_tokens": 64,
     }
     response = client.complete(payload, args.output / "entropy" / f"step-{point.step}.request.json")
-    tokens = ((response["choices"][0].get("logprobs") or {}).get("content") or [])
+    tokens = (response["choices"][0].get("logprobs") or {}).get("content") or []
     if not tokens:
         raise ValueError("BPO endpoint omitted requested first-token logprobs")
-    result = {"step": point.step, "token_position": token_position,
-              "snapshot_id": point.snapshot_id,
-              "scoring_usage": response.get("usage"), "first_token": tokens[0],
-              "entropy_kind": "first-content-token-top-k-plus-tail-lower-bound"}
+    result = {
+        "step": point.step,
+        "token_position": token_position,
+        "snapshot_id": point.snapshot_id,
+        "scoring_usage": response.get("usage"),
+        "first_token": tokens[0],
+        "entropy_kind": "first-content-token-top-k-plus-tail-lower-bound",
+    }
     result.update(token_entropy(tokens[0]))
     write_json(args.output / "entropy" / f"step-{point.step}.json", result)
     return result
 
 
-def select_points(args, problem: str, journal: Path, points: dict[int, object], client: ModelClient,
-                  prompts: Prompts = DEFAULT_PROMPTS) -> list[dict]:
+def select_points(
+    args,
+    problem: str,
+    journal: Path,
+    points: dict[int, object],
+    client: ModelClient,
+    prompts: Prompts = DEFAULT_PROMPTS,
+) -> list[dict]:
     if args.method == "bpo":
         positions = request_positions(journal, points)
         eligible = [point for step, point in sorted(points.items()) if step in positions]
         if not eligible:
             raise ValueError("No exact checkpoint maps to a following provider request")
         with ThreadPoolExecutor(max_workers=args.bpo_scoring_workers) as pool:
-            scores = list(pool.map(
-                lambda point: score_point(args, client, journal, point, positions[point.step]),
-                eligible,
-            ))
-        selected = bpo_select(scores, args.max_rollouts - 1,
-                              args.bpo_min_spacing, args.bpo_max_points)
+            scores = list(
+                pool.map(
+                    lambda point: score_point(args, client, journal, point, positions[point.step]),
+                    eligible,
+                )
+            )
+        selected = bpo_select(scores, args.max_rollouts - 1, args.bpo_min_spacing, args.bpo_max_points)
         write_json(args.output / "scores.json", scores)
         return selected
-    transcript, lo, hi = render_transcript(
-        journal, token_budget=args.meta_transcript_tokens)
+    transcript, lo, hi = render_transcript(journal, token_budget=args.meta_transcript_tokens)
     payload = {
         "model": args.model,
         "messages": [
             {"role": "system", "content": prompts.shepherd_system},
-            {"role": "user", "content": json.dumps({
-                "task": problem,
-                "reward": 0,
-                "eligible_checkpoint_steps": sorted(points),
-                "transcript_visible_step_range": [lo, hi],
-                "trajectory": transcript,
-            }, ensure_ascii=False)},
+            {
+                "role": "user",
+                "content": json.dumps(
+                    {
+                        "task": problem,
+                        "reward": 0,
+                        "eligible_checkpoint_steps": sorted(points),
+                        "transcript_visible_step_range": [lo, hi],
+                        "trajectory": transcript,
+                    },
+                    ensure_ascii=False,
+                ),
+            },
         ],
         "reasoning_effort": args.reasoning_effort,
         "temperature": 1.0,

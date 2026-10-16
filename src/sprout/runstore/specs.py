@@ -27,14 +27,15 @@ def validate_branch_budget(value: Any) -> dict:
     if "max_turns" in value and (type(value["max_turns"]) is not int or value["max_turns"] <= 0):
         raise ValueError("branch budget max_turns must be a positive integer")
     deadline = value.get("deadline_at")
-    if deadline is not None and (type(deadline) not in (int, float) or not math.isfinite(deadline) or deadline <= 0):
+    if deadline is not None and (
+        type(deadline) not in (int, float) or not math.isfinite(deadline) or deadline <= 0
+    ):
         raise ValueError("branch budget deadline_at must be a finite positive timestamp")
     return dict(value)
 
 
 def canonical(value: Any) -> str:
-    return json.dumps(value, sort_keys=True, separators=(",", ":"),
-                      ensure_ascii=False, allow_nan=False)
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False)
 
 
 def digest(value: Any) -> str:
@@ -53,8 +54,10 @@ def no_credentials(value: Any) -> None:
             if key in DATA_MAPPINGS:
                 continue
             normalized = key.lower().replace("-", "_")
-            secret = any(part in normalized for part in (
-                "api_key", "auth_token", "authorization", "password", "bearer_token", "secret"))
+            secret = any(
+                part in normalized
+                for part in ("api_key", "auth_token", "authorization", "password", "bearer_token", "secret")
+            )
             reference = isinstance(item, dict) and set(item) == {"$env"}
             if secret and item and not reference and not normalized.endswith("_env"):
                 raise ValueError("Use a worker-side $env reference instead of inline credentials")
@@ -67,8 +70,12 @@ def no_credentials(value: Any) -> None:
 def validate_continuation(parent: dict, child: dict) -> None:
     parent_spec = {key: value for key, value in parent["spec"].items() if key not in BRANCH_OVERRIDES}
     child_spec = {key: value for key, value in child["spec"].items() if key not in BRANCH_OVERRIDES}
-    if (parent["kind"] != "rollout" or child["kind"] != "rollout"
-            or parent["profile"] != child["profile"] or parent_spec != child_spec):
+    if (
+        parent["kind"] != "rollout"
+        or child["kind"] != "rollout"
+        or parent["profile"] != child["profile"]
+        or parent_spec != child_spec
+    ):
         raise ValueError("Continuation must retain its source environment, slot and tool configuration")
 
 
@@ -158,30 +165,41 @@ class ReviewSpec:
                 raise ValueError(f"A review needs {name}")
         if self.guidance not in REVIEW_GUIDANCE:
             raise ValueError("Review guidance must be assistant-turn or none")
-        for name in ("points", "candidates", "max_output_tokens", "prompt_chars", "transcript_tokens",
-                     "max_attempts", "round_no", "max_concurrent_requests"):
+        for name in (
+            "points",
+            "candidates",
+            "max_output_tokens",
+            "prompt_chars",
+            "transcript_tokens",
+            "max_attempts",
+            "round_no",
+            "max_concurrent_requests",
+        ):
             if type(getattr(self, name)) is not int or getattr(self, name) <= 0:
                 raise ValueError(f"Review {name} must be a positive integer")
         if type(self.points_per_attempt) is not bool:
             raise ValueError("Review points_per_attempt must be a boolean")
         if self.guidance == "none" and self.candidates != 1:
             raise ValueError("A none review proposes points only; candidates must be 1")
-        if self.temperature is not None and (type(self.temperature) not in (int, float)
-                                             or not 0 <= self.temperature <= 2):
+        if self.temperature is not None and (
+            type(self.temperature) not in (int, float) or not 0 <= self.temperature <= 2
+        ):
             raise ValueError("Review temperature must be between 0 and 2")
         if self.leak_judge is not None:
             judge = self.leak_judge
             if not isinstance(judge, dict) or set(judge) - LEAK_JUDGE_FIELDS:
                 raise ValueError("Review leak_judge names only threshold, model, resamples and api_key_env")
-            if "threshold" in judge and (type(judge["threshold"]) not in (int, float)
-                                         or not 0 < judge["threshold"] <= 1):
+            if "threshold" in judge and (
+                type(judge["threshold"]) not in (int, float) or not 0 < judge["threshold"] <= 1
+            ):
                 raise ValueError("Review leak_judge threshold must be in (0, 1]")
             if "model" in judge and (not isinstance(judge["model"], str) or not judge["model"].strip()):
                 raise ValueError("Review leak_judge model must be a model name")
             if "resamples" in judge and (type(judge["resamples"]) is not int or judge["resamples"] < 0):
                 raise ValueError("Review leak_judge resamples must be a non-negative integer")
-            if "api_key_env" in judge and (not isinstance(judge["api_key_env"], str)
-                                           or not judge["api_key_env"].isidentifier()):
+            if "api_key_env" in judge and (
+                not isinstance(judge["api_key_env"], str) or not judge["api_key_env"].isidentifier()
+            ):
                 raise ValueError("Review leak_judge api_key_env must name one environment variable")
         if not isinstance(self.parents, list) or not self.parents:
             raise ValueError("A review needs at least one finished attempt to read")
@@ -231,7 +249,9 @@ class JobSpec:
         canonical(body)
         if self.parent_point is not None or self.continuation is not None:
             if self.kind != "rollout" or self.parent_point is None:
-                raise ValueError("A continuation belongs to a rollout branch, with the parent_point it continues")
+                raise ValueError(
+                    "A continuation belongs to a rollout branch, with the parent_point it continues"
+                )
             Continuation.from_dict(self.continuation)
         if self.branch_budget is not None:
             if self.parent_point is None:
@@ -259,8 +279,10 @@ class JobSpec:
                 raise ValueError("Queued runs retain snapshots, not live sandboxes")
             if not isinstance(self.spec.get("extra", {}), dict):
                 raise ValueError("RunSpec extra must be a JSON object")
-            if any(key in self.spec.get("extra", {}) for key in (
-                    "native_prefix", "native_home", "checkpoint_identity")):
+            if any(
+                key in self.spec.get("extra", {})
+                for key in ("native_prefix", "native_home", "checkpoint_identity")
+            ):
                 raise ValueError("Native restoration fields are worker-owned")
         elif self.kind == "grade":
             grade = GradeSpec(**self.spec)
@@ -268,8 +290,15 @@ class JobSpec:
                 raise ValueError("Unsupported official grader")
             if grade.verifier_network not in {"allow", "deny"}:
                 raise ValueError("verifier_network must be allow or deny")
-            if not all((grade.instance_id, grade.snapshot_id, grade.dataset_path,
-                        grade.dataset_sha256, grade.grader_revision)):
+            if not all(
+                (
+                    grade.instance_id,
+                    grade.snapshot_id,
+                    grade.dataset_path,
+                    grade.dataset_sha256,
+                    grade.grader_revision,
+                )
+            ):
                 raise ValueError("Grading requires frozen task, snapshot and grader references")
             if not grade.parser_path:
                 raise ValueError("SWE-rebench grading requires a deployment parser_path")

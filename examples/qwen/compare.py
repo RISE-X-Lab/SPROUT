@@ -1,4 +1,5 @@
 """Combine the five requested method rows from separate run directories."""
+
 import argparse
 import csv
 import json
@@ -22,10 +23,15 @@ def compare(roots: dict[str, Path]) -> dict:
             reference = report["manifest"].get("baseline_root")
             if reference is None or Path(reference).resolve() != roots["baseline"].resolve():
                 raise ValueError(f"{method} did not use the selected shared baseline")
-    rows = [row for method in ("baseline", "bpo", "shepherd", "sprout")
-            for row in reports[method]["comparison"]]
-    return {"dataset": baseline["dataset"], "tasks": len(baseline["tasks"]),
-            "complete": all(r["complete"] for r in rows), "comparison": rows}
+    rows = [
+        row for method in ("baseline", "bpo", "shepherd", "sprout") for row in reports[method]["comparison"]
+    ]
+    return {
+        "dataset": baseline["dataset"],
+        "tasks": len(baseline["tasks"]),
+        "complete": all(r["complete"] for r in rows),
+        "comparison": rows,
+    }
 
 
 def main(argv=None):
@@ -37,10 +43,20 @@ def main(argv=None):
     result = compare({name: getattr(args, name) for name in ("baseline", "bpo", "shepherd", "sprout")})
     args.output.mkdir(parents=True, exist_ok=True)
     (args.output / "comparison.json").write_text(json.dumps(result, indent=2) + "\n")
-    columns = ("method", "Resolve Rate", "Recovery", "Steps", "Tokens (M)", "complete", "completed_tasks", "total_tasks")
+    columns = (
+        "method",
+        "Resolve Rate",
+        "Recovery",
+        "Steps",
+        "Tokens (M)",
+        "complete",
+        "completed_tasks",
+        "total_tasks",
+    )
     with (args.output / "comparison.csv").open("w", newline="") as stream:
         writer = csv.DictWriter(stream, fieldnames=columns, extrasaction="ignore")
-        writer.writeheader(); writer.writerows(result["comparison"])
+        writer.writeheader()
+        writer.writerows(result["comparison"])
     print(json.dumps(result, indent=2))
 
 

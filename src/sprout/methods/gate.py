@@ -87,7 +87,9 @@ def already_ok(log_path: Path) -> set:
 
 
 def main(argv=None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("--tasks-dir", type=Path, required=True)
     parser.add_argument("--task", action="append", default=[])
     parser.add_argument("--selection", type=Path, help="JSON list of task directory names")
@@ -95,11 +97,18 @@ def main(argv=None) -> int:
     parser.add_argument("--mode", default="both", choices=["both", *MODES])
     parser.add_argument("--workers", type=int, default=8)
     parser.add_argument("--runtime-bin", type=Path, required=True)
-    parser.add_argument("--backend", choices=tuple(ENVIRONMENTS), default="podman",
-                        help="the sandboxes every check runs in: podman (rootless containers on btrfs "
-                             "subvolumes of --store, the default) or microvm (AgentENV)")
-    parser.add_argument("--store", type=Path,
-                        help="podman: the btrfs store (default $SPROUT_PODMAN_STORE, else ~/sprout-btrfs)")
+    parser.add_argument(
+        "--backend",
+        choices=tuple(ENVIRONMENTS),
+        default="podman",
+        help="the sandboxes every check runs in: podman (rootless containers on btrfs "
+        "subvolumes of --store, the default) or microvm (AgentENV)",
+    )
+    parser.add_argument(
+        "--store",
+        type=Path,
+        help="podman: the btrfs store (default $SPROUT_PODMAN_STORE, else ~/sprout-btrfs)",
+    )
     parser.add_argument("--server-url", help="microvm: the AgentENV server")
     parser.add_argument("--api-key-file", type=Path, help="microvm: the AgentENV key")
     parser.add_argument("--sandbox-ttl", type=int, default=36000, help="microvm: the VM lease")
@@ -132,18 +141,32 @@ def main(argv=None) -> int:
                 n += 1
                 log.write(json.dumps(record, ensure_ascii=False) + "\n")
                 log.flush()
-                print("[%d/%d] %s %-7s %-45s %s" % (
-                    n, total, "ok  " if record.get("ok") else "FAIL", record["mode"], record["task"],
-                    record.get("error") or "reward=%s" % record.get("reward")), flush=True)
+                print(
+                    "[%d/%d] %s %-7s %-45s %s"
+                    % (
+                        n,
+                        total,
+                        "ok  " if record.get("ok") else "FAIL",
+                        record["mode"],
+                        record["task"],
+                        record.get("error") or "reward=%s" % record.get("reward"),
+                    ),
+                    flush=True,
+                )
                 if not record.get("ok"):
                     failures.append(record)
     done = already_ok(log_path)
-    summary = {"tasks": len(names), "modes": modes,
-               "ok": sorted("%s/%s" % key for key in done if key[0] in set(names)),
-               "failures": failures}
+    summary = {
+        "tasks": len(names),
+        "modes": modes,
+        "ok": sorted("%s/%s" % key for key in done if key[0] in set(names)),
+        "failures": failures,
+    }
     (args.output / "summary.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False))
-    print(f"\nGATE: {len(summary['ok'])}/{len(names) * len(modes)} checks ok; "
-          f"{len(failures)} failed this run -> {args.output}")
+    print(
+        f"\nGATE: {len(summary['ok'])}/{len(names) * len(modes)} checks ok; "
+        f"{len(failures)} failed this run -> {args.output}"
+    )
     return 0 if not failures else 1
 
 
