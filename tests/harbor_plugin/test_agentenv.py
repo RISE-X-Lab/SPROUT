@@ -366,7 +366,7 @@ def test_a_failed_final_snapshot_retains_the_sandbox_instead_of_destroying_it(tm
 
     pool = RecordingPool()
     env.session._pool = pool
-    env.session._drive = asyncio.run
+    env.session._loop = SimpleNamespace(drive=asyncio.run)
     env.session._destroy_async = lambda: pool.destroy("sandbox")
     env.session._release_async = lambda: pool.forget("sandbox")
 

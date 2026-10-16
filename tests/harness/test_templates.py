@@ -2,8 +2,9 @@
 
 import pytest
 
-from sprout.harness_sandbox.templates import (RUNTIME_PATH, TemplateBuilder, TemplateError,
-                                builder_from_backend, template_name)
+from sprout.harness_sandbox.spawn import builder_from_backend
+from sprout.harness_sandbox.template_recipe import RUNTIME_PATH, TemplateError, env_salt, template_name
+from sprout.harness_sandbox.templates import TemplateBuilder
 
 
 IMAGE = "swebench/sweb.eval.x86_64.django__django-11848:latest"
@@ -63,16 +64,16 @@ def test_image_env_changes_the_start_command_and_the_name(monkeypatch, runtime_b
         f"{RUNTIME_PATH} --port 3000")
     assert name != template_name(IMAGE, b._fingerprint, 3000)
     assert name == template_name(IMAGE, b._fingerprint, 3000,
-                                 salt=templates.env_salt(env))
+                                 salt=env_salt(env))
     # Off by default: the SWE-bench templates keep their names and their startCmd.
     plain = builder(monkeypatch, FakeClient(exists=False), runtime_bin)
     assert plain.template_for(IMAGE) == template_name(IMAGE, plain._fingerprint, 3000)
 
 
 def test_image_env_without_regctl_is_refused_at_wiring(monkeypatch, runtime_bin):
-    import sprout.harness_sandbox.templates as templates
-    monkeypatch.setattr(templates, "find_regctl", lambda: None)
-    monkeypatch.setattr(templates, "ensure_ripgrep", lambda: None)
+    import sprout.harness_sandbox.spawn as spawn
+    monkeypatch.setattr(spawn, "find_regctl", lambda: None)
+    monkeypatch.setattr(spawn, "ensure_ripgrep", lambda: None)
     with pytest.raises(TemplateError, match="regctl"):
         builder_from_backend({"backend": "microvm",
                               "microvm": {"runtime_bin": str(runtime_bin),
@@ -420,7 +421,8 @@ def test_a_poisoned_name_is_routed_around_not_retried():
 def test_the_search_for_a_name_is_bounded():
     """Needing many variants means something fails repeatably, and a loud
     error beats a longer search."""
-    from sprout.harness_sandbox.templates import MAX_TEMPLATE_ATTEMPTS, TemplateError
+    from sprout.harness_sandbox.template_recipe import TemplateError
+    from sprout.harness_sandbox.templates import MAX_TEMPLATE_ATTEMPTS
     import pytest
 
     b = bare_builder()

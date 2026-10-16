@@ -310,7 +310,7 @@ def guest_directory() -> str:
 
 
 def _guest_directory(session) -> str:
-    from sprout.harness_sandbox.session import checked
+    from sprout.harness_sandbox.commands import checked
 
     guest = guest_directory()
     checked(session, "mkdir -m 700 " + shlex.quote(guest), 120)
@@ -367,7 +367,7 @@ def model_patch(
     (the agent removed ``.git`` or the base commit): the agent's doing, which
     the grade scores 0 instead of failing.
     """
-    from sprout.harness_sandbox.session import shell
+    from sprout.harness_sandbox.commands import shell
 
     workdir = "/" + row["repo"].split("/", 1)[1]
     session = session_factory(quiet=True, backend=backend)
@@ -389,7 +389,7 @@ def model_patch(
 
 
 def grade_swerebench(spec: GradeSpec, row: dict, backend: dict, directory: Path, *, session_factory) -> dict:
-    from sprout.harness_sandbox.session import checked, shell, shell_outcome
+    from sprout.harness_sandbox.commands import checked, shell, shell_outcome
 
     parsers = load_parsers(spec)
     config = row["install_config"]

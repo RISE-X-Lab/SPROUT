@@ -94,11 +94,9 @@ class FakeSession:
         self.network: list = []
         self._pool = FakePool()
         self._sandbox = object()
+        self._loop = SimpleNamespace(drive=asyncio.run)
         self.on_swap: list = []
         FakeSession.instances.append(self)
-
-    def _drive(self, coroutine):
-        return asyncio.run(coroutine)
 
     async def _destroy_async(self):
         await self._pool.destroy(self._sandbox)

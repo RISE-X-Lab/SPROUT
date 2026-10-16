@@ -296,7 +296,7 @@ def test_no_template_is_built_for_podman(store, runtime_bin):
     """Templates exist because a microVM cold-started from a plain image has no
     runtime; the podman pool mounts it into every container, so the session must
     not go looking for AgentENV to build one."""
-    from sprout.harness_sandbox.templates import builder_from_backend
+    from sprout.harness_sandbox.spawn import builder_from_backend
 
     assert builder_from_backend({"backend": "podman",
                                  "podman": {"store": str(store), "runtime_bin": str(runtime_bin)}}) is None
@@ -343,7 +343,7 @@ def test_what_the_cli_hands_over_is_what_build_pool_takes(backend, pool_type, st
 def test_both_clients_mount_the_runtime_at_one_path():
     """The SDK may not import from `sprout`, so podman_containers carries its own
     copy of the template's RUNTIME_PATH; this keeps the two from drifting."""
-    from sprout.harness_sandbox import templates
+    from sprout.harness_sandbox import template_recipe
     from sprout_sandbox import podman_containers
 
-    assert podman_containers.RUNTIME_PATH == templates.RUNTIME_PATH
+    assert podman_containers.RUNTIME_PATH == template_recipe.RUNTIME_PATH

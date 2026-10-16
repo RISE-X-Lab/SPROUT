@@ -16,7 +16,8 @@ from typing import Any, List
 import pytest
 
 from sprout.harness_core.result import ToolResult
-from sprout.harness_sandbox.session import OWNER_AGENT_ID, SandboxSession, shell, shell_outcome
+from sprout.harness_sandbox.commands import shell, shell_outcome
+from sprout.harness_sandbox.session import OWNER_AGENT_ID, SandboxSession
 
 
 # --- fakes -----------------------------------------------------------------
@@ -99,7 +100,7 @@ def test_interrupted_drive_cancels_in_original_task():
     import anyio
 
     session = SandboxSession(quiet=True)
-    loop = session._get_loop()
+    loop = session._loop.get()
     tasks = []
 
     async def operation():
@@ -116,18 +117,18 @@ def test_interrupted_drive_cancels_in_original_task():
     loop.call_later(0.01, interrupt)
     try:
         with pytest.raises(KeyboardInterrupt, match="isolated cancellation injection"):
-            session._drive(operation())
+            session._loop.drive(operation())
         assert len(tasks) == 2 and tasks[0] is tasks[1]
         assert not asyncio.all_tasks(loop)
-        assert session._drive(asyncio.sleep(0, result="healthy")) == "healthy"
+        assert session._loop.drive(asyncio.sleep(0, result="healthy")) == "healthy"
     finally:
         loop.close()
 
 
 def test_unsettled_drive_quarantines_session_until_cleanup_finishes():
     session = SandboxSession(quiet=True)
-    session._cancel_grace_seconds = 0.01
-    loop = session._get_loop()
+    session._loop.cancel_grace_seconds = 0.01
+    loop = session._loop.get()
     release = asyncio.Event()
 
     async def operation():
@@ -142,12 +143,12 @@ def test_unsettled_drive_quarantines_session_until_cleanup_finishes():
     loop.call_later(0.01, interrupt)
     try:
         with pytest.raises(KeyboardInterrupt):
-            session._drive(operation())
+            session._loop.drive(operation())
         with pytest.raises(RuntimeError, match="quarantined"):
-            session._drive(asyncio.sleep(0))
+            session._loop.drive(asyncio.sleep(0))
         release.set()
-        loop.run_until_complete(session._unsettled_operation)
-        assert session._drive(asyncio.sleep(0, result="healthy")) == "healthy"
+        loop.run_until_complete(session._loop.unsettled)
+        assert session._loop.drive(asyncio.sleep(0, result="healthy")) == "healthy"
         assert not asyncio.all_tasks(loop)
     finally:
         release.set()
@@ -179,7 +180,7 @@ def test_session_download_routes_to_pool_and_reports_failure(tmp_path, fails):
         if not fails:
             assert destination.read_bytes() == b"log bytes\x00"
     finally:
-        session._loop.close()
+        session._loop.get().close()
 
 
 def test_a_failed_upload_says_why_for_a_quiet_caller(tmp_path):
@@ -195,7 +196,7 @@ def test_a_failed_upload_says_why_for_a_quiet_caller(tmp_path):
         assert session.upload_file(source, "/tmp/sprout-grade-x/model.patch") is False
         assert session.transfer_error == "OSError: no space left on device"
     finally:
-        session._loop.close()
+        session._loop.get().close()
     assert SandboxSession(quiet=True).upload_file(source, "/tmp/x") is False
     assert SandboxSession(quiet=True).download_file("/tmp/x", tmp_path / "x") is False
 
@@ -502,10 +503,11 @@ def pooled(monkeypatch):
     resolution off, cold start on.
     """
     import sprout.harness_sandbox.session as module
+    import sprout.harness_sandbox.spawn as spawn
 
     def install(pool: FakePool):
         monkeypatch.setattr(module, "build_pool", lambda backend: pool)
-        monkeypatch.setattr(module, "builder_from_backend", lambda backend: None)
+        monkeypatch.setattr(spawn, "builder_from_backend", lambda backend: None)
         return pool
 
     return install
@@ -543,8 +545,8 @@ def test_session_snapshot_workers_do_not_reenter_the_same_loop():
         finally:
             release.set()
         assert first.result(2) == second.result(2) == "snapshot"
-    session._drive(session._loop.shutdown_default_executor())
-    session._loop.close()
+    session._loop.drive(session._loop.get().shutdown_default_executor())
+    session._loop.get().close()
     assert not [w for w in caught if issubclass(w.category, RuntimeWarning)]
 
 

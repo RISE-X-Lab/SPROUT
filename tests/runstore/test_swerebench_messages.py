@@ -79,9 +79,9 @@ class Grading:
         self.lifecycle, self.commands, self.uploads, self.downloads, self.guests = [], [], [], [], []
         #: ``(direction, file name)`` of a transfer the backend refuses.
         self.refuse = None
-        monkeypatch.setattr("sprout.harness_sandbox.session.shell", self.shell)
-        monkeypatch.setattr("sprout.harness_sandbox.session.checked", self.checked)
-        monkeypatch.setattr("sprout.harness_sandbox.session.shell_outcome", self.shell_outcome)
+        monkeypatch.setattr("sprout.harness_sandbox.commands.shell", self.shell)
+        monkeypatch.setattr("sprout.harness_sandbox.commands.checked", self.checked)
+        monkeypatch.setattr("sprout.harness_sandbox.commands.shell_outcome", self.shell_outcome)
         monkeypatch.setattr("sprout.runstore.grading.guest_directory", self.guest_directory)
 
     def git(self, *argv):

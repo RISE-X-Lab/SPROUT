@@ -340,11 +340,11 @@ class SandboxEnvironment(BaseEnvironment):
             # that fails half-way still closes the pool; the error names what
             # is left and how `harness reap` reclaims it.
             await asyncio.to_thread(
-                session._drive, session._destroy_async() if delete else session._release_async()
+                session._loop.drive, session._destroy_async() if delete else session._release_async()
             )
         finally:
             if pool is not None:
-                await asyncio.to_thread(session._drive, pool.close())
+                await asyncio.to_thread(session._loop.drive, pool.close())
             self.session = None
 
     # --- commands ------------------------------------------------------------
@@ -395,7 +395,7 @@ class SandboxEnvironment(BaseEnvironment):
         try:
             result = await asyncio.shield(pending)
         except asyncio.CancelledError:
-            loop = self.session._get_loop()
+            loop = self.session._loop.get()
             loop.call_soon_threadsafe(lambda: [task.cancel() for task in asyncio.all_tasks(loop)])
             try:
                 await asyncio.shield(pending)
