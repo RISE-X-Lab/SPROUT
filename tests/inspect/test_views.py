@@ -407,7 +407,7 @@ def test_real_fixture_json_shapes_load(tmp_path):
     [loaded] = evaluation.trials
     assert loaded.phase == "grading" and loaded.restored["snapshot_id"] == "sprout-b2867d643e67-0105"
     assert loaded.receipt["sandbox_id"] == "sprout-69b1adc970d8" and loaded.receipt["overlay"] is None
-    assert loaded.receipt["image"] == "sprout-b2867d643e67-0105" and loaded.receipt["store"] == "/home/ubuntu/sprout-btrfs"
+    assert loaded.receipt["image"] == "sprout-b2867d643e67-0105" and loaded.receipt["store"] == "/path/to/sprout-btrfs"
     # the log is stored as .log.txt because the repository ignores *.log; the stage reads <name>.log
     (tmp_path / "attempt-4.log").write_text((FIXTURES / "attempt-4.log.txt").read_text())
     shutil.copy(FIXTURES / "attempt-4.stage.json", tmp_path / "attempt-4.stage.json")
@@ -421,7 +421,7 @@ def test_real_fixture_json_shapes_load(tmp_path):
     assert isinstance(success["initial_resolved"], bool) and success["baseline"]["attempts"][0]["name"] == "parent"
     retained = read_dict(FIXTURES / "retained-checkpoints.json")
     assert len(retained["points"]) == 2 and retained["points"][0]["checkpoint"]["snapshot_id"] == "sprout-b2867d643e67-0001"
-    assert retained["backend"] == "podman" and retained["store"] == "/home/ubuntu/sprout-btrfs"
+    assert retained["backend"] == "podman" and retained["store"] == "/path/to/sprout-btrfs"
     grade = load_grade({"verifier_result": {"rewards": {"reward": 0, "f2p_total": 20, "f2p_passed": 9,
                                                         "p2p_total": 3, "p2p_passed": 3}}, "exception_info": None})
     assert (grade.resolved, grade.reward, grade.detail) == (False, 0.0, "f2p 9/20 p2p 3/3")

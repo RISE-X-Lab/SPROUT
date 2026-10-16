@@ -6,7 +6,7 @@ gets back a pool built from the named backend's own section::
     execution:
       backend: podman                   # the default when none is named
       podman:
-        store: /home/ubuntu/sprout-btrfs      # a directory on btrfs (ops/btrfs_store.sh)
+        store: /path/to/sprout-btrfs      # a directory on btrfs (ops/btrfs_store.sh)
         runtime_bin: runtime/sprout-runtime
 
     execution:

@@ -116,9 +116,9 @@ def test_podman_defaults(store, runtime_bin, monkeypatch):
 def test_a_bare_section_runs_the_podman_sprout_podman_bin_names(store, runtime_bin, monkeypatch):
     """ops/setup_podman.sh installs podman 6 off PATH and prints the variable;
     `sprout.services env` exports it; a section that names no podman_bin runs it."""
-    monkeypatch.setenv("SPROUT_PODMAN_BIN", "/home/me/.local/opt/podman/bin/podman")
+    monkeypatch.setenv("SPROUT_PODMAN_BIN", "/path/to/podman/bin/podman")
     pool = build_pool({"backend": "podman", "podman": {"store": str(store), "runtime_bin": str(runtime_bin)}})
-    assert pool.podman_bin == "/home/me/.local/opt/podman/bin/podman"
+    assert pool.podman_bin == "/path/to/podman/bin/podman"
     # an explicit podman_bin in the section still wins
     pool = build_pool({"backend": "podman", "podman": {"store": str(store), "runtime_bin": str(runtime_bin),
                                                        "podman_bin": "podman"}})

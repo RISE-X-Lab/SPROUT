@@ -110,14 +110,14 @@ def test_a_missing_or_modified_parent_is_reported_not_refused(tmp_path, capsys):
     assert "sha256 %s… matches" % sha[:8] in render_markdown(chain, max_output_chars=0)
 
     # the real r1b1 journal, exported from a copy under tmp_path: "not found" relies on its recorded
-    # /home/ubuntu/ash-runs/… parent not existing on this host, and on relocate() finding no moved
+    # /path/to/ash-runs/… parent not existing on this host, and on relocate() finding no moved
     # one beside the journal -- which it does from a checkout under an experiments directory
     # (~/sprout-runs/qwen/<root>/baseline/tasks/... is the recorded path's own tail).
     real = tmp_path / "r1b1.trajectory.jsonl"
     shutil.copyfile(FIXTURES / "r1b1.trajectory.jsonl", real)
     assert cli.main(["export", str(real)]) == 0
     text = capsys.readouterr().out
-    assert "parent journal not found: /home/ubuntu/ash-runs/" in text
+    assert "parent journal not found: /path/to/ash-runs/" in text
     assert "branch_step 136" in text and "sprout-b2867d643e67-0105" in text
     assert "REVIEWER-AUTHORED assistant turn" in text and "call `rev136-abs-test`" in text
     assert "## Run finished" in text and "model calls: 2" in text

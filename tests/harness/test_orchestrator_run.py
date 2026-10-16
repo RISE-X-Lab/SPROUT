@@ -514,7 +514,7 @@ def test_volatile_paths_are_named_and_persistent_ones_are_not():
     for doomed in ("/tmp/v32", "/tmp", "/var/tmp/x/deep/run.jsonl",
                    "/dev/shm/j.jsonl", "/tmp/../tmp/sneaky"):
         assert volatile_reason(doomed), doomed
-    for safe in ("runs/fork-eval", "/home/user/runs", "/tmpdir/runs",
+    for safe in ("runs/fork-eval", "/path/to/runs", "/tmpdir/runs",
                  "/data/tmp-results"):
         assert volatile_reason(safe) is None, safe
 
