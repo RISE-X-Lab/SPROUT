@@ -22,7 +22,7 @@ Each moves into `checks/` once the code meets it.
 
 | Pending | Fails when |
 | --- | --- |
-| `pending/src_layout.py` | a package under `src/` nests another (except `worker/agents/<agent>/`, `worker/tools/interceptors/`), holds more than 10 files, holds anything but `.py`, or a file is over 500 lines |
+| `pending/src_layout.py` | a package under `src/` is more than 5 directories deep (counting `src/sprout` as the first), holds more than 10 files, holds anything but `.py`, or a file is over 700 lines |
 | `pending/type_hints.py` | `mypy` (strict, warn_unreachable; `[tool.mypy]` in pyproject.toml) reports anything in `src/` |
 | `pending/lint.py` | `ruff check` or `ruff format --check` (pyproject.toml), `gofmt -l`, `go vet`, `staticcheck` (runtime/) or `shellcheck` reports anything |
 | `pending/comment_length.py` | a file docstring is over 20 lines, a function or class docstring over 5, or another run of whole-line comments over 2 (Go and shell: the block opening the file, and the block above a declaration) |
