@@ -107,7 +107,7 @@ def test_injection_requires_history_and_cannot_reuse_parent_call_id(tmp_path, mo
 @pytest.mark.parametrize("interrupt", [False, True])
 def test_multiple_reviewer_calls_keep_real_errors_and_only_close_complete_turns(tmp_path, monkeypatch, interrupt):
     from sprout.harness_checkpoint.rollback import branch_checkpoints
-    from sprout.harness_agents.mini_swe.runtime import ToolEnvironment
+    from sprout.harness_agents.mini_swe.sandbox import ToolEnvironment
 
     memory, _, points = parent_run(tmp_path / "parent", monkeypatch)
     child_dir = tmp_path / "child"

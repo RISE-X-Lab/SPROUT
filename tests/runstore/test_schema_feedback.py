@@ -10,7 +10,7 @@ from sprout.harness_agents.mini_swe.history import read_entries
 from tests.harness.test_mini_swe import FilesystemSession, model_server, owned_filesystem, pytestmark, reply, spec
 from sprout.runstore.messages import export_messages
 from sprout.harness_agents.mini_swe.history import index_native, materialize, read_prefix
-from sprout.harness_agents.mini_swe.runtime import malformed_tool_calls
+from sprout.harness_agents.mini_swe.tools import malformed_tool_calls
 from sprout.harness.atif import journal_to_atif
 from tests.runstore.test_assistant_turn_branch import restore_files
 
