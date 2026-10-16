@@ -21,7 +21,7 @@ from sprout.harness_orchestrator.run import Orchestrator, OwnedSandbox
 from sprout.contract.run_spec import RunSpec
 from sprout.harness_checkpoint.rollback import branch_checkpoints
 from sprout.contract.mini_history import read_entries, training_messages
-from sprout.runstore.messages import clean_messages
+from sprout.contract.messages import clean_messages
 
 pytestmark = pytest.mark.skipif(
     __import__("importlib.util").util.find_spec("minisweagent") is None,

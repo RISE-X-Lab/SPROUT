@@ -86,7 +86,7 @@ def execute(request: dict, directory: Path) -> dict:
             # Only a user-hint branch appends a message; the training export
             # strips what is marked, so the hint never becomes a target.
             if message_export:
-                from sprout.runstore.messages import mark_hint
+                from sprout.contract.messages import mark_hint
 
                 prompt = mark_hint(prompt)
             spec["prompt"] = prompt

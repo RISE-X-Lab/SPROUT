@@ -6,7 +6,8 @@ import pytest
 from sprout.harness_orchestrator.run import Orchestrator
 from sprout.contract.mini_history import read_entries, training_messages
 from tests.harness.test_mini_swe import FilesystemSession, model_server, owned_filesystem, reply, spec, pytestmark
-from sprout.runstore.messages import export_messages, mark_hint
+from sprout.runstore.messages import export_messages
+from sprout.contract.messages import mark_hint
 from sprout.harness_agents.mini_swe.history import index_native
 from sprout.contract.mini_history import materialize, read_prefix
 from tests.runstore.test_store import store  # noqa: F401  (fixture)
@@ -132,7 +133,8 @@ def test_branch_point_inspection_uses_the_latest_session_reference(tmp_path, mon
 def test_timeout_between_actions_grades_the_matching_closed_prefix(tmp_path, monkeypatch):
     from dataclasses import asdict
     from sprout.harness_agents.mini_swe.sandbox import ToolEnvironment
-    from sprout.runstore.messages import complete_message_result, is_truncated_result
+    from sprout.runstore.messages import complete_message_result
+    from sprout.contract.messages import is_truncated_result
 
     original_execute = ToolEnvironment.execute
     def stop_after_partial(env, action, cwd=""):
@@ -166,7 +168,8 @@ def salvage_point(point, identifier="point-last"):
 
 def test_a_failed_attempt_is_cut_back_to_its_last_closed_turn(tmp_path, monkeypatch):
     from dataclasses import asdict
-    from sprout.runstore.messages import clean_messages, is_truncated_result, salvage_interrupted
+    from sprout.contract.messages import clean_messages, is_truncated_result
+    from sprout.runstore.messages import salvage_interrupted
 
     memory, outcome, points = parent_run(tmp_path, monkeypatch)
     last = points[-1]

@@ -12,7 +12,7 @@ from sprout.rl_driver.messages import MessageRequest
 from sprout.rl_driver.messages import MessageAdapter
 from sprout.rl_driver.server import create_app
 from tests.rl_driver.test_driver import peer as peer
-from sprout.runstore.messages import clean_messages, mark_hint
+from sprout.contract.messages import clean_messages, mark_hint
 from sprout.runstore.grading import resolved
 
 

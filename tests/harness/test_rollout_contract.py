@@ -12,7 +12,7 @@ from sprout.harness_tools.pipeline import CallContext
 from sprout.harness_orchestrator.run import Orchestrator
 from sprout.contract.run_spec import RunSpec
 from sprout.harness_orchestrator.rollout import RolloutControls
-from sprout.runstore.messages import export_tools
+from sprout.contract.messages import export_tools
 from tests.harness.test_gateway import upstream as upstream
 
 TOOL = {"type": "function", "function": {

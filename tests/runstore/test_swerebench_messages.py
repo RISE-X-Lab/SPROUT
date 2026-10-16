@@ -11,7 +11,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from sprout.runstore.messages import export_messages, mark_hint
+from sprout.runstore.messages import export_messages
+from sprout.contract.messages import mark_hint
 from sprout.runstore.grading import expected_pass_share, grade_swerebench, progress, resolved
 
 

@@ -16,7 +16,7 @@ from sprout.contract.mini_history import read_entries, read_prefix, training_mes
 from sprout.harness_core.journal import read_journal
 from sprout.harness_orchestrator.run import Orchestrator
 from sprout.runstore import child
-from sprout.runstore.messages import clean_messages, mark_hint
+from sprout.contract.messages import clean_messages, mark_hint
 from sprout.runstore.specs import JobSpec
 from sprout.runstore.worker import apply_branch_budget, starting_point
 from tests.harness.test_assistant_turn import assistant_turn

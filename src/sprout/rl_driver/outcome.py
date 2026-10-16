@@ -35,7 +35,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from sprout.runstore.messages import clean_messages, is_truncated_result
+from sprout.contract.messages import clean_messages, is_truncated_result
 
 #: What the search samples after roots with each label. New shapes -- roots
 #: that confirm a split, children of a resolved root -- would be added here.

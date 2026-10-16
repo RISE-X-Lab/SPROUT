@@ -13,11 +13,12 @@ from pathlib import Path
 from threading import Event, Lock, Thread
 from uuid import uuid4
 
+from sprout.contract.messages import failure_kind
 from sprout.harness_agents.mini_swe.history import index_native
 from sprout.harness_core.journal import journal_events
 from sprout.harness_sandbox.backends import backend_name, default_podman_store, snapshot_store
 from sprout.runstore.config import merge, referenced_env, resolve, snapshot_validator
-from sprout.runstore.files import failure_kind, read_json, write_json
+from sprout.runstore.files import read_json, write_json
 from sprout.runstore.index import Index
 from sprout.runstore.payload import PayloadUnavailable, encode_payload, send_payload
 from sprout.runstore.specs import defaults_key, digest, validate_continuation
@@ -271,7 +272,7 @@ class Worker:
         return microvm_reclaimed(sorted(claims), backend.get("microvm", {}))
 
     def _publish(self, job: dict, directory: Path, result: dict, envelope: dict) -> None:
-        from sprout.runstore.messages import is_truncated_result
+        from sprout.contract.messages import is_truncated_result
 
         effective = envelope["effective_spec"]
         truncated = is_truncated_result(result)
@@ -427,7 +428,7 @@ class Worker:
                 started = time.monotonic()
                 timeout = effective.get("timeout_s", 3600) + (1200 if job["kind"] == "grade" else 0)
                 if effective.get("extra", {}).get("rollout_contract", {}).get("message_export"):
-                    from sprout.runstore.messages import TERMINATION_GRACE_SECONDS
+                    from sprout.contract.messages import TERMINATION_GRACE_SECONDS
 
                     timeout += TERMINATION_GRACE_SECONDS
                 process = subprocess.Popen(

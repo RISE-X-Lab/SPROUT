@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from sprout.runstore.files import failure_kind
+from sprout.contract.messages import failure_kind
 from sprout.runstore.files import read_json, write_json
 from sprout.runstore.specs import JobSpec, digest
 from tests.runstore.test_payload import envelope

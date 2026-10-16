@@ -22,7 +22,7 @@ from sprout.harness_orchestrator.run import Orchestrator
 from sprout.methods import review_transport
 from sprout.methods.review_transport import RequestStopped, ReviewTransport
 from sprout.runstore import review as review_module
-from sprout.runstore.messages import mark_hint
+from sprout.contract.messages import mark_hint
 from sprout.runstore.payload import encode_payload, send_payload
 from sprout.runstore.review import (
     ANALYSIS, CANDIDATE, POINTS, Call, ReviewStopped, commands_of, grade_of, run_review,

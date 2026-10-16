@@ -8,10 +8,10 @@ from dataclasses import asdict, dataclass, fields
 from typing import Any
 from urllib.parse import urlsplit
 
+from sprout.contract.messages import is_truncated_result
 from sprout.contract.sampling import validate as validate_sampling
 from sprout.rl_driver.ledger import Conflict, canonical
 from sprout.rl_driver.outcome import export_problem, grade_verdict, zero_reason
-from sprout.runstore.messages import is_truncated_result
 
 
 def internal_id(value: str) -> str:
