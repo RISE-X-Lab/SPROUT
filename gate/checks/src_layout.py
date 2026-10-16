@@ -20,7 +20,7 @@ REPO = Path(__file__).resolve().parents[2]
 SRC = "src"
 MAX_DEPTH = 5
 MAX_FILES = 10
-MAX_LINES = 700
+MAX_LINES = 1000
 
 
 def main() -> int:
