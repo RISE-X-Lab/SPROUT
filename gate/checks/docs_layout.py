@@ -2,7 +2,8 @@
 """Images live in docs/figures/, docs/ is markdown, and nothing there is orphaned.
 
 - an image anywhere but docs/figures/ fails, and docs/figures/ holds only images;
-- every other file under docs/ is markdown that README.md links to;
+- every other file under docs/ is markdown that README.md links to, except an ADR in
+  docs/decisions/, which the index docs/decisions/README.md links to instead;
 - every image in docs/figures/ is referenced by README.md or a markdown file under docs/.
 
 Exit codes: 0 ok, 1 a rule broken.
@@ -17,6 +18,7 @@ from pathlib import Path, PurePosixPath
 
 REPO = Path(__file__).resolve().parents[2]
 FIGURES = PurePosixPath("docs/figures")
+DECISIONS = PurePosixPath("docs/decisions")
 IMAGES = {".png", ".svg", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".ico", ".tif", ".tiff"}
 
 
@@ -52,6 +54,9 @@ def main() -> int:
             problems.append(f"{path}: referenced by neither README.md nor docs/*.md")
         elif path in docs and not in_figures and path.suffix != ".md":
             problems.append(f"{path}: docs/ outside {FIGURES}/ holds markdown only")
+        elif path.parent == DECISIONS and path.name != "README.md":
+            if not referenced(path, [DECISIONS / "README.md"]):
+                problems.append(f"{path}: {DECISIONS}/README.md does not list it")
         elif path in markdown and not referenced(path, readme):
             problems.append(f"{path}: README.md does not link to it")
     for problem in problems:

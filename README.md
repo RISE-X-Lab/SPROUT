@@ -216,6 +216,7 @@ do when the answer is wrong lives in `methods`.
 | [RL driver](docs/RL_DRIVER.md) | The Miles `/rollout-groups` adapter over Run Store |
 | [Leak judge](docs/LEAK_JUDGE.md) | Whether a reviewer-written turn copies hidden-test content |
 | [Snapshot cost](docs/SNAPSHOT_COST.md) | Per-turn snapshot latency on each backend, idle and under load |
+| [Decisions](docs/decisions/README.md) | The architecture decisions that one revert cannot undo, with their context and consequences |
 
 ## Acknowledgments
 

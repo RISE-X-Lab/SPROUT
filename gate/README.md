@@ -12,7 +12,7 @@ CI runs `gate/run.sh` too, so a commit made with `--no-verify` still meets it.
 | --- | --- |
 | `checks/runtime_tools.py` | the runtime serves, or `runtime/schema/tools.json` declares, a tool other than `shell`, `text_editor`, `grep_files`, `web_fetch`, `web_search` |
 | `checks/no_host_paths.py` | a tracked file names a path in a home directory (`/home/<user>/...`, `/Users/<user>/...`); examples and fixtures use placeholders under `/path/to/` |
-| `checks/docs_layout.py` | an image sits outside `docs/figures/`, `docs/` holds anything but markdown the top README links to, or a figure is referenced by neither README.md nor `docs/*.md` |
+| `checks/docs_layout.py` | an image sits outside `docs/figures/`, `docs/` holds anything but markdown the top README links to (an ADR in `docs/decisions/` is listed by its index instead), or a figure is referenced by neither README.md nor `docs/*.md` |
 | `checks/src_layout.py` | a package under `src/` is more than 5 directories deep (counting `src/sprout` as the first), holds more than 10 files, holds anything but `.py`, or a file is over 1000 lines |
 
 A new gate is a new executable in `checks/`; one that is not executable fails the run
