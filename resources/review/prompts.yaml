@@ -1,8 +1,8 @@
-# Every prompt sprout.methods sends: the analyst's request and its validation
+# Every prompt the controllers send a model: the analyst's request and its validation
 # feedback, the reviewer's request per --branch-guidance mode with its branch
 # count rule, the Shepherd selector's system prompt and the directive appended
-# to a structured-output request. sprout.methods.prompts.load_prompts reads it
-# (the packaged copy by default; `methods.evaluate --prompts PATH` another), and
+# to a structured-output request. sprout.worker.jobs.review.prompts.load_prompts
+# reads it (this copy by default; `eval.evaluate --prompts PATH` another), and
 # the file's sha256 is recorded in summary.json, every plan-roundN.json and the
 # examples/qwen/run.py manifest, so a run says which prompts it used.
 #
@@ -375,7 +375,7 @@ reviewer:
       directions there; do not reduce the count because positions repeat.
       Use only eligible checkpoints and preserve the task's constraints.
 shepherd:
-  # methods.evaluate --method shepherd: the meta-agent's system prompt.
+  # eval.evaluate --method shepherd: the meta-agent's system prompt.
   system: |-
     You select the branching state for a coding-agent sampling
     experiment following Shepherd's meta-agent-guided Tree-RL (Algorithm 2).
