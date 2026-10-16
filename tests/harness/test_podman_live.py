@@ -36,7 +36,7 @@ from sprout.harness_orchestrator.reap import PodmanClient, Reaper
 from sprout.harness_orchestrator.resources import ResourceLedger
 from sprout.harness_sandbox.session import SandboxSession, checked, shell
 from sprout_sandbox import PodmanPool
-from sprout_sandbox.podman import mount_problem
+from sprout_sandbox.btrfs_store import mount_problem
 
 REPO = Path(__file__).resolve().parents[2]
 RUNTIME_BIN = REPO / "runtime" / "sprout-runtime"

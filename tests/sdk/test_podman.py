@@ -24,8 +24,10 @@ from pathlib import Path
 import pytest
 
 from sprout_sandbox import HttpBackend, PodmanPool, Snapshot
-from sprout_sandbox.podman import (EXTRACTION_FORMAT, RUNTIME_PATH, PodmanError, _config_path, default_podman_bin,
-                                   mount_problem)
+from sprout_sandbox.btrfs_store import config_path, mount_problem
+from sprout_sandbox.podman_cli import PodmanError, default_podman_bin
+from sprout_sandbox.podman_containers import RUNTIME_PATH, PodmanContainers
+from sprout_sandbox.podman_images import EXTRACTION_FORMAT
 from tests.conftest import (FAKE_EXPORT_BYTES, FAKE_EXTRACTION_CONTAINER, fake_networks, recorded_calls,
                             recorded_cwds, recorded_sequence)
 
@@ -57,7 +59,7 @@ def ready(monkeypatch):
     async def _ready(self, sandbox):
         probed.append(sandbox)
 
-    monkeypatch.setattr(PodmanPool, "_wait_for_runtime", _ready)
+    monkeypatch.setattr(PodmanContainers, "wait_for_runtime", _ready)
     return probed
 
 
@@ -129,7 +131,7 @@ def test_the_first_spawn_extracts_the_base_once_per_image(store, runtime_bin, to
     assert base.is_dir() and (base / "etc" / "extracted").read_text() == str(FAKE_EXPORT_BYTES), \
         "the whole export reached tar"
     assert not list((store / "bases").glob("*.partial-*")), "the partial name is gone once published"
-    saved = json.loads(_config_path(base).read_text())
+    saved = json.loads(config_path(base).read_text())
     assert saved == {
         "image": IMAGE, "digest": image_id(), "extract": EXTRACTION_FORMAT,
         "repo_digests": ["docker.io/library/python@sha256:" + image_id()],
@@ -205,7 +207,7 @@ def test_prepare_pulls_and_extracts_the_base_and_starts_nothing(store, runtime_b
     first, second, sandbox = asyncio.run(scenario())
     base = store / "bases" / image_id()
     assert first == second == base and base.is_dir()
-    assert json.loads(_config_path(base).read_text())["extract"] == EXTRACTION_FORMAT
+    assert json.loads(config_path(base).read_text())["extract"] == EXTRACTION_FORMAT
     seen = podman_calls(store.parent)
     assert ["pull", IMAGE] in seen, "an image that is not local is pulled"
     assert [c for c in seen if c[0] == "create"] == [["create", "--entrypoint", "/bin/true", IMAGE]], \
@@ -226,12 +228,12 @@ def test_a_base_extracted_by_an_older_format_is_extracted_again(store, runtime_b
     base.mkdir()
     (base / "etc").mkdir()
     (base / "etc" / "old").write_text("format 1")
-    _config_path(base).write_text(json.dumps({"image": IMAGE, "digest": image_id(),
+    config_path(base).write_text(json.dumps({"image": IMAGE, "digest": image_id(),
                                               "config": {"Env": [], "WorkingDir": "/", "User": ""}}))
     p = pool(store, runtime_bin)
     asyncio.run(p.spawn(IMAGE))
     assert not (base / "etc" / "old").exists() and (base / "etc" / "extracted").exists(), "extracted anew"
-    assert json.loads(_config_path(base).read_text())["extract"] == EXTRACTION_FORMAT
+    assert json.loads(config_path(base).read_text())["extract"] == EXTRACTION_FORMAT
     sequence = recorded_sequence(store.parent)
     deleted = sequence.index(["btrfs", "subvolume", "delete", str(base)])
     created = next(i for i, c in enumerate(sequence) if c[:3] == ["btrfs", "subvolume", "create"])
@@ -285,7 +287,7 @@ def test_spawn_builds_the_exact_run_argv_and_attaches_over_the_socket(
     assert ready == [sb], "adopted only after the runtime answered"
     assert (store / "sockets" / sid).is_dir() and not (store / "sockets" / sid).stat().st_mode & 0o002, \
         "the runtime binds the socket as the container's root, which owns the directory: no world-writable hand-over"
-    saved = json.loads(_config_path(store / "sandboxes" / sid).read_text())
+    saved = json.loads(config_path(store / "sandboxes" / sid).read_text())
     assert saved["digest"] == image_id() and saved["config"]["User"] == "appuser", \
         "the sandbox carries its image config, User included, for the snapshots taken of it and for the harness"
 
@@ -386,10 +388,10 @@ def test_podman_runs_from_the_store_and_a_container_from_its_own_directory(store
         "the container is created and started from its own socket directory"
     assert {Path(cwd).resolve() for cmd, cwd in cwds if cmd not in ("create", "start", "run")} == {store.resolve()}, \
         "everything else runs from the store"
-    assert not p.oom_killed(sb.sandbox_id)
+    assert not p._containers.oom_killed(sb.sandbox_id)
     (socket_dir / "oom").touch()                      # what conmon does on an OOM kill
-    assert p.oom_killed(sb.sandbox_id)
-    diagnosis = asyncio.run(p._diagnosis(sb.sandbox_id))
+    assert p._containers.oom_killed(sb.sandbox_id)
+    diagnosis = asyncio.run(p._containers.diagnosis(sb.sandbox_id))
     assert "OOM-killed" in diagnosis and "oom marker" in diagnosis
     asyncio.run(p.destroy(sb))
     assert not socket_dir.exists(), "the marker goes with the socket directory"
@@ -400,8 +402,8 @@ def test_a_container_whose_runtime_never_answers_is_removed_with_its_rootfs(
     """No runtime listens behind the fake, so the probe fails until the deadline;
     the caller gets the error and neither the container, nor its subvolume, nor
     its socket directory stays behind."""
-    monkeypatch.setattr(PodmanPool, "READY_TIMEOUT_S", 0.3)
-    monkeypatch.setattr(PodmanPool, "READY_POLL_S", 0.05)
+    monkeypatch.setattr(PodmanContainers, "READY_TIMEOUT_S", 0.3)
+    monkeypatch.setattr(PodmanContainers, "READY_POLL_S", 0.05)
     p = pool(store, runtime_bin)
     with pytest.raises(PodmanError, match=r"did not answer within 0 s.*fake logs"):
         asyncio.run(p.spawn(IMAGE))
@@ -409,7 +411,7 @@ def test_a_container_whose_runtime_never_answers_is_removed_with_its_rootfs(
     seen = podman_calls(store.parent)
     [rm] = [c for c in seen if c[0] == "rm" and c[-1].startswith("sprout-")]
     sid = rm[-1]
-    assert not (store / "sandboxes" / sid).exists() and not _config_path(store / "sandboxes" / sid).exists()
+    assert not (store / "sandboxes" / sid).exists() and not config_path(store / "sandboxes" / sid).exists()
     assert not (store / "sockets" / sid).exists()
     assert fake_networks(store.parent) == {}, "nor its network"
     deletes = [c for c in btrfs_calls(store.parent) if c[:2] == ["subvolume", "delete"]]
@@ -420,7 +422,7 @@ def test_a_container_that_exits_before_answering_names_the_cause(store, runtime_
     """The runtime failed to exec (seen live: the glibc-linked binary in alpine).
     Reported at once, with the state and the logs, not after the deadline."""
     monkeypatch.setenv("FAKE_PODMAN_STATE", "exited 127")
-    monkeypatch.setattr(PodmanPool, "READY_TIMEOUT_S", 30.0)
+    monkeypatch.setattr(PodmanContainers, "READY_TIMEOUT_S", 30.0)
     p = pool(store, runtime_bin)
     with pytest.raises(PodmanError, match=r"exited before answering.*exited \(exit 127\).*fake logs"):
         asyncio.run(p.spawn("docker.io/library/alpine:3.19"))
@@ -451,7 +453,7 @@ def test_a_snapshot_is_a_read_only_subvolume_named_after_the_sandbox(store, runt
         for snap in (first, second, named)]
     for snap in (first, second, named):
         assert (store / "snapshots" / snap.id).is_dir()
-        assert json.loads(_config_path(store / "snapshots" / snap.id).read_text())["digest"] == image_id(), \
+        assert json.loads(config_path(store / "snapshots" / snap.id).read_text())["digest"] == image_id(), \
             "a snapshot carries the image config, for the sandboxes spawned from it"
     # A memory snapshot is refused: the session catches this and returns None, and
     # ToolAccess.finalize then journals captured=False for it -- the honest record.
@@ -479,7 +481,7 @@ def test_spawn_from_a_snapshot_id_snapshots_the_snapshot(store, runtime_bin, too
                         str(store / "sandboxes" / branch.sandbox_id)]
     run = [c for c in podman_calls(store.parent) if c[0] == "run"][-1]
     assert run[run.index("--cpus") + 1] == "1", "a subvolume carries no shape; the caller passes one"
-    assert json.loads(_config_path(store / "sandboxes" / branch.sandbox_id).read_text())["digest"] == image_id()
+    assert json.loads(config_path(store / "sandboxes" / branch.sandbox_id).read_text())["digest"] == image_id()
 
 
 def test_a_snapshot_id_the_store_lacks_is_an_error_not_an_image_to_pull(store, runtime_bin, tools, ready):
@@ -531,7 +533,7 @@ def test_a_rootfs_holding_a_nested_subvolume_is_not_snapshotted_and_is_destroyed
         ["btrfs", "property", "set", str(rootfs), "ro", "false"],
         ["btrfs", "subvolume", "delete", str(rootfs)])]
     assert order == sorted(order), "container, then the nested subvolumes deepest first, then the rootfs"
-    assert not rootfs.exists() and not _config_path(rootfs).exists() and p.list() == []
+    assert not rootfs.exists() and not config_path(rootfs).exists() and p.list() == []
 
 
 def test_a_destroy_that_fails_after_the_container_is_gone_drops_the_handle_and_names_the_leftover(
@@ -585,7 +587,7 @@ def test_forget_leaves_the_container_running_and_close_no_longer_reaches_it(stor
     assert p.list() == []
     assert [c for c in podman_calls(store.parent) if c[0] == "rm" and c[-1].startswith("sprout-")] == \
         [["rm", "-f", other_id]], "close removed only what the pool still held"
-    assert kept_rootfs.is_dir() and _config_path(kept_rootfs).is_file() and (store / "sockets" / kept_id).is_dir(), \
+    assert kept_rootfs.is_dir() and config_path(kept_rootfs).is_file() and (store / "sockets" / kept_id).is_dir(), \
         "its rootfs, config and socket directory are all still there for the run that kept it"
 
 
@@ -598,7 +600,7 @@ def test_delete_snapshot_makes_it_writable_first(store, runtime_bin, tools, read
     tail = btrfs_calls(store.parent)[-2:]
     assert tail == [["property", "set", str(path), "ro", "false"], ["subvolume", "delete", str(path)]], \
         "the unprivileged owner may delete a subvolume only while it is writable"
-    assert not path.exists() and not _config_path(path).exists()
+    assert not path.exists() and not config_path(path).exists()
     with pytest.raises(PodmanError, match="no snapshot"):
         asyncio.run(p.delete_snapshot(snap.id))
     for bad in ("", "../x", "a/b", ".."):
@@ -673,7 +675,7 @@ def test_destroy_removes_the_container_before_its_network_rootfs_and_socket_dir(
     sequence = recorded_sequence(store.parent)
     assert sequence.index(["podman", "rm", "-f", sid]) < sequence.index(["btrfs", "subvolume", "delete", str(rootfs)]), \
         "the container first: a mounted subvolume cannot be deleted"
-    assert not (store / "sandboxes" / sid).exists() and not _config_path(store / "sandboxes" / sid).exists()
+    assert not (store / "sandboxes" / sid).exists() and not config_path(store / "sandboxes" / sid).exists()
     assert not (store / "sockets" / sid).exists()
     assert p.list() == [] and sb.sandbox_id is None
 
@@ -702,7 +704,7 @@ def test_upload_and_download_are_podman_cp(store, runtime_bin, tools, ready):
 def test_a_failing_command_names_the_tool_and_reports_its_stderr(store, runtime_bin, tools, monkeypatch):
     p = pool(store, runtime_bin)
     with pytest.raises(PodmanError, match=r"podman frobnicate failed \(exit 2\): fake podman: unknown command"):
-        asyncio.run(p._podman("frobnicate"))
+        asyncio.run(p._containers.podman("frobnicate"))
     monkeypatch.setenv("FAKE_BTRFS_FAIL", "create")
     with pytest.raises(PodmanError, match=r"btrfs subvolume create failed \(exit 1\): ERROR: simulated"):
         asyncio.run(p.store.create(store / "x"))

@@ -127,7 +127,7 @@ services:
   # The podman the sandboxes run on: checked (it answers --version), never started. null is
   # $SPROUT_PODMAN_BIN, else the podman 6 ops/setup_podman.sh installs under ~/.local/opt/podman,
   # else `podman` on PATH; `env` exports the resolved path so every entry point in that shell
-  # runs the same one (sprout_sandbox.podman.default_podman_bin).
+  # runs the same one (sprout_sandbox.podman_cli.default_podman_bin).
   podman:
     kind: check
     check: podman

@@ -27,7 +27,7 @@ _paths = [str(ROOT / "src"), str(ROOT)]
 _current = os.environ.get("PYTHONPATH", "")
 os.environ["PYTHONPATH"] = os.pathsep.join(_paths + ([_current] if _current else []))
 
-from sprout_sandbox.podman import default_podman_bin  # noqa: E402  (src is on the path above)
+from sprout_sandbox.podman_cli import default_podman_bin  # noqa: E402  (src is on the path above)
 
 #: What the fake podman prints for the containers it "creates".
 FAKE_CONTAINER = "a1" * 32

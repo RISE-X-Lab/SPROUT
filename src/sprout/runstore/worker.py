@@ -22,14 +22,14 @@ from sprout.runstore.index import Index
 from sprout.runstore.payload import PayloadUnavailable, encode_payload, send_payload
 from sprout.runstore.specs import defaults_key, digest, validate_continuation
 from sprout.runstore.store import Store
-from sprout_sandbox.podman import default_podman_bin
+from sprout_sandbox.podman_cli import default_podman_bin
 
 #: Where a queued job's sandboxes may live: on this host, owned by the attempt,
 #: so the worker can establish that each one is gone afterwards. podman unless
 #: the profile names microvm, the default everywhere in Sprout.
 OWNED_BACKENDS = ("podman", "microvm")
 #: What of the worker's environment an attempt child inherits: the system basics, and the
-#: podman and store every entry point resolves (sprout_sandbox.podman.default_podman_bin), so
+#: podman and store every entry point resolves (sprout_sandbox.podman_cli.default_podman_bin), so
 #: the child builds its sandboxes on the podman the worker later asks about them.
 CHILD_ENV_PASSTHROUGH = frozenset(
     {

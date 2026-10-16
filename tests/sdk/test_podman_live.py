@@ -44,7 +44,9 @@ import pytest
 from tests.conftest import default_podman_bin, podman_store_in_use, sandbox_networks
 
 from sprout_sandbox import PodmanPool
-from sprout_sandbox.podman import PodmanError, _config_path, image_info, mount_problem
+from sprout_sandbox.btrfs_store import config_path, mount_problem
+from sprout_sandbox.podman_cli import PodmanError
+from sprout_sandbox.podman_images import image_info
 
 REPO = Path(__file__).resolve().parents[2]
 RUNTIME_BIN = REPO / "runtime" / "sprout-runtime"
@@ -154,7 +156,7 @@ def test_spawn_snapshot_branch_files_and_teardown(cleanup):
     assert sid.startswith("sprout-") and (STORE / "sandboxes" / sid).is_dir()
     assert _state(sid) == "running 314572800 1000000000", "the shape reaches the container"
     base = STORE / "bases" / _digest(pool, IMAGE)
-    assert base.is_dir() and _config_path(base).is_file() and _ro(base) == "ro=true"
+    assert base.is_dir() and config_path(base).is_file() and _ro(base) == "ro=true"
 
     assert checked(parent, "echo hi > /tmp/a && cat /tmp/a && id -u && pwd") == "hi\n0\n/"
     env = checked(parent, "env")
@@ -198,7 +200,7 @@ def test_spawn_snapshot_branch_files_and_teardown(cleanup):
     assert sid not in _podman("ps", "-a", "--format", "{{.Names}}")
     assert (STORE / "snapshots" / snap.id).is_dir(), "destroying the sandbox keeps its snapshots"
     asyncio.run(pool.delete_snapshot(snap.id))
-    assert not (STORE / "snapshots" / snap.id).exists() and not _config_path(STORE / "snapshots" / snap.id).exists()
+    assert not (STORE / "snapshots" / snap.id).exists() and not config_path(STORE / "snapshots" / snap.id).exists()
     print("\nspawn %.2f s (base cached: %s), snapshot %.3f s, branch %.2f s"
           % (spawn_s, base.is_dir(), snapshot_s, branch_s))
 
@@ -293,7 +295,7 @@ def test_the_runtime_runs_as_root_in_the_images_working_directory_whatever_its_u
     assert checked(sb, "runuser -u nobody -- id -u") == "65534", "and it can become the image's user"
     socket_path = STORE / "sockets" / sb.sandbox_id / "runtime.sock"
     assert socket_path.stat().st_uid == os.getuid() and socket_path.stat().st_mode & 0o777 == 0o660
-    saved = _config_path(STORE / "sandboxes" / sb.sandbox_id)
+    saved = config_path(STORE / "sandboxes" / sb.sandbox_id)
     assert '"User": "nobody"' in saved.read_text(), "the image's user is kept for the harness"
 
 

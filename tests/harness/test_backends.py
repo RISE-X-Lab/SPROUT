@@ -341,9 +341,9 @@ def test_what_the_cli_hands_over_is_what_build_pool_takes(backend, pool_type, st
 
 
 def test_both_clients_mount_the_runtime_at_one_path():
-    """The SDK may not import from `sprout`, so the podman pool carries its own
+    """The SDK may not import from `sprout`, so podman_containers carries its own
     copy of the template's RUNTIME_PATH; this keeps the two from drifting."""
     from sprout.harness_sandbox import templates
-    from sprout_sandbox import podman
+    from sprout_sandbox import podman_containers
 
-    assert podman.RUNTIME_PATH == templates.RUNTIME_PATH
+    assert podman_containers.RUNTIME_PATH == templates.RUNTIME_PATH

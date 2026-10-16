@@ -234,7 +234,7 @@ class Spec:
 def installed_podman() -> Path:
     """Where ``ops/setup_podman.sh`` installs podman: a static build, off PATH so
     the distribution's podman, if any, is left alone. The same path as
-    ``sprout_sandbox.podman.installed_podman`` (this package imports no layer it
+    ``sprout_sandbox.podman_cli.installed_podman`` (this package imports no layer it
     starts, so the path is spelled twice and a test keeps the two in step)."""
     return Path.home() / ".local" / "opt" / "podman" / "bin" / "podman"
 
@@ -242,7 +242,7 @@ def installed_podman() -> Path:
 def podman_bin_for(environ: Mapping[str, str]) -> str:
     """The podman the sandboxes run on: ``$SPROUT_PODMAN_BIN``, else the one
     ``ops/setup_podman.sh`` installed, else ``podman`` on PATH -- the rule of
-    ``sprout_sandbox.podman.default_podman_bin``. What the ``{podman_bin}``
+    ``sprout_sandbox.podman_cli.default_podman_bin``. What the ``{podman_bin}``
     placeholder, the ``podman`` check and the database container resolve to."""
     chosen = environ.get("SPROUT_PODMAN_BIN")
     if chosen:

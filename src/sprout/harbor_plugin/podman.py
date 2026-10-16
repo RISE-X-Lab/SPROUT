@@ -3,7 +3,7 @@
 The same trial as on a microVM -- the task image booted with sprout-runtime
 inside, the tests/Dockerfile overlay replayed, a separate verifier, a disk
 snapshot after every model turn -- on a machine without the snapshot service.
-The session's ``podman`` backend does the work (``sprout_sandbox.podman``):
+The session's ``podman`` backend does the work (``sprout_sandbox.podman_pool``):
 the image's rootfs is extracted once into the store, every sandbox is a
 writable btrfs snapshot of it, a checkpoint is a read-only snapshot taken while
 the container runs, and a branch is a container started from one. Egress is a
@@ -18,7 +18,8 @@ import asyncio
 from pathlib import Path
 
 from sprout.harbor_plugin.environment import SandboxEnvironment
-from sprout_sandbox.podman import CONFIG_KEYS, default_podman_bin, digest_reference, image_info
+from sprout_sandbox.podman_cli import default_podman_bin
+from sprout_sandbox.podman_images import CONFIG_KEYS, digest_reference, image_info
 
 #: A command Harbor runs without a timeout of its own may take this long: the
 #: eight-hour actor budget plus setup and collection, as on the microVM.

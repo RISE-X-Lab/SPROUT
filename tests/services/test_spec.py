@@ -144,5 +144,5 @@ def test_the_services_and_the_sandbox_package_name_the_same_installed_podman():
     """services imports no layer it starts, so the install path of ops/setup_podman.sh is
     spelled in both packages; they must agree or `env` would export one podman and the
     pool pick another."""
-    from sprout_sandbox.podman import installed_podman as sandbox_installed_podman
+    from sprout_sandbox.podman_cli import installed_podman as sandbox_installed_podman
     assert spec_module.installed_podman() == sandbox_installed_podman()

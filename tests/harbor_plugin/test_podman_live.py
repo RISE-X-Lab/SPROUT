@@ -36,7 +36,8 @@ from harbor.models.task.config import EnvironmentConfig, NetworkMode, NetworkPol
 from harbor.models.trial.paths import TrialPaths
 from sprout.harbor_plugin.podman import PodmanEnvironment
 from sprout.methods import gate
-from sprout_sandbox.podman import CONFIG_KEYS, BtrfsStore, image_info, mount_problem
+from sprout_sandbox.btrfs_store import BtrfsStore, mount_problem
+from sprout_sandbox.podman_images import CONFIG_KEYS, image_info
 
 REPO = Path(__file__).resolve().parents[2]
 RUNTIME_BIN = REPO / "runtime" / "sprout-runtime"

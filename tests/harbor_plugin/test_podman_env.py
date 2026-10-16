@@ -32,7 +32,8 @@ from sprout.harbor_plugin.podman import PodmanEnvironment
 from sprout.harness_core.journal import JournalWriter
 from sprout.harness_core.result import ToolResult
 from sprout.harness_orchestrator.run import RunOutcome
-from sprout_sandbox.podman import PodmanError, digest_reference
+from sprout_sandbox.podman_cli import PodmanError
+from sprout_sandbox.podman_images import digest_reference
 
 IMAGE = "public.ecr.aws/org/task:v1"
 INFO = {"Id": "ab" * 32,

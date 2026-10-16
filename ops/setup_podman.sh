@@ -27,7 +27,7 @@
 # shared-memory segment named after the uid); the one piece podman insists on
 # sharing is the per-user rootless pause process. Nothing goes on PATH: every
 # Sprout entry point runs the podman $SPROUT_PODMAN_BIN names, else this one
-# when it is installed, else `podman` on PATH (sprout_sandbox.podman.
+# when it is installed, else `podman` on PATH (sprout_sandbox.podman_cli.
 # default_podman_bin); `python -m sprout.services env` exports the resolved
 # path. --share-images DIR adds another podman's image storage as a read-only
 # additional store, so images it pulled need no second pull; the choice is

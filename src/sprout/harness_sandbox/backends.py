@@ -35,7 +35,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from sprout_sandbox import MicroVMPool, PodmanPool
-from sprout_sandbox.podman import default_podman_bin
+from sprout_sandbox.podman_cli import default_podman_bin
 
 __all__ = [
     "build_pool",
