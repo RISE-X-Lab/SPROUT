@@ -213,7 +213,7 @@ points, runs `tf_student_continuations` students at each point and no repairs; w
 a `none` branch, with nothing added; a repair is an assistant-turn branch that inserts a
 repair turn, with `assistant_turn_rendering` `reasoning`: before it executes, the
 reviewer-written `content` moves into `reasoning_content` and `content` is left empty
-(`render_reasoning` in `src/sprout/harness_agents/mini_swe/continuation.py`), the same
+(`render_reasoning` in `src/sprout/contract/continuation.py`), the same
 shape as a turn the reasoning policy samples itself.
 
 **Multi-round repair** (`repair_rounds`, default 1): under `full`, once round r's branches

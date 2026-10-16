@@ -16,10 +16,11 @@ from pathlib import Path
 
 import httpx
 
-from sprout.harness_agents.mini_swe.history import actor_tools_at, load_prefix, reference_at
+from sprout.contract.mini_history import load_prefix
+from sprout.contract.sampling import endpoint
+from sprout.harness_agents.mini_swe.history import actor_tools_at, reference_at
 from sprout.harness_core.journal import read_journal
 from sprout.harness_gateway.auth import bearer_headers
-from sprout.harness_orchestrator.rollout import endpoint
 from sprout.methods.branching import extract_json, render_transcript
 from sprout.methods.prompts import DEFAULT_PROMPTS, Prompts
 

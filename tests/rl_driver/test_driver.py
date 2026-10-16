@@ -415,7 +415,7 @@ def test_example_is_valid_and_package_has_no_execution_calls():
     # The driver validates requests but never executes: from the harness it may
     # use only the contracts enforced at run time -- the rollout contract
     # (sampling validation) and what a branch adds after its restored history.
-    pure_contracts = {"sprout.harness_orchestrator.rollout", "sprout.harness_agents.mini_swe.continuation"}
+    pure_contracts = {"sprout.harness_orchestrator.rollout", "sprout.contract.continuation"}
     for path in directory.glob("*.py"):
         tree = ast.parse(path.read_text())
         for node in ast.walk(tree):

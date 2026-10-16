@@ -7,7 +7,7 @@ import sys
 
 import pytest
 
-from sprout.harness_agents.mini_swe.history import validate_assistant_turn
+from sprout.contract.mini_history import validate_assistant_turn
 from sprout.harness_core.journal import read_journal
 from sprout.harness_agents.mini_swe.tools import mini_tool_primer, mini_tool_schema
 from sprout.harness_orchestrator.run import Orchestrator

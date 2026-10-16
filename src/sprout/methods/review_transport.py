@@ -9,8 +9,8 @@ from pathlib import Path
 
 import httpx
 
+from sprout.contract.sampling import endpoint
 from sprout.harness_gateway.auth import bearer_headers, bearer_key
-from sprout.harness_orchestrator.rollout import endpoint
 from sprout.methods import structured_review
 from sprout.methods.branch_plan import PromptRejected, ReviewResponseTruncated
 from sprout.methods.prompts import DEFAULT_PROMPTS

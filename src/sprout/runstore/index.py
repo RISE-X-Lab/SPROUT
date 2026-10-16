@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from sprout.harness_agents.mini_swe.history import NativePoint, valid_prefix
+from sprout.contract.mini_history import NativePoint, valid_prefix
 from sprout.runstore.specs import canonical, digest
 from sprout.runstore.store import Conflict, Store
 

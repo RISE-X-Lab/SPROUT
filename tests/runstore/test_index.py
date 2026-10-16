@@ -1,7 +1,7 @@
 import hashlib
 
 from sprout.runstore.index import Index
-from sprout.harness_agents.mini_swe.history import NativePoint
+from sprout.contract.mini_history import NativePoint
 from tests.runstore.test_store import request, store
 
 

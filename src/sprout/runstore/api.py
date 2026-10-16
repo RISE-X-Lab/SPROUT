@@ -5,8 +5,8 @@ from __future__ import annotations
 import secrets
 from dataclasses import replace
 
-from sprout.harness_agents.mini_swe.continuation import Continuation, prepare
-from sprout.harness_agents.mini_swe.history import load_prefix
+from sprout.contract.continuation import Continuation, prepare
+from sprout.contract.mini_history import load_prefix
 from sprout.runstore.config import merge
 from sprout.runstore.index import Index
 from sprout.runstore.specs import (

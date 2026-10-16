@@ -29,13 +29,15 @@ REPO = Path(__file__).resolve().parents[2]
 
 #: What each package may import from this repository (besides itself and sdk).
 ALLOWED = {
-    "harness": set(),
-    "harbor_plugin": {"harness"},
-    "methods": {"harness", "harbor_plugin"},
-    "runstore": {"harness", "methods"},
-    "inspect": {"harness", "harbor_plugin", "methods"},
-    "rl_driver": {"harness", "runstore"},
-    "examples": {"harness", "harbor_plugin", "methods"},
+    # The formats RunStore, the RL driver and the worker agree on; it imports no other layer.
+    "contract": set(),
+    "harness": {"contract"},
+    "harbor_plugin": {"contract", "harness"},
+    "methods": {"contract", "harness", "harbor_plugin"},
+    "runstore": {"contract", "harness", "methods"},
+    "inspect": {"contract", "harness", "harbor_plugin", "methods"},
+    "rl_driver": {"contract", "runstore"},
+    "examples": {"contract", "harness", "harbor_plugin", "methods"},
     # The service manager starts the layers above; it imports none of them
     # (stdlib + PyYAML), so it works before the extras are installed.
     "services": set(),

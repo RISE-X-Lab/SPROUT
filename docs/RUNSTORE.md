@@ -145,7 +145,7 @@ on-disk manifest with `snapshot_repository`).
 What the actor is given after the restored prefix is the branch's
 `continuation`, required, with the same three modes as a SPROUT branch trial
 (`--branch-guidance`), applied by the same code
-(`harness_agents/mini_swe/continuation.py`):
+(`contract/continuation.py`):
 
 | `continuation` | after the prefix |
 |---|---|

@@ -17,7 +17,7 @@ import json
 import httpx
 import pytest
 
-from sprout.harness_agents.mini_swe.continuation import Continuation, prepare, render_reasoning
+from sprout.contract.continuation import Continuation, prepare, render_reasoning
 from sprout.rl_driver.backend import RunStoreClient
 from sprout.rl_driver.driver import REVIEW_GRADE_KEYS
 from sprout.rl_driver.messages import SearchSpec

@@ -76,7 +76,8 @@ from functools import partial
 from pathlib import Path
 from typing import Any
 
-from sprout.harness_agents.mini_swe.history import available_branch_points, training_messages
+from sprout.contract.mini_history import training_messages
+from sprout.harness_agents.mini_swe.history import available_branch_points
 from sprout.methods.branching import (
     Attempt,
     BranchChoice,

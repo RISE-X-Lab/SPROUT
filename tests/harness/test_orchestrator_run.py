@@ -394,7 +394,8 @@ def _own(monkeypatch, session, **spec_kwargs):
     """Drive the real sandbox wiring with a fake session, returning (orchestrator, owned)."""
     import sprout.harness_sandbox.session as session_module
 
-    from sprout.harness_orchestrator.run import Orchestrator, RunSpec
+    from sprout.harness_orchestrator.run import Orchestrator
+    from sprout.contract.run_spec import RunSpec
 
     monkeypatch.setattr(session_module, "SandboxSession", lambda **kw: session)
     spec = RunSpec(prompt="x", sandbox_image="img", **spec_kwargs)
@@ -448,7 +449,8 @@ def test_the_ledger_claim_names_the_backend(monkeypatch, tmp_path):
     import sprout.harness_sandbox.session as session_module
 
     from sprout.harness_orchestrator import ResourceLedger
-    from sprout.harness_orchestrator.run import Orchestrator, RunSpec
+    from sprout.harness_orchestrator.run import Orchestrator
+    from sprout.contract.run_spec import RunSpec
 
     session = _FakeSession()
     monkeypatch.setattr(session_module, "SandboxSession", lambda **kw: session)
@@ -535,7 +537,8 @@ def test_the_pipeline_is_limits_then_the_tracker_then_declared_rules(tmp_path):
     """The checkpointer must read the tracker the pipeline feeds: a second,
     unfed tracker once recorded every step after the first as clean reuse."""
     from sprout.harness_core.journal import JournalWriter
-    from sprout.harness_orchestrator.run import OwnedSandbox, RunSpec
+    from sprout.harness_orchestrator.run import OwnedSandbox
+    from sprout.contract.run_spec import RunSpec
     from sprout.harness_tools.interceptors import MutationTracker, ShellContext
 
     limits = object()

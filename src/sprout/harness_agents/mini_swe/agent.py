@@ -10,7 +10,8 @@ from minisweagent.agents.default import DefaultAgent
 from minisweagent.environments.local import LocalEnvironment
 from minisweagent.exceptions import Submitted
 
-from sprout.harness_agents.mini_swe.history import History, validate_assistant_turn
+from sprout.contract.mini_history import validate_assistant_turn
+from sprout.harness_agents.mini_swe.history import History
 from sprout.harness_agents.mini_swe.model import ChatModel
 from sprout.harness_agents.mini_swe.sandbox import ToolEnvironment
 from sprout.harness_agents.mini_swe.tools import tool_schema_feedback

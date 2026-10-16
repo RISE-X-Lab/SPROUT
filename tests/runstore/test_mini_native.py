@@ -4,10 +4,11 @@ from pathlib import Path
 import pytest
 
 from sprout.harness_orchestrator.run import Orchestrator
-from sprout.harness_agents.mini_swe.history import read_entries, training_messages
+from sprout.contract.mini_history import read_entries, training_messages
 from tests.harness.test_mini_swe import FilesystemSession, model_server, owned_filesystem, reply, spec, pytestmark
 from sprout.runstore.messages import export_messages, mark_hint
-from sprout.harness_agents.mini_swe.history import index_native, materialize, read_prefix
+from sprout.harness_agents.mini_swe.history import index_native
+from sprout.contract.mini_history import materialize, read_prefix
 from tests.runstore.test_store import store  # noqa: F401  (fixture)
 
 

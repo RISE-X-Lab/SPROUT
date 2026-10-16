@@ -399,7 +399,7 @@ def test_example_profiles_only_default_real_runspec_fields():
     from dataclasses import fields
     from pathlib import Path
 
-    from sprout.harness_orchestrator.run import RunSpec
+    from sprout.contract.run_spec import RunSpec
 
     from sprout.runstore.specs import GradeSpec
     from sprout.runstore.worker import owned_backend

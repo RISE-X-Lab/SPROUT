@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from sprout.harness_agents.mini_swe.history import validate_assistant_turn
+from sprout.contract.mini_history import validate_assistant_turn
 from sprout.methods.branch_plan import ReviewerPlanError, ReviewResponseTruncated, review_with_feedback
 from tests.methods.test_branch_selection import direction, exercise
 

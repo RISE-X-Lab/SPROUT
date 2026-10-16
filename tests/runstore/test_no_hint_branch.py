@@ -4,10 +4,11 @@ import pytest
 
 from sprout.harness_core.journal import read_journal
 from sprout.harness_orchestrator.run import Orchestrator
-from sprout.harness_agents.mini_swe.history import read_entries
+from sprout.contract.mini_history import read_entries
 from tests.harness.test_assistant_turn import assistant_turn
 from tests.harness.test_mini_swe import model_server, owned_filesystem, pytestmark, reply, spec
-from sprout.harness_agents.mini_swe.history import index_native, materialize, read_prefix
+from sprout.harness_agents.mini_swe.history import index_native
+from sprout.contract.mini_history import materialize, read_prefix
 from tests.runstore.test_assistant_turn_branch import restore_files
 from tests.runstore.test_mini_native import parent_run
 

@@ -9,8 +9,9 @@ from pathlib import Path
 import yaml
 from minisweagent import package_dir
 
+from sprout.contract.mini_history import load_prefix, validate_assistant_turn
 from sprout.harness_agents.mini_swe.agent import CheckpointAgent
-from sprout.harness_agents.mini_swe.history import History, load_prefix, validate_assistant_turn
+from sprout.harness_agents.mini_swe.history import History
 from sprout.harness_agents.mini_swe.model import ChatModel
 from sprout.harness_agents.mini_swe.sandbox import ToolEnvironment
 from sprout.harness_agents.mini_swe.tools import DEFAULT_COMMAND_TIMEOUT_S

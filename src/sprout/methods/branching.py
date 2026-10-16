@@ -18,14 +18,8 @@ from dataclasses import dataclass, replace
 from functools import partial
 from pathlib import Path
 
-from sprout.harness_agents.mini_swe.history import (
-    actor_tools_at,
-    conversation_restore,
-    load_prefix,
-    reference_at,
-    training_messages,
-    validate_assistant_turn,
-)
+from sprout.contract.mini_history import load_prefix, training_messages, validate_assistant_turn
+from sprout.harness_agents.mini_swe.history import actor_tools_at, conversation_restore, reference_at
 from sprout.harness_checkpoint.rollback import Checkpoint, load_checkpoints
 from sprout.harness_core.journal import read_journal
 from sprout.harness_orchestrator.run import RunOutcome

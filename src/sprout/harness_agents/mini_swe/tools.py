@@ -4,35 +4,13 @@ an actor gets when a response breaks it.
 
 import json
 import shlex
-from copy import deepcopy
+
+from sprout.contract.mini_history import validate_mini_tools
 
 #: Seconds one agent command may run before the runtime kills it, unless the run
 #: names another (``--command-timeout``, the mini environment's ``timeout``). The
 #: model's bash tool has no timeout argument, so every command runs under this.
 DEFAULT_COMMAND_TIMEOUT_S = 600
-
-
-def validate_mini_tools(tools: list[dict]) -> list[dict]:
-    """Check the interface our mini executor implements, without rewriting history."""
-    if not isinstance(tools, list) or len(tools) != 1 or not isinstance(tools[0], dict):
-        raise ValueError("Mini requires exactly one recorded bash tool")
-    tool = tools[0]
-    function = tool.get("function")
-    if tool.get("type") != "function" or not isinstance(function, dict) or function.get("name") != "bash":
-        raise ValueError("Recorded actor tool must be the bash function")
-    parameters = function.get("parameters")
-    if not isinstance(parameters, dict) or not isinstance(parameters.get("properties"), dict):
-        raise ValueError("Recorded bash tool requires an object parameter schema")
-    properties = parameters["properties"]
-    if (
-        parameters.get("type") != "object"
-        or set(properties) != {"command"}
-        or not isinstance(properties["command"], dict)
-        or properties["command"].get("type") != "string"
-        or parameters.get("required") != ["command"]
-    ):
-        raise ValueError("Recorded bash tool must require exactly one string command")
-    return deepcopy(tools)
 
 
 def mini_tool_schema(upstream: dict | None = None) -> list[dict]:

@@ -4,9 +4,9 @@ from copy import deepcopy
 
 import pytest
 
-from sprout.harness_agents.mini_swe.continuation import (
+from sprout.contract.continuation import (
     RENDERINGS, Continuation, prepare, render_branch_note, render_reasoning)
-from sprout.harness_agents.mini_swe.history import validate_assistant_turn
+from sprout.contract.mini_history import validate_assistant_turn
 from tests.harness.test_assistant_turn import assistant_turn
 
 

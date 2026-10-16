@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from sprout.harness_agents.mini_swe.history import validate_assistant_turn
+from sprout.contract.mini_history import validate_assistant_turn
 
 
 def assistant_turn(command="printf check", identifier="reviewer-call-1"):

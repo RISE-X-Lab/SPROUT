@@ -8,7 +8,7 @@ import shlex
 import time
 from copy import deepcopy
 
-from sprout.harness_agents.mini_swe.history import load_prefix
+from sprout.contract.mini_history import load_prefix
 from sprout.harness_agents.mini_swe.tools import DEFAULT_COMMAND_TIMEOUT_S
 from sprout.harness_core.control import RunControl
 from sprout.harness_core.journal import JournalWriter

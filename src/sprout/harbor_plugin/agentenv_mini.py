@@ -5,12 +5,12 @@ from __future__ import annotations
 import math
 import time
 
+from sprout.contract.run_spec import RunSpec
+from sprout.contract.sampling import endpoint
 from sprout.harbor_plugin.agentenv_agent import AgentENVAgent
 from sprout.harness_agents.mini_swe.slot import MiniSweSlot
 from sprout.harness_agents.mini_swe.tools import DEFAULT_COMMAND_TIMEOUT_S, mini_tool_primer
 from sprout.harness_gateway.auth import bearer_key
-from sprout.harness_orchestrator.rollout import endpoint
-from sprout.harness_orchestrator.run import RunSpec
 
 
 class AgentENVMini(AgentENVAgent):

@@ -5,7 +5,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 import pytest
 
-from sprout.harness_orchestrator.rollout import parameters
+from sprout.contract.sampling import parameters
 from sprout.rl_driver.driver import Driver
 from sprout.rl_driver.ledger import Ledger
 from sprout.rl_driver.messages import MessageRequest
