@@ -2,7 +2,7 @@
 
 Harbor asks an environment for a handful of things -- start, exec, upload,
 download, a network policy, stop -- and Sprout answers every one of them
-through a :class:`~sprout.harness.sandbox.session.SandboxSession`, whichever
+through a :class:`~sprout.harness_sandbox.session.SandboxSession`, whichever
 backend the session's config names. :class:`SandboxEnvironment` is that
 answer; a backend subclass (``agentenv.AgentENVEnvironment`` for a microVM,
 ``podman.PodmanEnvironment`` for a rootless container) adds only what differs:
@@ -32,8 +32,8 @@ from harbor.environments.base import BaseEnvironment, ExecResult
 from harbor.environments.capabilities import EnvironmentCapabilities, EnvironmentResourceCapabilities
 from harbor.models.task.config import NetworkMode
 
-from sprout.harness.sandbox.backends import backend_name
-from sprout.harness.sandbox.session import SandboxSession
+from sprout.harness_sandbox.backends import backend_name
+from sprout.harness_sandbox.session import SandboxSession
 from sprout.harness.tools.interceptors import shell_command
 
 CHECKPOINT_MODES = ("disk_only", "none")

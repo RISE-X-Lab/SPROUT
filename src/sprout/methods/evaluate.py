@@ -54,8 +54,8 @@ from sprout.harness.agents.mini_swe.tools import DEFAULT_COMMAND_TIMEOUT_S
 from sprout.harness.core.journal import read_journal, volatile_reason
 from sprout.harness_gateway.auth import bearer_key
 from sprout.harness.orchestrator.reap import AgentEnvClient
-from sprout.harness.sandbox.backends import default_podman_store
-from sprout.harness.sandbox.templates import find_regctl
+from sprout.harness_sandbox.backends import default_podman_store
+from sprout.harness_sandbox.templates import find_regctl
 from sprout.methods import leak_judge, policies
 from sprout.methods.branching import (
     BRANCH_COUNT_MODES, BRANCH_GUIDANCE_MODES, DEFAULT_GUIDANCE, DEFAULT_PROMPT_CHARS, MAX_ROLLOUTS, Attempt, BranchChoice,

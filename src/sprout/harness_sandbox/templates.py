@@ -583,7 +583,7 @@ def builder_from_backend(backend: dict) -> Optional[TemplateBuilder]:
     # AENV_API_KEY while this required both in the config, so a configuration that
     # spawned sandboxes fine failed here -- reported as "could not create a
     # sandbox", which points at the image rather than at the missing setting.
-    from sprout.harness.sandbox.backends import backend_name, resolve_microvm_endpoint
+    from sprout.harness_sandbox.backends import backend_name, resolve_microvm_endpoint
 
     if backend_name(backend) != "microvm":
         return None

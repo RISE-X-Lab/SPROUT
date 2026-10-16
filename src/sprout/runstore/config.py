@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 from typing import Any, Callable
 
-from sprout.harness.sandbox.backends import backend_name, default_podman_store, snapshot_store
+from sprout.harness_sandbox.backends import backend_name, default_podman_store, snapshot_store
 from sprout.runstore.specs import no_credentials
 
 

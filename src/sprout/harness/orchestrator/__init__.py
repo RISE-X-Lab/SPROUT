@@ -8,7 +8,7 @@
 This is the *run* granularity, and the boundary is worth stating because two
 things that look adjacent are deliberately not here:
 
-- ``harness/sandbox/backends.py`` -- which pool sandboxes come from. The
+- ``harness_sandbox/backends.py`` -- which pool sandboxes come from. The
   orchestrator is one of its callers, not its owner.
 - ``harness/tools/interceptors/mutation.py`` -- an interceptor, so it runs
   per *tool call*. Putting per-call machinery in a per-run component would be a

@@ -14,7 +14,7 @@ import tomllib
 
 from sprout.harness.agents.mini_swe.tools import DEFAULT_COMMAND_TIMEOUT_S
 from sprout.harness_gateway.auth import bearer_key
-from sprout.harness.sandbox.backends import default_podman_store
+from sprout.harness_sandbox.backends import default_podman_store
 from sprout.methods.branching import DEFAULT_PROMPT_CHARS, MAX_ROLLOUTS
 from sprout.methods.leak_judge import KEY_ENV as LEAK_KEY_ENV, THRESHOLD as LEAK_THRESHOLD
 from sprout.methods.prompts import load_prompts

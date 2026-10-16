@@ -37,8 +37,8 @@ from typing import Optional
 from sprout_sandbox import MicroVMPool, PodmanPool, Sandbox, Snapshot
 from sprout_sandbox.result import ToolResult as SdkToolResult
 from sprout.harness.core.result import ToolResult
-from sprout.harness.sandbox.backends import backend_name, build_pool, spawn_takes_shape
-from sprout.harness.sandbox.templates import builder_from_backend
+from sprout.harness_sandbox.backends import backend_name, build_pool, spawn_takes_shape
+from sprout.harness_sandbox.templates import builder_from_backend
 
 #: Identity for the owner's own traffic (patch extraction, resets, test runs).
 #: Distinct from any agent's id so that bookkeeping does not appear in an agent's
@@ -59,7 +59,7 @@ class SandboxSession:
                  quiet: bool = False, backend: "dict | None" = None):
         self.timeout = timeout
         self.quiet = quiet
-        #: Where sandboxes come from (``harness/sandbox/backends.py``): a
+        #: Where sandboxes come from (``harness_sandbox/backends.py``): a
         #: config's execution section, passed through. ``{"backend": "podman",
         #: "podman": {"store": ..., "runtime_bin": ...}}`` is local containers on
         #: btrfs subvolumes of the store, and empty means podman too (the

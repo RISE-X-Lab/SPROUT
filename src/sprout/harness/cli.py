@@ -39,7 +39,7 @@ from sprout.harness.core.events import SANDBOX_CREATED
 from sprout.harness.orchestrator import (AgentEnvClient, Orchestrator, PodmanClient, Reaper,
                                          ResourceLedger, RunSpec, parse_duration)
 from sprout.harness.core.journal import journal_events, read_journal, volatile_reason
-from sprout.harness.sandbox.backends import default_podman_store
+from sprout.harness_sandbox.backends import default_podman_store
 
 
 def _backend_section(name: str, runtime_bin: "str | None", store: "str | None" = None) -> dict:

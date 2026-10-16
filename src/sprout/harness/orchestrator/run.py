@@ -41,7 +41,7 @@ from sprout.harness.core.events import SANDBOX_CREATED
 from sprout.harness.core.journal import JournalWriter, new_run_id, read_journal
 from sprout.harness.core.slot import SlotResult, TaskSpec
 from sprout.harness.orchestrator.resources import ResourceLedger
-from sprout.harness.sandbox.backends import backend_name, snapshot_store
+from sprout.harness_sandbox.backends import backend_name, snapshot_store
 
 
 @dataclass
@@ -60,7 +60,7 @@ class RunSpec:
     journal_path: Optional[Union[str, Path]] = None
 
     # --- sandbox ---
-    #: Where the sandbox comes from (``harness/sandbox/backends.py``):
+    #: Where the sandbox comes from (``harness_sandbox/backends.py``):
     #: ``{"backend": "microvm", "microvm": {...}}`` for an AgentENV microVM, or
     #: ``{"backend": "podman", "podman": {"store": ..., "runtime_bin": ...}}``
     #: for a rootless container whose rootfs is a subvolume of the store. Empty
@@ -73,7 +73,7 @@ class RunSpec:
     #: fields) and not otherwise consumed: the binary a backend actually uses is
     #: the one in its own section -- ``backend["podman"]["runtime_bin"]`` is
     #: mounted into every container, ``backend["microvm"]["runtime_bin"]`` builds
-    #: the per-image template (``harness/sandbox/templates.py``).
+    #: the per-image template (``harness_sandbox/templates.py``).
     runtime_bin: Optional[str] = None
     #: The image (or snapshot) the sandbox is created from. Required.
     sandbox_image: Optional[str] = None
@@ -280,8 +280,8 @@ class Orchestrator:
     def _wire_sandbox(self, spec: RunSpec, claim) -> "OwnedSandbox":
         """Create the sandbox. The session stays here: every tool call, snapshot
         and the final teardown go through this one handle."""
-        from sprout.harness.sandbox.backends import with_sandbox_budget
-        from sprout.harness.sandbox.session import SandboxSession
+        from sprout.harness_sandbox.backends import with_sandbox_budget
+        from sprout.harness_sandbox.session import SandboxSession
 
         if not spec.sandbox_image:
             raise ValueError("RunSpec.sandbox_image is required: the orchestrator owns the sandbox")

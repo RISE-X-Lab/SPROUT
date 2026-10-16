@@ -234,7 +234,7 @@ def test_missing_sandbox_id_in_response_is_an_error():
 
 
 def test_the_pool_serves_the_sessions_contract():
-    """`harness.sandbox.session.SandboxSession` duck-types on exactly these."""
+    """`harness_sandbox.session.SandboxSession` duck-types on exactly these."""
     pool = MicroVMPool("http://aenv:8000")
     for name in ("spawn", "spawn_from_image", "destroy", "close", "snapshot", "squash",
                  "upload_file", "download_file", "supports_snapshot",

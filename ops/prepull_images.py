@@ -43,8 +43,8 @@ import tomllib
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-from sprout.harness.sandbox.backends import default_podman_store
-from sprout.harness.sandbox.session import SandboxSession
+from sprout.harness_sandbox.backends import default_podman_store
+from sprout.harness_sandbox.session import SandboxSession
 from sprout_sandbox import PodmanPool
 
 BACKENDS = ("microvm", "podman")

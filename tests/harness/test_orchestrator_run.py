@@ -213,7 +213,7 @@ def test_a_bad_spec_is_refused_before_a_sandbox_or_the_agent_exists(tmp_path, mo
     check comes first, so a typo'd slot never pays for a sandbox (one wired too
     early would surface as the image error instead), and a missing image is
     named before the backend fails opaquely on create(None)."""
-    import sprout.harness.sandbox.session as session_module
+    import sprout.harness_sandbox.session as session_module
 
     session = _FakeSession()
     monkeypatch.setattr(session_module, "SandboxSession", lambda **kw: session)
@@ -331,7 +331,7 @@ def test_a_reboard_moves_the_claim_and_the_record_to_the_replacement(tmp_path, m
     The replacement has to be claimed before that -- a process killed afterwards
     would otherwise leave a sandbox `harness reap` cannot attribute -- and the
     release at teardown and the outcome must name it, not the destroyed one."""
-    import sprout.harness.sandbox.session as session_module
+    import sprout.harness_sandbox.session as session_module
     from sprout.harness.orchestrator import ResourceLedger
 
     session = ReboardingSession()
@@ -392,7 +392,7 @@ class _FakeSession:
 
 def _own(monkeypatch, session, **spec_kwargs):
     """Drive the real sandbox wiring with a fake session, returning (orchestrator, owned)."""
-    import sprout.harness.sandbox.session as session_module
+    import sprout.harness_sandbox.session as session_module
 
     from sprout.harness.orchestrator.run import Orchestrator, RunSpec
 
@@ -409,7 +409,7 @@ def test_one_run_start_to_finish_on_the_sandbox_it_owns(tmp_path, monkeypatch):
     the slot's result and still names the sandbox after teardown; and the ledger
     reads claim, release under the same id, done -- what `harness reap` has to go
     on, since a killed *process* releases nothing."""
-    import sprout.harness.sandbox.session as session_module
+    import sprout.harness_sandbox.session as session_module
 
     from sprout.harness.orchestrator import ResourceLedger
     from sprout.harness.tools.access import ToolAccess
@@ -445,7 +445,7 @@ def test_one_run_start_to_finish_on_the_sandbox_it_owns(tmp_path, monkeypatch):
 def test_the_ledger_claim_names_the_backend(monkeypatch, tmp_path):
     """`harness reap` frees AgentENV's sandboxes; a podman container's claim
     has to say so, or reap reads it as "already gone" forever."""
-    import sprout.harness.sandbox.session as session_module
+    import sprout.harness_sandbox.session as session_module
 
     from sprout.harness.orchestrator import ResourceLedger
     from sprout.harness.orchestrator.run import Orchestrator, RunSpec

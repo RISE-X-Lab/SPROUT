@@ -44,7 +44,7 @@ from typing import Dict, Iterable, List, Optional
 
 from sprout_sandbox.podman import BtrfsStore, MANAGED_LABEL, SOCKET_MOUNT, STORE_LABEL, default_podman_bin
 from sprout.harness.orchestrator.resources import ResourceLedger
-from sprout.harness.sandbox.backends import default_aenv_server_url
+from sprout.harness_sandbox.backends import default_aenv_server_url
 
 _DURATION = re.compile(r"^(\d+(?:\.\d+)?)\s*([smhd])$")
 

@@ -31,8 +31,8 @@ import time
 from pathlib import Path
 
 from sprout.harness.orchestrator.reap import AgentEnvClient
-from sprout.harness.sandbox.backends import resolve_microvm_endpoint
-from sprout.harness.sandbox.templates import TemplateBuilder
+from sprout.harness_sandbox.backends import resolve_microvm_endpoint
+from sprout.harness_sandbox.templates import TemplateBuilder
 from sprout_sandbox import MicroVMPool, PodmanPool
 
 WORKDIR = "/var/tmp/sprout-bench"

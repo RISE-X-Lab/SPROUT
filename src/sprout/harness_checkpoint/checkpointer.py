@@ -27,7 +27,7 @@ process carries none). Without one, re-boarding and replaying land on
 sandboxes whose runtime is missing; build the template through AgentENV's
 template API with ``startCmd`` set (``aenv snapshot create`` records none).
 Sprout cannot repair that from outside -- it reaches a sandbox only through
-its runtime -- so :meth:`~harness.sandbox.session.SandboxSession.swap_sandbox`
+its runtime -- so :meth:`~harness_sandbox.session.SandboxSession.swap_sandbox`
 probes a replacement before adopting it and keeps the current sandbox when the
 probe fails. (A podman container has no template: the pool mounts the runtime
 into every container it starts, so a restore always has one.)
@@ -96,7 +96,7 @@ class CheckpointRecord:
 class Checkpointer:
     """Drives per-step checkpoints and layer-chain upkeep for one episode.
 
-    ``session`` is a :class:`~harness.sandbox.session.SandboxSession`; only its
+    ``session`` is a :class:`~harness_sandbox.session.SandboxSession`; only its
     ``snapshot`` / ``squash_snapshot`` / ``swap_sandbox`` / ``supports_snapshot``
     surface is used, so a test double is a small object.
     """

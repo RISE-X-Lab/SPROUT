@@ -108,7 +108,7 @@ MICROVM_KEYS = {"server_url", "runtime_port", "api_key", "api_key_file",
                 # Path to a local sprout-runtime binary. Set it and the harness
                 # builds a template per instance image on demand, uploading
                 # the binary through the backend's file service
-                # (harness/sandbox/templates.py); leave it unset and the harness
+                # (harness_sandbox/templates.py); leave it unset and the harness
                 # expects templates to exist already.
                 "runtime_bin",
                 # False = no egress from any sandbox this pool creates

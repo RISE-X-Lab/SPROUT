@@ -3,7 +3,7 @@
 Layering:
 
 - ``harness.core``          event model v2, journal store, slot contract, control
-- ``harness.sandbox``       sandbox session, the microVM and podman backends, the microVM templates
+- ``harness_sandbox``       sandbox session, the microVM and podman backends, the microVM templates
 - ``harness.tools``         ToolAccess, the runtime schema, interceptor pipeline
 - ``harness_checkpoint``    checkpointer, branch points
 - ``harness.agents``        the mini-swe-agent driver and its native history

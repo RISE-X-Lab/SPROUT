@@ -80,7 +80,7 @@ def _sprout_imports(path: Path) -> set[str]:
 
 def test_the_sdk_imports_nothing_from_sprout():
     """The harness drives the SDK; the SDK knows nothing of the harness. The
-    one-line temptation is `from sprout.harness.sandbox.templates import
+    one-line temptation is `from sprout.harness_sandbox.templates import
     RUNTIME_PATH` in the podman pool, which carries its own copy instead."""
     paths = sorted((REPO / "src" / "sprout_sandbox").rglob("*.py"))
     assert paths, "sprout_sandbox has no modules to check"
