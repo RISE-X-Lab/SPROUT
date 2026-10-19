@@ -1,8 +1,9 @@
 """``python -m sprout.services``: argument parsing, dispatch and exit codes.
 
 A command exits 0 when every action succeeded or every report was printed. It
-exits 1 when a start or a stop failed, a doctor check failed, a name is unknown,
-a placeholder cannot be resolved, or ``services.yaml`` is missing or invalid.
+exits 1 when a start or a stop failed, a doctor check failed, the setup stopped,
+a name is unknown, a placeholder cannot be resolved, or ``services.yaml`` is
+missing or invalid.
 ``logs`` of a container exits with the code of ``podman logs``. The output is one
 line per action, without colour. Only ``env`` prints a secret.
 
@@ -14,7 +15,6 @@ as a verdict of the worker's doctor. docs/SERVICES.md describes the commands.
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import shlex
 import sys
@@ -22,13 +22,12 @@ import time
 from collections import deque
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
-from typing import Any
 
 import sprout.services
-from sprout.resource import resource
 from sprout.services import health, secrets
 from sprout.services.podman import Podman
 from sprout.services.render import StatusRow, doctor_line, env_lines, status_table
+from sprout.services.setup import findings, templates, wizard
 from sprout.services.spec import (
     Context,
     ExpandError,
@@ -64,9 +63,6 @@ def _one_line(text: str, limit: int = 160) -> str:
 #: A service of health kind ``process`` or ``none`` is up once it has stayed alive this long, in
 #: seconds. A worker that dies on its config does so within the first second.
 SETTLE_S = 2.0
-#: The templates of the per-service config files that ``init`` writes beside services.yaml.
-RUNSTORE_TEMPLATE = resource("runstore/config.example.json")
-RL_DRIVER_TEMPLATE = resource("rl_driver/config.example.json")
 
 
 class Manager:
@@ -296,6 +292,20 @@ class Manager:
         return True
 
     # --- reports -----------------------------------------------------------
+    def host_values(self) -> templates.HostValues:
+        """The values of this host that ``init`` writes into the config files."""
+        return templates.host_values(
+            state=self.paths.state, runtime_bin=self.paths.runtime_binary(), python=self.ctx.python
+        )
+
+    def config_checks(self) -> list[tuple[str, health.Probe]]:
+        """A doctor line for each problem in runstore.json, or one ``ok`` line. None without the file."""
+        runstore = self.paths.config / findings.RUNSTORE
+        if not runstore.is_file():
+            return []
+        found = findings.host_findings(runstore=runstore.read_text(encoding="utf-8"), environ=self.environ)
+        return findings.doctor_checks(found)
+
     def status_row(self, service: Service) -> StatusRow:
         """The service's row of the ``status`` table."""
         port = str(service.port) if service.port else "-"
@@ -309,7 +319,8 @@ class Manager:
         return StatusRow(service.name, service.kind, pid, text, port)
 
     def doctor(self, say: Say) -> bool:
-        """Print every host check and the probe of every enabled service, and start nothing.
+        """Print every host check, each problem in runstore.json and the probe of every enabled
+        service, and start nothing.
 
         A disabled service gets a ``skip`` line. True when nothing failed.
         """
@@ -317,7 +328,7 @@ class Manager:
         # The worker's checks that no `check` service names, enabled or not, such as the podman
         # check for a services.yaml written before that service existed.
         kinds = [service.check for service in self.spec.services if service.kind == "check"]
-        host = [("uv", health.program("uv")), *self._worker_doctor.other_checks(kinds)]
+        host = [("uv", health.program("uv")), *self._worker_doctor.other_checks(kinds), *self.config_checks()]
         for subject, result in host:
             say(doctor_line(result.word, subject, result.detail))
             fine = fine and (result.ok or result.warning)
@@ -350,62 +361,40 @@ def _seed(path: Path, text: str, say: Say) -> bool:
     return True
 
 
-def _rewrite(value: Any, key: str, replacement: Any) -> Any:
-    """``value`` with each ``key`` at any depth set to ``replacement``.
+def _init_files(paths: Paths, say: Say) -> Spec | None:
+    """Write each missing config file and make each missing secret, and return the spec.
 
-    The JSON template holds the example paths of another host.
+    Returns None after an error on stderr, when services.yaml is invalid.
     """
-    if isinstance(value, dict):
-        return {k: (replacement if k == key else _rewrite(v, key, replacement)) for k, v in value.items()}
-    if isinstance(value, list):
-        return [_rewrite(item, key, replacement) for item in value]
-    return value
-
-
-def _runstore_config(paths: Paths, python: str) -> str:
-    """The Run Store template with the values of this host: the artifact root under state, the
-    checkout's runtime binary, and ``python`` for every profile.
-
-    ``runstore init`` refuses a volatile artifact root. The worker runs each job of a profile as
-    ``<python> -m sprout.worker.jobs.rollout``, so that interpreter must import sprout."""
-    config = json.loads(RUNSTORE_TEMPLATE.read_text(encoding="utf-8"))
-    config["artifact_root"] = str(paths.state / "runstore-artifacts")
-    config = _rewrite(config, "runtime_bin", str(paths.runtime_binary()))
-    config["profiles"] = _rewrite(config.get("profiles", {}), "python", python)
-    return json.dumps(config, indent=2) + "\n"
-
-
-def _rl_driver_config(paths: Paths) -> str:
-    """The RL driver template with its ledger under state and its token from ``SPROUT_RL_DRIVER_TOKEN``."""
-    config = json.loads(RL_DRIVER_TEMPLATE.read_text(encoding="utf-8"))
-    config["ledger"] = str(paths.state / "rl-driver" / "groups.sqlite3")
-    config["driver_token_env"] = "SPROUT_RL_DRIVER_TOKEN"
-    return json.dumps(config, indent=2) + "\n"
-
-
-def _cmd_init(args: argparse.Namespace, paths: Paths) -> int:
-    say = print
     paths.config.mkdir(parents=True, exist_ok=True)
     paths.state.mkdir(parents=True, exist_ok=True)
     _seed(paths.spec, template_path("services.yaml").read_text(encoding="utf-8"), say)
     spec = _load(paths)
     if spec is None:
-        return 1
-    python = spec.python or paths.default_python()
+        return None
+    values = Manager(spec, paths).host_values()
     _seed(paths.config / "litellm.yaml", template_path("litellm.yaml").read_text(encoding="utf-8"), say)
-    _seed(paths.config / "runstore.json", _runstore_config(paths, python), say)
-    _seed(paths.config / "rl_driver.json", _rl_driver_config(paths), say)
+    _seed(paths.config / "runstore.json", templates.json_text(templates.runstore_config(values)), say)
+    _seed(paths.config / "rl_driver.json", templates.rl_driver_text(paths.state), say)
     for name in spec.secret_names():
         existed = secrets.exists(paths, name)
         secrets.ensure(paths, name)
         say("%s secret %s" % ("kept  " if existed else "made  ", paths.secrets / name))
+    return spec
+
+
+def _cmd_init(args: argparse.Namespace, paths: Paths) -> int:
+    say = print
+    if _init_files(paths, say) is None:
+        return 1
     say("")
     say("edit   %s: the model aliases the experiments use" % (paths.config / "litellm.yaml"))
     say(
-        "edit   %s: profiles (the podman store, snapshot_repository, sandbox_resources, worker_env)"
+        "edit   %s: profiles (snapshot_repository, sandbox_resources, worker_env)"
         % (paths.config / "runstore.json")
     )
     say("edit   %s: miles.tasks, when the RL driver is used" % (paths.config / "rl_driver.json"))
+    say("or     python -m sprout.services setup     # the guided setup, which asks before each change")
     say("then   python -m sprout.services up        # dependencies first; `status` and `doctor` to look")
     say(
         '       eval "$(python -m sprout.services env)"   # the podman and store the sandboxes use, '
@@ -440,7 +429,7 @@ def _known(spec: Spec, names: Sequence[str]) -> bool:
     return not unknown
 
 
-def _up(manager: Manager, services: Sequence[Service]) -> bool:
+def _up(manager: Manager, services: Sequence[Service], say: Say = print) -> bool:
     """Start ``services`` in order, and return True when every one is up.
 
     A service whose dependency failed is skipped, so one fault prints one failure, not a cascade.
@@ -449,10 +438,10 @@ def _up(manager: Manager, services: Sequence[Service]) -> bool:
     for service in services:
         blocked = sorted(set(service.depends_on) & failed)
         if blocked:
-            print("%s: skipped (%s failed)" % (service.name, ", ".join(blocked)))
+            say("%s: skipped (%s failed)" % (service.name, ", ".join(blocked)))
             failed.add(service.name)
             continue
-        if not manager.up(service, print):
+        if not manager.up(service, say):
             failed.add(service.name)
     return not failed
 
@@ -565,6 +554,92 @@ def _cmd_doctor(args: argparse.Namespace, paths: Paths) -> int:
     return 0 if Manager(spec, paths).doctor(print) else 1
 
 
+def _host_report(paths: Paths) -> health.HostReport:
+    """The worker doctor's report, on the interpreter of services.yaml, else on the default one.
+
+    Raises ``HostError`` when the doctor gives no report.
+    """
+    try:
+        python = load_spec(paths.spec).python if paths.spec.is_file() else None
+    except SpecError:
+        python = None
+    return health.WorkerDoctor(python=python or paths.default_python(), environ=os.environ).report()
+
+
+def _start(paths: Paths, say: Say) -> bool:
+    """Start the services of ``wizard.START`` and their dependencies, as ``up`` does."""
+    spec = _load(paths)
+    if spec is None or not _known(spec, wizard.START):
+        return False
+    return _up(Manager(spec, paths), spec.order(wizard.START), say)
+
+
+def _cmd_setup(args: argparse.Namespace, paths: Paths) -> int:
+    answers = wizard.Answers(
+        yes=args.yes,
+        go_on=args.continue_after_failure,
+        model=args.model,
+        endpoint=args.model_endpoint,
+        key_env=args.model_key_env,
+        add_key=args.add_key,
+        remove_unset=args.remove_unset,
+        check_endpoint=args.check_endpoint,
+        start=args.start,
+    )
+    session = wizard.Session(
+        paths=paths,
+        environ=dict(os.environ),
+        answers=answers,
+        prompter=wizard.Prompter(stdin=sys.stdin, stdout=sys.stdout, yes=args.yes),
+        report=lambda: _host_report(paths),
+        seed=lambda say: _init_files(paths, say),
+        start=lambda say: _start(paths, say),
+    )
+    return wizard.run(session)
+
+
+def _add_setup_options(setup: argparse.ArgumentParser) -> None:
+    """The flags of ``setup``: ``--yes``, and one flag for each question."""
+    yes_no = argparse.BooleanOptionalAction
+    setup.add_argument(
+        "--yes",
+        action="store_true",
+        help="take the default of each question that no flag answers, so that setup needs no terminal",
+    )
+    setup.add_argument(
+        "--continue-after-failure", action=yes_no, help="go on after a failed host check (default: yes)"
+    )
+    setup.add_argument("--model", help="the model name (default: %s)" % wizard.DEFAULT_MODEL)
+    setup.add_argument(
+        "--model-endpoint",
+        help="the OpenAI-compatible endpoint URL; empty skips the model step "
+        "(default: $QWEN_BASE_URL, else $OPENAI_BASE_URL, else empty)",
+    )
+    setup.add_argument(
+        "--model-key-env",
+        help="the environment variable that holds the key (default: %s)" % wizard.DEFAULT_KEY_ENV,
+    )
+    setup.add_argument(
+        "--add-key",
+        action=yes_no,
+        help="reference the key variable in the worker_env of %s (default: yes)"
+        % ", ".join(wizard.KEY_PROFILES),
+    )
+    setup.add_argument(
+        "--remove-unset",
+        action=yes_no,
+        help="remove each worker_env reference to a variable that this shell does not set (default: no)",
+    )
+    setup.add_argument(
+        "--check-endpoint",
+        action=yes_no,
+        help="send one short chat completion to the endpoint; it costs a request (default: no)",
+    )
+    setup.add_argument(
+        "--start", action=yes_no, help="start %s at the end (default: no)" % " and ".join(wizard.START)
+    )
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="python -m sprout.services",
@@ -619,6 +694,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         "doctor", help="every host check and health probe, starting nothing; exit 1 when something is wrong"
     )
     doctor.set_defaults(func=_cmd_doctor)
+
+    setup = sub.add_parser(
+        "setup",
+        help="the guided setup: host checks, the config files, the model endpoint and the start; "
+        "asks before each change",
+    )
+    _add_setup_options(setup)
+    setup.set_defaults(func=_cmd_setup)
 
     args = parser.parse_args(argv)
     command: Callable[[argparse.Namespace, Paths], int] = args.func

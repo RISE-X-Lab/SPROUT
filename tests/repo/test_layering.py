@@ -33,7 +33,7 @@ LAYERS = {
     "search": LEAVES | {"contract", "runstore"},
     "rl_driver": LEAVES | {"contract", "runstore", "search"},
     "eval": LEAVES | {"contract", "runstore", "search", "worker"},
-    "services": LEAVES,
+    "services": LEAVES | {"contract"},
     "examples": LEAVES | {"contract", "worker", "eval"},
 }
 

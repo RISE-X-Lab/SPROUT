@@ -230,6 +230,37 @@ def test_doctor_prints_uv_then_the_workers_other_checks_then_each_service(
     )
 
 
+def test_doctor_prints_each_problem_in_runstore_json_after_the_host_checks_and_fails_on_a_fail(
+    paths, python, tmp_path, monkeypatch, capsys
+):
+    uv = uv_on_path(tmp_path, monkeypatch)
+    monkeypatch.setenv("SPROUT_MODEL_API_KEY", "set")
+    python.answer(out=doctor_report())
+    off = {"kind": "process", "command": ["true"], "enabled": False}
+    write_spec(paths, {"off": off}, python=str(python.path))
+    cli.main(["init"])
+    runstore = paths.config / "runstore.json"
+    artifacts = str(paths.state / "runstore-artifacts")
+    runstore.write_text(runstore.read_text().replace(artifacts, "/path/to/data"))
+    capsys.readouterr()
+
+    code = cli.main(["doctor"])
+
+    assert (code, capsys.readouterr().out.splitlines()) == (
+        1,
+        [
+            "ok    uv               %s" % uv.path,
+            "ok    podman           podman 9.9.9 (/path/to/podman)",
+            "ok    store            /path/to/store: btrfs, user_subvol_rm_allowed",
+            "ok    runtime          /path/to/sprout-runtime",
+            "ok    keyring          kernel.keys.maxkeys=20000",
+            "fail  runstore.json    `artifact_root` is the example path /path/to/data of the template, at "
+            "the top level. Fix: set it to a path on this host",
+            "skip  off              disabled in services.yaml",
+        ],
+    )
+
+
 def test_doctor_exits_0_when_the_only_problems_are_warnings(paths, python, tmp_path, monkeypatch):
     uv_on_path(tmp_path, monkeypatch)
     python.answer(out=doctor_report(checks={"keyring": ("warn", "kernel.keys.maxkeys=200 < 20000")}))

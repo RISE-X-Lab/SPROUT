@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -106,3 +107,37 @@ def test_init_prints_no_secret_value(paths, capsys):
     cli.main(["init"])
 
     assert secrets_in(capsys.readouterr().out, paths) == []
+
+
+def podman_stores(config: dict) -> dict[str, Any]:
+    """The ``store`` of each podman backend section of ``config``, by ``<profile>.<section>``."""
+    return {
+        "%s.%s" % (name, section): profile[section]["backend"]["podman"].get("store")
+        for name, profile in config["profiles"].items()
+        for section in ("run_defaults", "grade_defaults")
+        if profile.get(section, {}).get("backend", {}).get("backend") == "podman"
+    }
+
+
+def test_init_names_the_store_of_sprout_podman_store_in_each_podman_section(paths, monkeypatch):
+    """The template's store is an example path, and each job of a podman profile failed on it."""
+    monkeypatch.setenv("SPROUT_PODMAN_STORE", "/path/to/the-store-of-this-host")
+
+    cli.main(["init"])
+
+    config = json.loads((paths.config / "runstore.json").read_text())
+    assert podman_stores(config) == {
+        "mini.run_defaults": "/path/to/the-store-of-this-host",
+        "grade.grade_defaults": "/path/to/the-store-of-this-host",
+    }
+
+
+def test_without_sprout_podman_store_init_names_sprout_btrfs_in_the_home_directory(paths, monkeypatch):
+    """The worker's doctor and each run use this default, which ``ops/setup_podman.sh`` makes."""
+    monkeypatch.delenv("SPROUT_PODMAN_STORE", raising=False)
+
+    cli.main(["init"])
+
+    config = json.loads((paths.config / "runstore.json").read_text())
+    store = str(Path(os.environ["HOME"]) / "sprout-btrfs")
+    assert podman_stores(config) == {"mini.run_defaults": store, "grade.grade_defaults": store}

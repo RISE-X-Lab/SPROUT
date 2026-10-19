@@ -81,16 +81,17 @@ on the same host claims and runs them.
 
 ```bash
 pip install -e ".[runstore]"
-python -m sprout.services init
-# In ~/.config/sprout/runstore.json, set each "store" to the absolute path of your btrfs store.
 export SPROUT_MODEL_API_KEY=<key>
+python -m sprout.services setup
 python -m sprout.services up runstore-api runstore-worker
 eval "$(python -m sprout.services env)"
 ```
 
-`init` writes the configs and the secrets under `~/.config/sprout/`, and keeps each file that
-already exists. The worker passes `SPROUT_MODEL_API_KEY` to its jobs. The last command exports
-the Run Store token into the shell ([Services](docs/SERVICES.md)).
+`setup` checks the host, and writes the configs and the secrets under `~/.config/sprout/`. It
+asks for the model endpoint and the variable of its key, and it asks before each change of a file
+that exists ([Guided setup](docs/SERVICES.md#guided-setup)). `python -m sprout.services init`
+writes the same configs without questions. The worker passes the key variable to its jobs. The
+last command exports the Run Store token into the shell.
 
 ### 4. Evaluate a task with SPROUT
 

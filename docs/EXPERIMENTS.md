@@ -84,27 +84,7 @@ Install Sprout and start the services:
    (cd runtime && go generate ./... && go build -o sprout-runtime .)
    ```
 
-3. Write the service configuration:
-
-   ```bash
-   python -m sprout.services init
-   ```
-
-   The command writes `services.yaml`, `runstore.json` and the other service files into
-   `~/.config/sprout`, and prints what to edit. It does not overwrite a file that exists
-   ([services](SERVICES.md)).
-4. Edit the profiles in `runstore.json` as `init` prints, for example the podman `store`.
-5. Add the model key to the `worker_env` of the `mini` profile and of the `review` profile:
-
-   ```json
-   "QWEN_API_KEY": {"$env": "QWEN_API_KEY"}
-   ```
-
-   Each rollout job and each review job names `QWEN_API_KEY` as its key (`--model-key-env`).
-   Apart from system variables such as `PATH` and `HOME`, the worker passes a job only the
-   variables that a `$env` reference of the job names. If you use the microVM profiles, add
-   the entry to `mini-microvm` too.
-6. Set the model endpoint and the key in this shell. Replace the placeholder URL with your
+3. Set the model endpoint and the key in this shell. Replace the placeholder URL with your
    endpoint, and keep credentials out of Git.
 
    ```bash
@@ -113,7 +93,33 @@ Install Sprout and start the services:
    export QWEN_API_KEY
    ```
 
-7. Start the Run Store and a worker from this shell:
+4. Run the guided setup from this shell, and answer its questions:
+
+   ```bash
+   python -m sprout.services setup --model-key-env QWEN_API_KEY
+   ```
+
+   The setup checks the host and writes `services.yaml`, `runstore.json` and the other service
+   files into `~/.config/sprout`. It asks before each change of a file that exists
+   ([Guided setup](SERVICES.md#guided-setup)). The endpoint question takes `$QWEN_BASE_URL` as its
+   default. The setup then adds `"QWEN_API_KEY": {"$env": "QWEN_API_KEY"}` to the `worker_env` of
+   the `mini`, `mini-microvm` and `review` profiles. Each rollout job and each review job names
+   `QWEN_API_KEY` as its key (`--model-key-env`). Apart from system variables such as `PATH` and
+   `HOME`, the worker passes a job only the variables that a `$env` reference of the job names.
+   At its end, the setup offers to start the Run Store and a worker.
+
+   To do this step by hand, do these steps instead:
+
+   1. Run `python -m sprout.services init`. It writes the service files and prints what to edit.
+      It does not overwrite a file that exists. It sets the podman `store` of each profile to
+      `$SPROUT_PODMAN_STORE`, else to `~/sprout-btrfs`.
+   2. Edit the profiles in `runstore.json` as `init` prints, for example `sandbox_resources`.
+   3. Add `"QWEN_API_KEY": {"$env": "QWEN_API_KEY"}` to the `worker_env` of the `mini` profile
+      and of the `review` profile. If you use the microVM profiles, add it to `mini-microvm` too.
+   4. Run `python -m sprout.services doctor`. It lists each problem in `runstore.json` that
+      makes jobs fail, with its fix.
+
+5. If the setup did not start them, start the Run Store and a worker from this shell:
 
    ```bash
    python -m sprout.services up runstore-api runstore-worker
@@ -121,8 +127,8 @@ Install Sprout and start the services:
 
    The command also starts their dependencies: the database `db`, and the checks of the
    podman and the store. The worker inherits `QWEN_API_KEY` from this shell. If the worker
-   ran before step 6, restart it with `python -m sprout.services restart runstore-worker`.
-8. Export the service variables into this shell:
+   ran before step 3, restart it with `python -m sprout.services restart runstore-worker`.
+6. Export the service variables into this shell:
 
    ```bash
    eval "$(python -m sprout.services env)"
@@ -232,8 +238,8 @@ directories on reboot, so the evaluator refuses an output there.
 In a new terminal, do these steps again:
 
 1. Activate the virtual environment.
-2. Set `QWEN_BASE_URL` and `QWEN_API_KEY` (Section 1, step 6).
-3. Export the service variables (Section 1, step 8).
+2. Set `QWEN_BASE_URL` and `QWEN_API_KEY` (Section 1, step 3).
+3. Export the service variables (Section 1, step 6).
 4. Set the variables and the Bash arrays of step 5 above.
 
 ## 3. Run one of the 12 experiments
