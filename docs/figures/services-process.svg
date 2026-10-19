@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="720" viewBox="0 0 1240 720" role="img" aria-labelledby="title desc" font-family="-apple-system, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
+  <title id="title">The states of a process service</title>
+  <desc id="desc">The states of one process service under python -m sprout.services, with the trigger and the result of each transition. not running: there is no pid file, or its pid is not the service's process. From not running, up runs the prepare steps and starts the process detached, and the service is starting: the CLI polls the probe every 0.5 s. From starting: if the probe passes, the service is up. If the process exits first, the start failed, the CLI removes the pid file, and the service is not running. If timeout_s runs out, the start failed, and the process is left running with a failing probe. From up: if the probe fails while the process lives, the service runs with a failing probe. If the process exits on its own, the service is not running, and the next up starts it again. In the state runs with a failing probe, up fails and starts no second instance. From up, or from runs with a failing probe, down sends SIGTERM to the process group, and the service is stopping. From stopping: if the process is gone within 20 s of SIGTERM, down prints stopped. Else down sends SIGKILL, and if the process is gone within 5 s, down prints killed. Both go to not running, and down removes the pid file. If the process survives SIGKILL, down prints FAILED and exits 1.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10Z" fill="#3A5047"/>
+    </marker>
+    <style>
+      .title { font-size: 24px; font-weight: 700; fill: #2F443E; }
+      .lead { font-size: 15px; fill: #63766F; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; }
+      .name { font-size: 17px; font-weight: 700; fill: #2F443E; text-anchor: middle; }
+      .sub { font-size: 15px; fill: #63766F; text-anchor: middle; }
+      .label { font-size: 15px; fill: #2F443E; }
+      .note { font-size: 15px; fill: #63766F; }
+      .ended { fill: #E4E3D4; stroke: #63766F; stroke-width: 2; }
+      .wait { fill: #FFE7A9; stroke: #B28745; stroke-width: 2; }
+      .good { fill: #DFF0DB; stroke: #256348; stroke-width: 2; }
+      .bad { fill: #FBE3DC; stroke: #BC7168; stroke-width: 2; }
+      .flow { fill: none; stroke: #3A5047; stroke-width: 2; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect x="1" y="1" width="1238" height="718" rx="16" fill="#FFFDF6" stroke="#E5E2D2" stroke-width="2"/>
+  <text class="title" x="40" y="50">The states of a process service</text>
+  <text class="lead" x="40" y="82">Each box is a state. Each arrow gives its trigger, then its result after the colon.</text>
+
+  <!-- Row 1 -->
+  <rect class="ended" x="40" y="180" width="250" height="76" rx="12"/>
+  <text class="name" x="165" y="211">not running</text>
+  <text class="sub" x="165" y="236">no pid file, or not its pid</text>
+
+  <rect class="wait" x="470" y="180" width="260" height="76" rx="12"/>
+  <text class="name" x="600" y="211">starting</text>
+  <text class="sub" x="600" y="236">probe every 0.5 s</text>
+
+  <rect class="good" x="920" y="180" width="280" height="76" rx="12"/>
+  <text class="name" x="1060" y="211">up</text>
+  <text class="sub" x="1060" y="236">the probe passed</text>
+
+  <!-- Row 2 -->
+  <rect class="bad" x="470" y="360" width="260" height="76" rx="12"/>
+  <text class="name" x="600" y="391">runs, probe fails</text>
+  <text class="sub" x="600" y="416">the CLI leaves it running</text>
+
+  <rect class="wait" x="920" y="360" width="280" height="76" rx="12"/>
+  <text class="name" x="1060" y="391">stopping</text>
+  <text class="sub" x="1060" y="416">SIGTERM, then SIGKILL</text>
+
+  <!-- Row 3 -->
+  <rect class="bad" x="920" y="560" width="280" height="76" rx="12"/>
+  <text class="name" x="1060" y="591">survived SIGKILL</text>
+  <text class="sub" x="1060" y="616">FAILED, down exits 1</text>
+
+  <!-- Start -->
+  <path class="flow" d="M290 205 H468"/>
+  <text class="label" x="380" y="197" text-anchor="middle"><tspan class="mono">up</tspan>: prepare, start</text>
+  <path class="flow" d="M470 235 H292"/>
+  <text class="label" x="380" y="256" text-anchor="middle">exits first: FAILED</text>
+
+  <path class="flow" d="M730 218 H918"/>
+  <text class="label" x="824" y="210" text-anchor="middle">probe passes</text>
+
+  <path class="flow" d="M600 256 V358"/>
+  <text class="label" x="588" y="296" text-anchor="end"><tspan class="mono">timeout_s</tspan> runs out:</text>
+  <text class="label" x="588" y="316" text-anchor="end">FAILED</text>
+
+  <path class="flow" d="M960 256 V300 H680 V358"/>
+  <text class="label" x="820" y="292" text-anchor="middle">probe fails</text>
+
+  <path class="flow" d="M1060 180 V140 H165 V178"/>
+  <text class="label" x="612" y="132" text-anchor="middle">the process exits on its own: the next <tspan class="mono">up</tspan> starts it again</text>
+
+  <!-- up refuses a second instance -->
+  <path class="flow" d="M470 384 H436 V414 H468"/>
+  <text class="label" x="424" y="394" text-anchor="end"><tspan class="mono">up</tspan>: FAILED,</text>
+  <text class="label" x="424" y="414" text-anchor="end">no second instance</text>
+
+  <!-- Stop -->
+  <path class="flow" d="M1120 256 V358"/>
+  <text class="label" x="1132" y="312"><tspan class="mono">down</tspan></text>
+  <path class="flow" d="M730 398 H918"/>
+  <text class="label" x="824" y="390" text-anchor="middle"><tspan class="mono">down</tspan></text>
+
+  <path class="flow" d="M950 436 V520 H165 V258"/>
+  <text class="label" x="560" y="512" text-anchor="middle">gone within 20 s of SIGTERM, or 5 s of SIGKILL: <tspan class="mono">stopped</tspan> or <tspan class="mono">killed</tspan></text>
+
+  <path class="flow" d="M1120 436 V558"/>
+  <text class="label" x="1108" y="482" text-anchor="end">alive 5 s</text>
+  <text class="label" x="1108" y="502" text-anchor="end">after SIGKILL</text>
+
+  <text class="note" x="40" y="690">Drawn from src/sprout/services/supervisor.py (start, stop, process_state) and Manager._up_process in __main__.py.</text>
+</svg>

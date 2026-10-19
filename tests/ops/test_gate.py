@@ -126,6 +126,12 @@ def test_docs_layout_fails_on_each_broken_rule(tmp_path, extra, problem):
     assert run_check(repo, "checks/docs_layout.py") == (1, problem + "\n")
 
 
+def test_doc_length_passes_a_document_at_the_limit_and_fails_one_a_line_past_it(tmp_path):
+    repo = repository(tmp_path, {"docs/AT.md": "x\n" * 800, "runtime/OVER.md": "x\n" * 801})
+
+    assert run_check(repo, "checks/doc_length.py") == (1, "runtime/OVER.md: 801 lines (max 800)\n")
+
+
 def python_lines(count):
     return "".join("x%d = %d\n" % (n, n) for n in range(count))
 

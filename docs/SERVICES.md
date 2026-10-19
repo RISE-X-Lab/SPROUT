@@ -1,655 +1,365 @@
 # Services
 
-`python -m sprout.services` keeps the persistent services of one experiment host up, so that
-you start nothing by hand before a batch. One file, `~/.config/sprout/services.yaml`, lists the
-services. The code knows how to start a process or a container and how to probe it. It knows
-nothing about a particular service. Read this document if you set up an experiment host, or if a
-service on a host is down.
+`python -m sprout.services` starts the persistent services of one experiment host and keeps them
+up, so that you start nothing by hand before a batch. One file, `~/.config/sprout/services.yaml`,
+lists the services. The code knows how to start a process or a container and how to probe it, but
+nothing about a particular service. Read this document if you set up a host, if a service on a
+host is down, or if you change `src/sprout/services/`.
 
-The CLI starts and stops these services:
-
-- `db`: the PostgreSQL of the Run Store, in a rootless podman container
-- `proxy`: the LiteLLM proxy in front of the providers that Sprout cannot call directly
-- `runstore-api`: the Run Store API
-- `runstore-worker`: the Run Store worker
-- `rl-driver`: the RL driver
-
-The CLI only checks these:
-
-- `podman`: the podman that the sandboxes run on
-- `store`: the btrfs store of that podman
-- `aenv`: the AgentENV microVM server, if you enable it
-
-The worker owns the checks of its host. So the CLI asks `python -m sprout.worker doctor` about
-the podman and the store ([The worker's host checks](#the-workers-host-checks)).
-
-The package imports only these modules:
-
-- the standard library
-- PyYAML
-- `sprout.resource`
-- its own modules
-
-`tests/services/test_package_dependencies.py` and `tests/repo/test_layering.py` enforce this. So
-the CLI runs before you install the optional extras, and it imports no code of the services that
-it starts.
+The package imports no module that needs an optional extra, and no code of the services that it
+starts. So the CLI runs before you install the extras. `tests/services/test_package_dependencies.py`
+and `tests/repo/test_layering.py` give the allowed modules and enforce the rule.
 
 ## Start the services of a host
 
-Do these steps on a new host:
+On a new host, run the guided setup. It checks the host and writes the config files, and it asks
+before each change ([Guided setup](#guided-setup)):
 
-1. Write the config files and the secrets:
+```bash
+python -m sprout.services setup
+```
 
-   ```bash
-   python -m sprout.services init
-   ```
+To do the same work by hand, do these steps:
 
-   The command prints each file and secret that it wrote or kept, then the files to edit.
-2. Edit each file that `init` names. The table after these steps lists them.
-3. Start each enabled service, dependencies first:
+1. Write the config files and the secrets with `python -m sprout.services init`.
+2. Edit the files that `init` names. The table after these steps lists them.
+3. Start each enabled service and its dependencies with `python -m sprout.services up`.
+4. Export the variables of the services into your shell with
+   `eval "$(python -m sprout.services env)"`.
+5. Check the services with `python -m sprout.services doctor`. If a check or a probe fails,
+   `doctor` exits 1.
 
-   ```bash
-   python -m sprout.services up
-   ```
-
-   The command prints one line for each action.
-4. Export the variables of the services into your shell:
-
-   ```bash
-   eval "$(python -m sprout.services env)"
-   ```
-
-   The shell now has the variables that
-   [How experiments consume it](#how-experiments-consume-it) lists.
-5. Look at the services:
-
-   ```bash
-   python -m sprout.services status    # name | kind | pid | health | port
-   python -m sprout.services doctor    # every check and probe; starts nothing
-   ```
-
-   If a check or a probe fails, `doctor` exits 1.
-
-`init` tells you to edit these files:
-
-| File | What to edit |
+| File in `~/.config/sprout/` | What to edit |
 |---|---|
-| `~/.config/sprout/litellm.yaml` | The route of each model alias ([Model endpoints](MODEL_ENDPOINTS.md)) |
-| `~/.config/sprout/runstore.json` | The profiles: the podman store, `snapshot_repository`, `sandbox_resources` and `worker_env` |
-| `~/.config/sprout/rl_driver.json` | `miles.tasks`, if you use the RL driver |
+| `litellm.yaml` | The route of each model alias ([Model endpoints](MODEL_ENDPOINTS.md)) |
+| `runstore.json` | The profiles: `snapshot_repository`, `sandbox_resources` and `worker_env` ([Run Store](RUNSTORE.md)) |
+| `rl_driver.json` | `miles.tasks`, if you use the RL driver ([RL driver](RL_DRIVER.md)) |
 
 ## The services and their dependencies
 
-Three services depend on others, and each dependent receives the exports of its dependencies.
-The figure shows each `depends_on` edge of the template with the export that passes along it. It
-also shows the facts that the worker's doctor gives the CLI. The table after the figure lists
-each service.
+The CLI starts and stops five services and only checks three. Each process receives the exports
+of the services that it depends on. The figure shows each `depends_on` edge of the template with
+the export that passes along it. It also shows the facts that the worker's doctor gives the CLI.
 
 <p align="center">
   <img src="figures/services-dependencies.svg" width="1000" alt="The eight services of the packaged services.yaml template and the worker's doctor. db is a podman container on port 15432. runstore-api is a process on port 18110 that depends on db and receives SPROUT_RUNSTORE_DSN from it. runstore-worker is a process that depends on runstore-api, podman and store, and receives SPROUT_RUNSTORE_TOKEN, SPROUT_PODMAN_BIN and SPROUT_PODMAN_STORE from them. rl-driver is a process on port 11001 that depends on runstore-api and receives SPROUT_RUNSTORE_TOKEN from it. proxy is a process on port 4000, and aenv is a disabled external service. Neither has a dependency. podman and store are checks. The worker's doctor, which the CLI runs as {python} -m sprout.worker doctor --json, gives the verdict of the podman check and of the store check, and the values of the {podman_bin} and {store} placeholders. The db container runs on {podman_bin}. Exports also pass on transitively: runstore-worker and rl-driver also receive SPROUT_RUNSTORE_DSN from db through runstore-api. The CLI starts and stops db, proxy, runstore-api, runstore-worker and rl-driver. It only checks or probes podman, store and aenv."/>
 </p>
 <p align="center"><sub>The services of the template, each <code>depends_on</code> edge with the export that passes along it, and the facts from the worker's doctor.</sub></p>
 
-The template defines these services:
+| Service | Kind | Health probe | Command or image |
+|---|---|---|---|
+| `db` | `podman` | `pg_isready` on `127.0.0.1:15432` | `docker.io/library/postgres:16-alpine` |
+| `proxy` | `process` | `GET http://127.0.0.1:4000/health/liveliness` | `litellm` on `127.0.0.1:4000` |
+| `runstore-api` | `process` | `GET http://127.0.0.1:18110/v1/jobs` with the bearer token | `sprout.runstore serve` on `127.0.0.1:18110` |
+| `runstore-worker` | `process` | `process` | `sprout.worker start --concurrency 1` |
+| `rl-driver` | `process` | `GET http://127.0.0.1:11001/health` with the bearer token | `sprout.rl_driver` on `127.0.0.1:11001` |
+| `podman`, `store` | `check` | the doctor's `podman` or `store` check | none |
+| `aenv` | `external`, `enabled: false` | `GET $AENV_SERVER_URL/sandboxes` with `X-API-Key` | none |
 
-| Service | Kind | `depends_on` | Health probe | Exports |
-|---|---|---|---|---|
-| `db` | `podman` | none | `pg_isready` on `127.0.0.1:15432` | `SPROUT_RUNSTORE_DSN` |
-| `proxy` | `process` | none | `GET http://127.0.0.1:4000/health/liveliness` | `OPENAI_BASE_URL`, `OPENAI_API_KEY`, `SPROUT_LITELLM_KEY` |
-| `runstore-api` | `process` | `db` | `GET http://127.0.0.1:18110/v1/jobs` with the bearer token | `SPROUT_RUNSTORE_TOKEN` |
-| `runstore-worker` | `process` | `runstore-api`, `podman`, `store` | `process` | none |
-| `rl-driver` | `process` | `runstore-api` | `GET http://127.0.0.1:11001/health` with the bearer token | `SPROUT_RL_DRIVER_TOKEN` |
-| `podman` | `check` | none | the doctor's `podman` check | `SPROUT_PODMAN_BIN` |
-| `store` | `check` | none | the doctor's `store` check | `SPROUT_PODMAN_STORE` |
-| `aenv` | `external`, `enabled: false` | none | `GET $AENV_SERVER_URL/sandboxes` with `X-API-Key` | none |
+The CLI builds the environment of a process from these parts, in this order. A later part
+replaces a variable of an earlier part:
 
-These rules connect the services:
+1. the environment of the CLI, without the variables in `unset_env`
+2. the `exports` of each service that the process depends on, transitively, dependencies first
+3. the `exports` of the process itself
+4. the `env` of the process
 
-- `up` starts each dependency before its dependents. `down` stops each dependent before its
-  dependencies.
-- The CLI builds the environment of a process from these parts, in this order:
-  1. the environment of the shell that runs the CLI, without the variables in `unset_env`
-  2. the `exports` of each service that the process depends on, transitively, dependencies first
-  3. the `exports` of the process itself
-  4. the `env` of the process
-
-  A later part replaces a variable of an earlier part. So `runstore-api` receives
-  `SPROUT_RUNSTORE_DSN` from `db`. `runstore-worker` and `rl-driver` receive the DSN and
-  `SPROUT_RUNSTORE_TOKEN` through `runstore-api`. `runstore-worker` also receives
-  `SPROUT_PODMAN_BIN` and `SPROUT_PODMAN_STORE` from the two checks.
-- A container receives only its own `env`. The CLI gives `podman run` each name as `-e NAME`,
-  and the value in the environment of `podman run`.
-- The worker's doctor gives the verdict of each `check` service and the values of `{podman_bin}`
-  and `{store}`. The `db` container runs on `{podman_bin}`.
+A container receives only its own `env`. The CLI gives `podman run` each name as `-e NAME`, and
+the value in the environment of `podman run`. So no value appears in an argv.
 
 ## Commands
 
-The CLI has eight commands. Each command prints plain text without colour, one line for each
-action.
+The CLI has nine commands. Each command prints plain text without colour, one line for each
+action. `--help` lists the flags. `env` is the only command that prints a secret.
+
+Each command exits 0 if each action succeeded or each report was printed. It exits 1 on any
+failure, for example an unknown name or Ctrl-C. An invalid command line exits 2. `logs` of a
+container exits with the status of `podman logs`, and `logs -f` exits 0 on Ctrl-C. Without
+`services.yaml`, each command except `init` and `setup` tells you to run `init`.
 
 | Command | What it does |
 |---|---|
-| `init` | Writes `services.yaml` and the config files beside it from the templates, and makes the secrets. It never overwrites a file or a secret. |
-| `up [NAME...]` | Starts the named services and their dependencies, dependencies first. Without names, it starts each `enabled` service and its dependencies. It leaves a healthy service alone. |
-| `down [NAME...]` | Stops the named services and each service that depends on them, dependents first. Without names, it stops each `process` and `podman` service. |
+| `setup` | Guides you through the host checks, the config files, the model endpoint and the start ([Guided setup](#guided-setup)). |
+| `init` | Writes each missing config file and secret ([`init`](#init)). It never overwrites one. |
+| `up [NAME...]` | Starts the named services and their dependencies, dependencies first. Without names, it starts each `enabled` service. It leaves a healthy service alone ([`up`](#up)). |
+| `down [NAME...]` | Stops the named services and their dependents, dependents first. Without names, it stops each `process` and `podman` service ([`down` and `restart`](#down-and-restart)). |
 | `restart NAME...` | Runs `down`, then `up`, for the named services and their dependents. |
-| `status` | Prints one row for each service: `name \| kind \| pid \| health \| port`. |
-| `logs NAME [-f] [-n N]` | Prints the last lines of the service's log. With `-f`, it follows the log. |
-| `env` | Prints an `export NAME=value` line for each export of each service, quoted for `eval`. |
-| `doctor` | Prints each host check and the probe of each enabled service. It starts nothing. |
+| `status` | Prints `name \| kind \| pid \| health \| port` for each service, disabled ones included. A `check` shows the doctor's verdict. |
+| `logs NAME [-f] [-n N]` | Prints the last `N` lines of `<state>/<name>/log`, 50 by default. With `-f`, it follows the log. For a container, it runs `podman logs [-f]` instead. |
+| `env` | Prints an `export NAME=value` line for each export of each service, enabled or not, quoted for `eval`. A later export of a name replaces an earlier one. |
+| `doctor` | Prints each host check, each problem in `runstore.json` and the probe of each enabled service ([`doctor`](#doctor)). It starts nothing. |
 
 ### `up`
 
 `up` goes through the chosen services in dependency order. Independent services keep the order
-of the file. For each service, `up` does these steps:
+of the file. The figure shows what `up` does for one service.
 
-1. If a dependency of the service failed, `up` prints `<name>: skipped (<dependency> failed)`.
-   The skipped service counts as failed, and `up` goes on with the next service.
-2. If the service is a `check`, `up` prints the verdict of the worker's doctor. The service is up
-   only if the verdict is `ok`.
-3. `up` runs the health probe. If the probe passes, `up` prints `<name>: already healthy` and
-   does nothing more. A proxy that you started by hand on port 4000 also counts as healthy.
-4. If the service is `external`, `up` prints its `start_hint`. The service counts as failed.
-5. If the service is a `podman` container, `up` acts on the state of the container:
-   - If the container runs, `up` waits for its probe.
-   - If the container exists but is stopped, `up` runs `podman start`, then waits.
-   - If the container does not exist, `up` runs `podman run -d`, then waits.
+<p align="center">
+  <img src="figures/services-up.svg" width="1000" alt="The tests that python -m sprout.services up makes for each chosen service, in dependency order, from the top. First: did a dependency fail? If yes, the service is skipped and counts as failed. Second: is the kind check? If yes, the result is the verdict of the worker's doctor, and the service is up only if the verdict is ok. Third: does the health probe pass? If yes, the service is already healthy and up does nothing more. Otherwise the kind decides. An external service: up prints its start_hint, and the service counts as failed, because the server runs as root. A podman service: up starts the container. If the container runs, up does nothing to it. If it is stopped, up runs podman start. If it is absent, up runs podman run -d. Then up asks whether the probe passes within timeout_s: yes, the service is up; no, it failed. A process service: if its process runs although the probe failed, the service failed, because up starts no second instance. Otherwise up runs the prepare steps, then starts the process detached, and asks whether the probe passes within timeout_s: yes, the service is up; no, it failed. A failed service makes up skip each service that depends on it."/>
+</p>
+<p align="center"><sub>The tests that <code>up</code> makes for one service, and the start of each kind.</sub></p>
 
-   `up` waits up to `timeout_s`. If the container stops first, or the time runs out, the service
-   fails.
-6. If the service is a process that runs but failed its probe, the service fails. `up` does not
-   start a second instance. The message tells you to run `logs <name>`, then `restart <name>`.
-7. `up` runs each `prepare` step, except a step whose `unless` path exists. If a step exits with
-   a non-zero status, the service fails. `up` prints the last lines of the log.
-8. `up` starts the process and waits for its probe
-   ([How a process is supervised](#how-a-process-is-supervised)).
+A service also fails in these cases:
 
-For a failed start, `up` prints one line: `<name>: FAILED: <reason>`. For a failed check, `up`
-prints the verdict. For an external service, it prints the hint. If a service failed, `up` exits
-1 after it has gone through every chosen service.
+- A `podman` command fails, or the container stops before its probe passes.
+- A `prepare` step exits with a non-zero status. `up` skips a step whose `unless` path exists.
+- A placeholder has no value ([Validation](#validation)).
 
-When `up` needs a secret that does not exist yet, it makes the secret.
+A proxy that you started by hand on port 4000 passes the probe, so `up` leaves it alone. `up`
+makes a secret that does not exist yet. For a failed start, `up` prints
+`<name>: FAILED: <reason>`. After it has gone through every chosen service, `up` exits 1 if one
+failed.
 
 ### `down` and `restart`
 
-A service whose dependency stops does not work, so `down` also stops each service that depends
-on a named service, transitively. For example, `down db` also stops `runstore-api` and the two
-services that depend on it.
+A service whose dependency stops does not work. So `down` also stops each service that depends on
+a named service, transitively, in reverse dependency order. For example, `down db` also stops
+`runstore-api` and the two services that depend on it. `down` acts on each kind in this way:
 
-`down` goes through the chosen services in reverse dependency order:
+- A process gets SIGTERM, then SIGKILL ([How a process is supervised](#how-a-process-is-supervised)).
+- A running container gets `podman stop --time 20`. The CLI never removes a container.
+- A named `check` or `external` service gets the line `nothing to stop`.
 
-- For a process, `down` stops it as [How a process is supervised](#how-a-process-is-supervised)
-  says.
-- For a running container, `down` runs `podman stop --time 20 <container>`. For a container that
-  does not run, `down` prints its state and does nothing. The CLI never removes a container.
-- For a named `check` or `external` service, `down` prints `nothing to stop`.
-
-If a stop fails, `down` prints a `FAILED` line and goes on with the other services. At the end,
-`down` exits 1.
-
-`restart` stops the named services and their dependents with `down`. If a stop fails, `restart`
-exits 1 and starts nothing. Otherwise `restart` runs `up` for the same services. `up` also goes
-through their dependencies, and it prints `already healthy` for each healthy one.
-
-### `status`
-
-`status` prints one row for each service in the file, disabled services included. The `pid`
-column shows the pid of a process that this CLI started, while the process still runs the
-service's command. For a running container, it shows the pid that podman reports. Otherwise it
-shows `-`. The `port` column shows the `port` of the service, or `-` for a check.
-
-The `health` column depends on the service:
-
-| Service | `health` |
-|---|---|
-| A `process`, `podman` or `external` service | `ok: <detail>` or `down: <detail>`, for example `ok: HTTP 200` or `down: Connection refused` |
-| A `check` service | The verdict of the worker's doctor: `ok: <detail>`, `warn: <detail>` or `fail: <detail>` |
-| A disabled service | `disabled` |
-
-`status` never prints a secret and never makes one. If a secret does not exist yet, the row of
-the service that needs it says so. `status` exits 0 if `services.yaml` loads.
-
-### `logs`
-
-`logs` prints the log of one service:
-
-- For a process, `logs` prints the last `N` lines of `<state>/<name>/log`. The default is 50.
-  With `-f`, `logs` then prints each new line until you press Ctrl-C. If the service has no log
-  yet, `logs` exits 1.
-- For a container, `logs` runs `podman logs [-f] <container>` on `{podman_bin}` and exits with
-  its status. `-n` has no effect. The output of the container is in podman. The service log holds
-  only what the CLI did.
-
-### `env`
-
-`env` prints one `export NAME=value` line for each export of each service in the file, enabled
-or not, in the order of the file. The values are quoted for `eval "$(...)"`. A later export of
-the same name replaces an earlier one.
-
-`env` is the only command that prints a secret. It makes a secret that does not exist yet. If a
-placeholder cannot be resolved, `env` prints no line. It writes the reason on stderr and exits 1.
+If a stop fails, `down` prints a `FAILED` line, goes on, and exits 1 at the end. Then `restart`
+starts nothing. Otherwise `restart` runs `up` for the same services and their dependencies.
 
 ### `doctor`
 
-`doctor` prints these lines, in this order:
+`doctor` prints one line for each check. Each line starts with a status word, such as `ok`. The
+lines come in this order:
 
 1. `uv`: whether `uv` is on PATH or in `~/.local/bin`.
-2. Each check of the worker's doctor that no `check` service in `services.yaml` shows. A
-   disabled `check` service also counts as one that shows its check. With the template, these
-   lines are `runtime` and `keyring`. If the doctor gives no report, this is one failed `worker`
-   line that gives the reason.
-3. One line for each service, in the order of the file:
+2. Each check of the worker's doctor that no `check` service in `services.yaml` shows. A disabled
+   `check` service also counts. With the template, these are `runtime` and `keyring`. Without a
+   report, this is one failed `worker` line.
+3. Each problem in `runstore.json` ([Config checks](#config-checks)), or one `ok` line. Without
+   the file, there is no line.
+4. One line for each service, in the order of the file:
    - `skip`, for a disabled service
-   - the verdict of the worker's doctor, for a `check` service
-   - the health probe and the pid, for each other service
+   - the doctor's verdict, for a `check`
+   - the probe and the pid, for each other service
 
-Each line has these parts:
-
-| Part | Content |
-|---|---|
-| Status word | `ok`, `warn`, `fail` or `skip` |
-| Subject | The check or the service |
-| Detail | The detail of the check or the probe |
-
-`doctor` starts nothing and makes no secret. If a line is `fail`, `doctor`
-exits 1. A `warn` does not change the exit code.
+If a line is `fail`, `doctor` exits 1. A `warn` or a `skip` does not change the exit code.
 
 ### `init`
 
-`init` does these steps:
+`init` writes each of these files that does not exist, then makes each secret that
+`services.yaml` names. It prints one line for each file and secret, then the files to edit:
 
-1. It writes `services.yaml` from `resources/services/services.yaml`, if the file does not
-   exist.
-2. It loads and validates `services.yaml`. If the file is invalid, `init` exits 1.
-3. It writes these files beside `services.yaml`, each only if it does not exist:
-   - `litellm.yaml`, a copy of `resources/services/litellm.yaml`
-   - `runstore.json`, from the Run Store template, with the values of this host
-     ([`runstore-api`](#runstore-api))
-   - `rl_driver.json`, from the RL driver template, with the values of this host
-     ([`rl-driver`](#rl-driver))
-4. It makes each secret that a `{secret:NAME}` in `services.yaml` names, if the secret does not
-   exist.
-5. It prints one line for each file and for each secret: `wrote` or `kept` for a file, and
-   `made` or `kept` for a secret. Then it prints the files to edit. It prints no secret value.
+1. `services.yaml`, from `resources/services/services.yaml`. If the file is invalid, `init`
+   exits 1.
+2. `litellm.yaml`, a copy of `resources/services/litellm.yaml`.
+3. `runstore.json`, from `resources/runstore/config.example.json`, with these values of the host:
+   - `artifact_root`: `<state>/runstore-artifacts`
+   - each `python`: `{python}`
+   - each `runtime_bin`: `runtime/sprout-runtime` of the checkout
+   - the `store` of the `podman` backend in `run_defaults` and `grade_defaults`:
+     `$SPROUT_PODMAN_STORE`, else `~/sprout-btrfs`
+4. `rl_driver.json`, from `resources/rl_driver/config.example.json`, with the `ledger`
+   `<state>/rl-driver/groups.sqlite3` and the `driver_token_env` `SPROUT_RL_DRIVER_TOKEN`.
 
-### Exit codes and errors
+### Config checks
 
-Each command exits with one of these codes:
+`doctor` and `setup` check `runstore.json` for the problems that make jobs fail. The file that
+`init` writes has none of them. `doctor` ends each problem line with `Fix: <what to do>`. `setup`
+prints the fix on the next line.
 
-- 0, if each action succeeded or each report was printed.
-- 1, in each of these cases:
-  - A start or a stop failed.
-  - A doctor check failed.
-  - A name is unknown.
-  - A placeholder cannot be resolved.
-  - `services.yaml` is missing or invalid.
-- the status of `podman logs`, for `logs` of a container.
-- 2, if the command line itself is invalid. `argparse` prints the usage.
+| Problem | Status |
+|---|---|
+| The file is not valid JSON, or it has no `profiles` object. | `fail` |
+| A string value starts with `/path/to/`, the prefix of the example paths of the template. | `fail` |
+| A `{"$env": NAME}` reference in a `worker_env` names a variable that this shell does not set. Each job of the profile fails with `KeyError`, unless the shell of the worker sets it. | `warn` |
 
-If `services.yaml` does not exist, each command except `init` prints this line and exits 1:
-``no <path>: run `python -m sprout.services init` first``. If a command names an unknown service,
-it lists the services of the file and exits 1. If you press Ctrl-C, the command prints
-`interrupted` and exits 1. `logs -f` exits 0 on Ctrl-C.
+### Guided setup
+
+`python -m sprout.services setup` sets up a new host in four steps, and asks before each change.
+Each question shows its default in brackets, and Enter takes it:
+
+1. **Host checks.** The setup prints each check of the worker's doctor
+   ([The worker's host checks](#the-workers-host-checks)), with the fix under each check that did
+   not pass. If a check failed, the setup asks whether to go on, by default yes. If you answer
+   no, the setup stops and writes no file.
+2. **Config files.** The setup writes each missing config file and secret, as `init` does. Then
+   it prints each problem of [Config checks](#config-checks) with its fix.
+3. **Model endpoint.** The setup asks for these values:
+   - the endpoint URL, by default `$QWEN_BASE_URL`, else `$OPENAI_BASE_URL`. An empty URL skips
+     the rest of this step. The setup refuses a URL that `sprout.contract.sampling.endpoint`
+     refuses for a rollout request.
+   - the model name, by default `qwen3.8-27b`
+   - the variable that holds the key, by default `SPROUT_MODEL_API_KEY`. The setup says whether
+     this shell sets it, and never prints the value.
+
+   Then the setup offers to add `{"NAME": {"$env": "NAME"}}` to the `worker_env` of `mini`,
+   `mini-microvm` and `review`, the profiles whose jobs call the model, by default yes. For each
+   other `worker_env` variable that this shell does not set, it offers to remove the reference,
+   by default no. Last, it offers one chat completion with `max_tokens` 16 to
+   `<endpoint>/v1/chat/completions`, by default no, because it costs a request. The setup prints
+   the HTTP status, with the key replaced by `***`.
+4. **Start.** The setup offers to run `python -m sprout.services up runstore-api runstore-worker`,
+   by default no. Then it prints the `env` line and an example run of `examples.qwen.run` with
+   `--plan` for this host.
+
+Only step 3 changes a file that exists, and only for a change that you accept. Before it rewrites
+`runstore.json`, the setup copies the old file to `<config>/backup-<YYYYmmdd-HHMMSS>/`. The
+worker takes the environment of the shell that starts it, so start it in a shell that sets the
+key variable. A worker that runs already reads changed profiles only after
+`python -m sprout.services restart runstore-worker`.
+
+A flag answers each question, and `--help` lists the flags. With `--yes`, each question that no
+flag answers takes its default, so a script can run the setup without a terminal. The setup exits 1
+in these cases:
+
+- You answer no after a failed host check, or `services.yaml` is invalid.
+- A flag, or a default under `--yes`, gives an answer that the question refuses.
+- Without `--yes`, the input ends before an answer.
+- A service that you chose to start does not come up.
 
 ## Where things live
 
-The CLI keeps its files under two roots:
+The CLI keeps its files under two roots. An override variable comes before the XDG variable. A
+leading `~` in an override is the `HOME` of the environment.
 
 | Root | Default | Override |
 |---|---|---|
 | Config | `$XDG_CONFIG_HOME/sprout`, else `~/.config/sprout` | `SPROUT_SERVICES_CONFIG_DIR` |
 | State | `$XDG_STATE_HOME/sprout/services`, else `~/.local/state/sprout/services` | `SPROUT_SERVICES_STATE_DIR` |
 
-If an override variable is set, it comes before the XDG variable. A leading `~` in an override
-is the `HOME` of the environment.
-
-The config root holds the files that you edit:
-
-- `services.yaml`
-- `litellm.yaml`
-- `runstore.json`
-- `rl_driver.json`
-
-The state root holds what the programs make:
+The config root holds `services.yaml` and the three files that `init` names. The state root holds
+what the programs make:
 
 | Path under the state root | What it holds |
 |---|---|
-| `<name>/` | The working directory of each command that the CLI runs for the service |
-| `<name>/pid` | The pid of a process that the CLI started |
-| `<name>/log` | Each command that the CLI ran for the service, and the output of the process |
+| `<name>/` | The working directory of the service, with its `pid` file and its `log` |
 | `db/data` | The data directory of PostgreSQL |
 | `litellm-env/` | The venv of the proxy |
 | `runstore-artifacts/` | The `artifact_root` of `runstore.json` |
 | `rl-driver/groups.sqlite3` | The ledger of the RL driver |
 | `secrets/<name>` | One secret |
 
+The log of a service holds a timestamped argv and the output of each command that the CLI runs to
+start or stop the service. A process writes its own output to the same log. The log holds no
+probe. The output of a container is in `podman logs`.
+
+The `paths` fixture of `tests/services/conftest.py` moves `HOME` and both roots into the directory
+of the test. To run a second instance of every service, set both override variables, and change
+the ports in the `services.yaml` of that instance.
+
 ### Secrets
 
-Each secret is one file under `<state>/secrets/`. The directory has mode 0700, and each file has
-mode 0600. The value is `secrets.token_urlsafe(32)`. A command makes it one time, and each later
-command reads it back. The template names these secrets:
-
-- `db-password`
-- `litellm-master-key`
-- `runstore-token`
-- `rl-driver-token`
-
-The commands treat a secret that does not exist yet in two ways:
+Each secret is one file `<state>/secrets/<name>` with mode 0600, in a directory with mode 0700.
+Its value is `secrets.token_urlsafe(32)`. A command makes it one time, and later commands read it:
 
 | Commands | A secret that does not exist yet |
 |---|---|
-| `init`, `up`, `env` | The command makes it. Each time the command reads a secret, it also sets both modes again. |
-| `down`, `status`, `doctor`, `logs` | The command reports an error for each service that needs the secret. These commands only read secrets. |
-
-### The service log
-
-The CLI writes each command that it runs for a service to `<state>/<name>/log`. A timestamped
-line gives the argv, and the output of the command follows. These commands go to the log:
-
-- the start of a process
-- each `prepare` step
-- `podman run`
-- `podman start`
-- `podman stop`
-
-The CLI does not log `podman inspect` or `podman logs`. A process writes its stdout and stderr
-to the same log. An argv holds variable names only, because podman reads the value of each
-`-e NAME` from the environment. So the CLI writes no secret value to the log.
-
-### Tests and a second instance
-
-The `paths` fixture of `tests/services/conftest.py` sets `HOME` and both override variables to
-directories under the `tmp_path` of the test. So a services test cannot touch your home. To run
-a second instance of every service, set both override variables to other directories. Then edit
-the ports in the `services.yaml` of that instance.
+| `init`, `setup`, `up`, `restart`, `env` | The command makes it. Each time it reads a secret, it sets both modes again. |
+| `down`, `status`, `doctor`, `logs` | The command makes no secret. It reports an error for each service that needs one. |
 
 ## How experiments consume it
 
-An experiment shell evaluates the output of `env`, then passes the variables to its commands:
-
-```bash
-eval "$(python -m sprout.services env)"
-python -m examples.qwen.run ... --model luna \
-    --model-endpoint "$OPENAI_BASE_URL" --model-key-env SPROUT_LITELLM_KEY --structured-review
-```
-
-The worker also reads the model key. [The key](MODEL_ENDPOINTS.md#the-key-of-each-request) says
-how the key reaches the worker.
-
-`env` exports these variables with the template:
+An experiment shell runs `eval "$(python -m sprout.services env)"`, then passes the variables to
+its commands. [The key of each request](MODEL_ENDPOINTS.md#the-key-of-each-request) says how the
+model key reaches the worker. With the template, `env` exports these variables:
 
 | Variable | From | Value |
 |---|---|---|
-| `SPROUT_PODMAN_BIN` | `podman` | The `podman_bin` of the doctor report: `$SPROUT_PODMAN_BIN`, else `~/.local/opt/podman/bin/podman` from `ops/setup_podman.sh` if it is executable, else `podman` |
-| `SPROUT_PODMAN_STORE` | `store` | The `store` of the doctor report: `$SPROUT_PODMAN_STORE`, else `~/sprout-btrfs` |
+| `SPROUT_PODMAN_BIN`, `SPROUT_PODMAN_STORE` | `podman`, `store` | The podman and the store of the worker's doctor report |
 | `SPROUT_RUNSTORE_DSN` | `db` | `host=127.0.0.1 port=15432 dbname=sprout_runstore user=sprout_runstore password=<db-password>` |
 | `SPROUT_RUNSTORE_TOKEN` | `runstore-api` | The `runstore-token` secret. A client sends it as `Authorization: Bearer <token>`. |
 | `SPROUT_RL_DRIVER_TOKEN` | `rl-driver` | The `rl-driver-token` secret |
 | `OPENAI_BASE_URL` | `proxy` | `http://127.0.0.1:4000/v1` |
 | `OPENAI_API_KEY`, `SPROUT_LITELLM_KEY` | `proxy` | The `litellm-master-key` secret |
 
-Only the services in `services.yaml` contribute. So a host without `rl-driver` in its file
-exports no driver token.
+The worker also receives the podman and the store, so it runs its sandboxes where the experiment
+shell expects them. A service that is not in `services.yaml` exports nothing.
 
 ## The services
 
-This section gives the facts of each service in the template. `docs/RUNSTORE.md` and
-`docs/RL_DRIVER.md` describe the Run Store and the RL driver themselves.
+This section gives the facts that the tables do not give. [Run Store](RUNSTORE.md) and
+[RL driver](RL_DRIVER.md) describe the programs.
 
 ### `db`
 
-`db` is PostgreSQL 16 in a rootless container on `{podman_bin}`, the podman that the sandboxes
-run on. The template gives it these values:
+`db` is PostgreSQL 16 in the container `sprout-services-db` on `{podman_bin}`, the podman of the
+sandboxes. It publishes `127.0.0.1:15432`, because the PostgreSQL of the host owns port 5432. The
+probe uses the `pg_isready` of the host, which proves the published port that the Run Store
+connects through. The data directory `<state>/db/data` is a bind mount, so the data survives
+`down` and a reboot.
 
-| Setting | Value |
-|---|---|
-| `image` | `docker.io/library/postgres:16-alpine` |
-| `container` | `sprout-services-db` |
-| `publish` | `127.0.0.1:15432:5432`. The host's own PostgreSQL owns port 5432, so do not use it. |
-| `volumes` | `<state>/db/data` bind-mounted at `/var/lib/postgresql/data:Z` |
-| `env` | `POSTGRES_USER=sprout_runstore`, `POSTGRES_DB=sprout_runstore`, and `POSTGRES_PASSWORD` from the `db-password` secret |
+A container belongs to the podman that made it. To move `db` to another podman, do these steps:
 
-The probe runs `pg_isready -h 127.0.0.1 -p 15432 -U sprout_runstore` from the client tools of
-the host. That proves the published port, which the Run Store connects through. If the host has
-no `pg_isready`, the probe runs `podman exec sprout-services-db pg_isready -U sprout_runstore`.
-
-After a reboot, the container exists but is stopped, so `up` runs `podman start`. The data
-directory is a bind mount, so it survives `down` and a reboot.
-
-A container belongs to the podman that made it, and the CLI never removes a container. So to
-move `db` to another podman, do these steps:
-
-1. Stop the container under the old podman: `<old podman> stop sprout-services-db`.
-2. Remove it under the old podman: `<old podman> rm sprout-services-db`.
-3. Run `python -m sprout.services up db` in a shell where the worker's doctor finds the new
-   podman. For example, set `SPROUT_PODMAN_BIN` to it. The new container mounts the same data
-   directory.
-4. In the same shell, run `python -m sprout.services restart runstore-worker`. The worker then
-   gets the new `SPROUT_PODMAN_BIN`.
+1. Stop and remove `sprout-services-db` with the old podman. The data directory stays.
+2. In a shell where `SPROUT_PODMAN_BIN` names the new podman, run `python -m sprout.services up db`.
+3. In the same shell, run `python -m sprout.services restart runstore-worker`.
 
 ### `proxy`
 
-`proxy` is LiteLLM. It runs this command:
+`proxy` is the LiteLLM proxy. [Model endpoints](MODEL_ENDPOINTS.md) says when to use it and how
+to set its aliases. The proxy has its own venv, `<state>/litellm-env`, because litellm pins other
+httpx and pydantic versions than Sprout. Before a start, two `prepare` steps make the venv with
+`uv` and install `litellm[proxy]==1.103.0`. The proxy inherits the provider credentials from the
+shell that runs `up`. `up` waits up to 120 s, because the proxy imports for a while before it
+listens.
 
-```text
-<state>/litellm-env/bin/litellm --config <config>/litellm.yaml --host 127.0.0.1 --port 4000
-```
+To add a provider SDK that litellm does not bundle, do these steps:
 
-The proxy has a venv of its own at `<state>/litellm-env`, because litellm pins other httpx and
-pydantic versions than Sprout. Before a start, `up` runs these `prepare` steps:
-
-1. `uv venv --python 3.12 <state>/litellm-env`. The step does not run while
-   `<state>/litellm-env/bin/python` exists.
-2. `uv pip install --python <state>/litellm-env/bin/python 'litellm[proxy]==1.103.0'`. The step
-   does not run while `<state>/litellm-env/bin/litellm` exists.
-
-The 2026-10-09 smoke verified version 1.103.0 ([Model endpoints](MODEL_ENDPOINTS.md)). To add
-a provider SDK that litellm does not bundle, do these steps:
-
-1. Add the SDK to the install line of the `proxy` entry in `services.yaml`.
-2. If `<state>/litellm-env` exists, remove it. The install step does not run while
+1. Add the SDK to the install step of the `proxy` entry in `services.yaml`.
+2. Remove `<state>/litellm-env`. The install step does not run while
    `<state>/litellm-env/bin/litellm` exists.
-3. Run `python -m sprout.services restart proxy`. `up` makes the venv again with the SDK.
+3. Run `python -m sprout.services restart proxy`.
 
-The proxy gets its keys this way:
+### `runstore-api`, `runstore-worker` and `rl-driver`
 
-- `LITELLM_MASTER_KEY` is the `litellm-master-key` secret, from the `env` of the service.
-- The proxy inherits the provider credentials from the shell that runs `up`.
-- `unset_env` removes `FORCE_COLOR` from the environment of the proxy, so the log stays plain
-  text.
+These three processes run Sprout programs on `{python}`. Their entries add these facts:
 
-The probe is `GET http://127.0.0.1:4000/health/liveliness`, which must answer 200. `up` waits up
-to 120 s (`timeout_s: 120`), because the proxy imports for a while before it listens. The model
-aliases are in `~/.config/sprout/litellm.yaml` ([Model endpoints](MODEL_ENDPOINTS.md)). `init`
-copies that file from `resources/services/litellm.yaml`.
-
-### `runstore-api`
-
-`runstore-api` serves the Run Store API. Before each start, `up` runs this `prepare` step:
-
-```text
-{python} -m sprout.runstore init --config <config>/runstore.json
-```
-
-`sprout.runstore init` is idempotent. It refuses a volatile `artifact_root`, so
-`python -m sprout.services init` puts the artifact root under the state root. Then `up` runs
-this command:
-
-```text
-{python} -m sprout.runstore serve --config <config>/runstore.json --host 127.0.0.1 --port 18110
-```
-
-`runstore-api` depends on `db`. The probe is `GET http://127.0.0.1:18110/v1/jobs` with
-`Authorization: Bearer <runstore-token>`, and it must answer 200. The API has no `/health`
-route. If the probe gets 401, the API runs with a different token.
-
-`python -m sprout.services init` writes `runstore.json` from
-`resources/runstore/config.example.json`, with these values of the host:
-
-- `artifact_root`: `<state>/runstore-artifacts`
-- each `runtime_bin`: `runtime/sprout-runtime` of the checkout
-- the `python` of each profile: the interpreter of `{python}`
-
-### `runstore-worker`
-
-`runstore-worker` runs this command:
-
-```text
-{python} -m sprout.worker start --config <config>/runstore.json --concurrency 1
-```
-
-To change the concurrency, edit the command in `services.yaml`. The worker depends on three
-services ([The services and their dependencies](#the-services-and-their-dependencies)). Its probe
-is `process`: the worker is up after it has
-stayed alive for 2 s. After that, the probe passes while the pid runs the worker's command.
-
-The worker checks the profiles of `runstore.json` before it registers
-([Run Store](RUNSTORE.md#checks-at-the-start)). If a check fails, the worker exits at once with
-`Profile <name>: <reason>`, and `up` reports the service down. The service log has the reason.
-
-### `rl-driver`
-
-`rl-driver` runs this command:
-
-```text
-{python} -m sprout.rl_driver --config <config>/rl_driver.json --host 127.0.0.1 --port 11001
-```
-
-The driver depends on `runstore-api`. The probe is `GET http://127.0.0.1:11001/health` with
-`Authorization: Bearer <rl-driver-token>`, and it must answer 200. The driver checks the token on
-each route, `/health` included. So a probe without the token reads a healthy driver as down.
-
-`python -m sprout.services init` writes `rl_driver.json` from
-`resources/rl_driver/config.example.json`, with these values:
-
-- `ledger`: `<state>/rl-driver/groups.sqlite3`
-- `driver_token_env`: `SPROUT_RL_DRIVER_TOKEN`, the variable that the driver receives from its
-  own `exports`
-
-### `podman` (check only)
-
-`podman` shows the `podman` check of the worker's doctor: the podman of the sandboxes is
-executable and answers `--version`. Nothing starts it. Without a `path`, the doctor checks the
-first of these that applies:
-
-1. `$SPROUT_PODMAN_BIN`, if it is set
-2. the podman 6 that `ops/setup_podman.sh` installs at `~/.local/opt/podman/bin/podman`, if it is
-   executable
-3. `podman` on PATH
-
-A `path` names another podman to check. The value of `{podman_bin}` stays the podman of the
-default report.
-
-`podman` exports `SPROUT_PODMAN_BIN` as `{podman_bin}`. So these two run the podman that the
-setup script verified:
-
-- an experiment shell that ran `eval "$(python -m sprout.services env)"`
-- the Run Store worker, which depends on this check in the template
-
-A `services.yaml` from before this check existed does not have it, because `init` never
-overwrites the file. Until you add it, `doctor` shows the doctor's `podman` check among its host
-lines. To add the check, do these steps:
-
-1. Copy the `podman` entry of `resources/services/services.yaml` into your `services.yaml`.
-2. Copy the `exports` of the `store` entry of the template into your `store` entry.
-3. Add `podman` and `store` to the `depends_on` of `runstore-worker`.
-4. Run `python -m sprout.services restart runstore-worker`. The worker then gets
-   `SPROUT_PODMAN_BIN` and `SPROUT_PODMAN_STORE`.
-
-### `store` (check only)
-
-`store` shows the `store` check of the worker's doctor. Nothing starts it. The store is
-`$SPROUT_PODMAN_STORE`, else `~/sprout-btrfs`. A `path` names another store to check.
-
-The check asks the same questions as `BtrfsStore`, which `PodmanPool` opens. It reports a problem
-in the same words. You make the store one time, as root:
-`sudo ops/btrfs_store.sh <mount point> <image file> <size>`.
-
-`store` exports `SPROUT_PODMAN_STORE` as `{store}`.
+- Before each start of `runstore-api`, `up` runs `{python} -m sprout.runstore init`. That command
+  is idempotent, and it refuses a volatile `artifact_root`. The API has no `/health` route, so the
+  probe sends `GET /v1/jobs` with the token. If the probe gets 401, the API has another token.
+- Before it registers, `runstore-worker` checks the profiles of `runstore.json`
+  ([Run Store](RUNSTORE.md#checks-at-the-start)). If a check fails, the worker exits within the
+  first second, before its probe passes at 2 s. The service log gives the reason.
+- `rl-driver` checks its token on each route, `/health` included. So the probe sends the token,
+  and a probe without it reads a healthy driver as down.
 
 ### `aenv` (external, disabled)
 
-`aenv` is the AgentENV microVM server for `--backend microvm`. The template disables it with
-`enabled: false`. The probe is `GET $AENV_SERVER_URL/sandboxes` with
-`X-API-Key: $AENV_API_KEY`, and it must answer 200.
-
-The server runs as root, so the CLI never starts it. If the probe fails, `up aenv` prints the
-`start_hint` and exits 1. The hint of the template gives these steps:
-
-1. If the `ublk_drv` module is gone after a reboot, rebuild it against the running kernel with
-   `make -C /usr/src/kernels/$(uname -r) M=$PWD modules` in its source directory. Then install it
-   and load it with `modprobe ublk_drv`.
-2. Start the server: `sudo setsid env ... /opt/aenv-bench/bin/server`.
-3. Ask its `/sandboxes` with `curl` and the API key.
-
-Replace `<ublk_drv source directory>` in the hint with the directory of the module source on your host.
+`aenv` is the AgentENV microVM server for `--backend microvm`. The server runs as root, so the CLI
+never starts it. If the probe fails, `up aenv` prints the `start_hint` and exits 1. The hint
+rebuilds the `ublk_drv` module if a reboot removed it, then starts the server. Replace
+`<ublk_drv source directory>` in the hint with the directory of the module source on your host.
 
 ## The worker's host checks
 
-`python -m sprout.worker doctor` checks the machine that a worker runs on. It starts nothing and
-changes nothing. It runs these checks, in this order:
+`python -m sprout.worker doctor` checks the machine that a worker runs on, and changes nothing. It
+prints one line for each check. If a check is `fail`, it exits 1. A `warn` does not change the
+exit code. The `podman` and `store` services show its first two checks, and nothing starts them.
 
 | Check | Passes when | Otherwise |
 |---|---|---|
-| `podman` | The podman is executable, and `<podman> --version` exits 0 within 15 s. The podman is `--podman-bin`, else `$SPROUT_PODMAN_BIN`, else `~/.local/opt/podman/bin/podman` if it is executable, else `podman` on PATH. | `fail` |
-| `store` | The store is a directory, `btrfs` is on PATH, and `findmnt` reports a btrfs mount with `user_subvol_rm_allowed`. The store is `--store`, else `$SPROUT_PODMAN_STORE`, else `~/sprout-btrfs`. `PodmanPool` accepts the same stores. | `fail`, in the words of the pool |
-| `runtime` | The runtime binary is a file. It is `--runtime-bin`, else `runtime/sprout-runtime` of the checkout. | `fail`, with the build command |
-| `keyring` | `kernel.keys.maxkeys` is 20000 or more. | `warn`. Below 20000, rootless podman starts fail at about 180 concurrent containers. The fix is `sudo sysctl kernel.keys.maxkeys=20000 kernel.keys.maxbytes=2000000`. If the value is not readable, the check also gives `warn`. |
+| `podman` | `<podman> --version` exits 0 within 15 s. The podman is `--podman-bin`, else `$SPROUT_PODMAN_BIN`, else `~/.local/opt/podman/bin/podman` if it is executable, else `podman` on PATH. | `fail`. `ops/setup_podman.sh` installs a podman. |
+| `store` | The store is a directory, `btrfs` is on PATH, and `findmnt` reports a btrfs mount with `user_subvol_rm_allowed`. The store is `--store`, else `$SPROUT_PODMAN_STORE`, else `~/sprout-btrfs`. `PodmanPool` accepts the same stores. | `fail`, in the words of the pool. You make a store one time, as root, with `sudo ops/btrfs_store.sh <mount point> <image file> <size>`. |
+| `runtime` | The runtime binary is a file: `--runtime-bin`, else `runtime/sprout-runtime` of the checkout. | `fail`, with the build command |
+| `keyring` | `kernel.keys.maxkeys` is 20000 or more. Below that, rootless podman starts fail at about 180 concurrent containers. | `warn`, with the `sysctl` fix. Also `warn` if the value is not readable. |
 
-The doctor prints one line for each check, with these parts:
+With `--json`, the doctor prints one object instead:
+`{"podman_bin": ..., "store": ..., "checks": {"<check>": {"status": ..., "detail": ...}}}`. The
+podman and the store are the ones that it checked. The services CLI reads the object by these rules:
 
-| Part | Content |
-|---|---|
-| Status | `ok`, `warn` or `fail` |
-| Check | `podman`, `store`, `runtime` or `keyring` |
-| Detail | What the check found |
-
-With `--json`, the doctor prints one JSON object instead:
-
-```json
-{
-  "podman_bin": "/path/to/.local/opt/podman/bin/podman",
-  "store": "/path/to/sprout-btrfs",
-  "checks": {
-    "podman": {"status": "ok", "detail": "podman 6.1.3 (/path/to/.local/opt/podman/bin/podman)"},
-    "store": {"status": "ok", "detail": "/path/to/sprout-btrfs: btrfs, user_subvol_rm_allowed"},
-    "runtime": {"status": "ok", "detail": "/path/to/sprout/runtime/sprout-runtime"},
-    "keyring": {"status": "warn", "detail": "kernel.keys.maxkeys=200 < 20000: ..."}
-  }
-}
-```
-
-`podman_bin` and `store` are the podman and the store that the checks used. If a check is
-`fail`, the doctor exits 1. A `warn` does not change the exit code.
-
-The services CLI reads the doctor by these rules:
-
-- When a command first needs a check or the value of `{podman_bin}` or `{store}`, the CLI runs
-  `{python} -m sprout.worker doctor --json` as a child process. The child gets the environment of
-  the CLI. The CLI waits up to 120 s for it.
-- In one command, the CLI runs the doctor at most one time for each set of flags.
-- A `check` service shows the doctor's check of its kind: `check: podman` shows `podman`, and
-  `check: btrfs_store` shows `store`. For a service with a `path`, the CLI runs the doctor again
-  with `--podman-bin <path>` or `--store <path>`.
-- `{podman_bin}` and `{store}` are the `podman_bin` and `store` of the report without flags. A
-  `path` does not change them. `env` exports them, and the `db` container runs on that podman.
-- If the doctor prints no report, each check fails. An example cause is a `{python}` that cannot
-  import `sprout.worker`. The detail gives the exit status of the doctor and its last line on
-  stderr. Then `env`, and each command that needs a placeholder, fail with the same message.
+- When a command first needs the report, the CLI runs `{python} -m sprout.worker doctor --json`
+  in its own environment. It waits up to 120 s.
+- In one command, the CLI runs the doctor at most one time for each set of flags. A `check` with
+  a `path` adds `--podman-bin <path>` or `--store <path>`. A `path` does not change `{podman_bin}`
+  or `{store}`, which come from the report without flags.
+- If the doctor prints no report, each check fails with the exit status and the last stderr line
+  of the doctor. For example, a `{python}` that cannot import `sprout.worker` gives no report.
 
 ## services.yaml
 
-`resources/services/services.yaml` is the template, and its comments explain each entry. The
-loader checks the whole file each time a command loads it.
+`resources/services/services.yaml` is the template, and its comments explain each entry. The file
+has two top-level keys:
 
-### The top level
-
-The file is a mapping with two keys:
-
-- `python`: the interpreter that `{python}` names. If it is null, `{python}` is the checkout's
-  `.venv/bin/python` if that exists, else the interpreter that runs the CLI.
-- `services`: a mapping from each service name to its entry. A name must match
-  `^[a-z][a-z0-9-]*$`.
+- `python`: the interpreter that `{python}` names. If it is null, `{python}` is the
+  `.venv/bin/python` of the checkout if that exists, else the interpreter that runs the CLI.
+- `services`: a mapping from each service name to its entry. A name matches `^[a-z][a-z0-9-]*$`.
 
 ### Kinds
 
@@ -662,24 +372,9 @@ Each service has one of these kinds:
 | `external` | Starts nothing. If the probe fails, `up` prints `start_hint`. | `kind`, `enabled`, `depends_on`, `health`, `port`, `exports`, `start_hint` |
 | `check` | Starts nothing. Shows a check of the worker's doctor. | `kind`, `enabled`, `check` (`podman` or `btrfs_store`), `path`, `exports` |
 
-### Keys
-
-| Key | Meaning |
-|---|---|
-| `enabled` | Default `true`. If `false`, a bare `up` leaves the service out, `status` shows `disabled`, and `doctor` prints `skip`. A command that names the service still acts on it. |
-| `depends_on` | The services that `up` starts first. The service receives their exports. |
-| `port` | Informational. `status` shows it. |
-| `timeout_s` | How long `up` waits for the probe, in seconds. The default is 60. |
-| `exports` | Variables that `env` prints. The service and its dependents also receive them. |
-| `env` | Variables of this process or container only. |
-| `unset_env` | Variables that the CLI removes from the environment of the process. |
-| `prepare` | Steps of the form `{run: [argv...], unless: <path>}`. Before a start, `up` runs each step whose `unless` path does not exist. |
-| `command` | The argv of the process. |
-| `image`, `container` | The image reference and the container name. Every podman verb finds the container by this name. |
-| `publish`, `volumes` | The `-p` and `-v` values of `podman run`. Before `podman run`, the CLI makes the host side of each `volumes` entry that starts with `/`. |
-| `start_hint` | The text that `up` prints for an `external` service. |
-| `check`, `path` | The doctor check to show, and the podman or store to check instead of the default. |
-| `health` | The probe. [Health kinds](#health-kinds) gives its keys. |
+The template's comments explain each key. `enabled` is `true` by default. If it is `false`, a bare
+`up` leaves the service out. `status` shows `disabled`, and `doctor` prints `skip`. A command that
+names the service still acts on it. `timeout_s` is 60 s by default. `port` is informational.
 
 ### Health kinds
 
@@ -688,7 +383,7 @@ Each `health` mapping has one of these kinds. A service without `health` has the
 | Kind | Passes when | Keys |
 |---|---|---|
 | `http` | A GET of `url` answers 200 within 3 s. | `url` (required), `headers` |
-| `pg_isready` | The `pg_isready -h <host> -p <port>` of the host exits 0 within 15 s. It gets `-U <user>` if `user` is set. If the host has no `pg_isready`, the CLI runs `pg_isready` in `container` with `podman exec`. | `port` (required), `host` (default `127.0.0.1`), `user`, `container` (default: the `container` of the service) |
+| `pg_isready` | The `pg_isready -h <host> -p <port>` of the host exits 0 within 15 s, with `-U <user>` if `user` is set. If the host has no `pg_isready`, the CLI runs it in `container` with `podman exec`. | `port` (required), `host` (default `127.0.0.1`), `user`, `container` (default: the `container` of the service) |
 | `process` | For a process: the pid in the pid file is alive and runs the service's command. During `up`, the process must also stay alive for 2 s. For a container: the container runs. | none |
 | `none` | For a process or a container: the same as `process`. For an `external` service: always. | none |
 
@@ -700,141 +395,60 @@ The CLI resolves these placeholders when a command runs:
 |---|---|
 | `{python}` | The interpreter of the `python` key |
 | `{repo}` | The checkout that the package was imported from |
-| `{config}` | The config root |
-| `{state}` | The state root |
-| `{podman_bin}` | The podman of the worker's doctor report |
-| `{store}` | The store of the worker's doctor report |
+| `{config}`, `{state}` | The config root and the state root |
+| `{podman_bin}`, `{store}` | The podman and the store of the worker's doctor report |
 | `{secret:NAME}` | The secret `NAME`. A name matches `^[a-z0-9][a-z0-9-]*$`. |
 | `{env:NAME}` | The variable `NAME` of the CLI's environment |
 
-The CLI expands placeholders in these fields only:
+The field decides whether a placeholder or a secret can go in it:
 
-- `command`
-- `env`
-- `exports`
-- `prepare`: `run` and `unless`
-- `volumes`
-- `publish`
-- `health.url` and `health.headers`
-- `path`
+| Fields | Placeholders | `{secret:NAME}` |
+|---|---|---|
+| `env`, `exports`, `health.headers` | expanded | allowed |
+| `command`, `prepare` (`run` and `unless`), `volumes`, `publish`, `health.url`, `path` | expanded | refused |
+| `unset_env` | used as written, but checked | refused |
+| `image`, `container` | used as written, and a brace is refused | refused |
+| `start_hint`, `health.host`, `health.user`, `health.container` | used as written | not checked |
 
-The CLI uses each other string as written. These fields are literal:
-
-- `image`
-- `container`
-- `start_hint`
-- `unset_env`
-- `health.host`
-- `health.user`
-- `health.container`
-
-The loader still refuses an unknown placeholder and a secret in `unset_env`. It refuses a brace in
-`image`. A `container` must match the name rule of podman, so it cannot hold a placeholder.
-
-After the expansion, a leading `~` is the home directory. For the first word of `command` or of
-a `prepare` step, the CLI looks up a bare program name on PATH, then in `~/.local/bin`. The uv
-installer puts uv in `~/.local/bin`, and a cron shell does not have that directory on PATH.
-
-A `{secret:NAME}` can appear only in these fields:
-
-- `env`
-- `exports`
-- `health.headers`
-
-These values become the environment of a process, or `env` prints them when you ask. The loader
-refuses a secret in each of these fields, and it names the field:
-
-- `command`
-- `unset_env`
-- `prepare`
-- `volumes`
-- `publish`
-- `health.url`
-- `path`
-
-Most of these fields reach the log or the terminal as written. Also, each user on the host can
-read an argv in `/proc/<pid>/cmdline`.
+A secret can go only where its value becomes the environment of a process, or where `env` prints
+it. Each other field can reach the log or the terminal as written, and each user on the host can
+read an argv in `/proc/<pid>/cmdline`. After the expansion, a leading `~` is the home directory.
 
 ### Validation
 
-The loader checks the whole file before a command acts, so a bad entry fails before `up` starts
-anything. The loader refuses each of these problems, and it names the service and the field:
-
-- YAML that does not parse
-- a top-level key other than `python` and `services`
-- a service name that breaks the name rule
-- an unknown kind
-- a key that the kind does not take
-- an unknown `check`
-- an unknown dependency, or a service that depends on itself
-- a dependency cycle. The error shows the whole cycle.
-- a `port` that is not an integer from 1 to 65535
-- a `timeout_s` that is not a positive number
-- a `process` without `command`
-- a `podman` service without `image`, or without a valid `container`
-- an unknown health kind or health key
-- an `http` probe without `url`, or a `pg_isready` probe without `port`
-- a `prepare` step that is not `{run: [argv...]}` with an optional `unless`
-- a value of the wrong type, for example an `enabled` that is not `true` or `false`
-- an unknown placeholder
-- a `{secret:NAME}` in a field that cannot hold one
+The loader checks the whole file each time a command loads it, so a bad entry fails before `up`
+starts anything. At the first problem, it names the service and the field. For example, it refuses
+an unknown key or a dependency cycle.
 
 A placeholder can be valid in the file but have no value in a run, in these cases:
 
 - `{env:NAME}`, when the variable is not set
-- `{secret:NAME}`, when the secret does not exist and the command does not make secrets
+- `{secret:NAME}`, when the secret does not exist and the command makes no secret
 - `{podman_bin}` or `{store}`, when the worker's doctor gives no report
 
-In these cases, the commands react in these ways. None of them prints a traceback.
-
-- `up` and `down` print one `FAILED` line. `up` skips the dependents of the failed service.
-- `status` shows a `down: ...` cell.
-- `env` prints an error line and exits 1.
+Then `up` and `down` print one `FAILED` line for the service, and `up` skips its dependents.
+`status` shows a `down: ...` cell. `env` prints the reason on stderr and exits 1.
 
 ## How a process is supervised
 
-The CLI starts a process detached from the shell, so a closed terminal does not stop it. `up`
-starts a process in these steps:
+The CLI starts a process detached from the shell, so a closed terminal does not stop it. The
+figure shows the states of a process service and what changes each one.
 
-1. The CLI finds the program. It uses a path as written. It looks up a bare name on PATH, then in
-   `~/.local/bin`. If it finds no program, the start fails.
-2. The CLI starts the process in a session of its own (`setsid`), with these settings:
-   - the working directory `<state>/<name>`, never the checkout. `conmon` can write an `oom`
-     marker into its working directory, and it once dirtied the checkout that way.
-   - stdin from `/dev/null`
-   - stdout and stderr appended to `<state>/<name>/log`
-3. The CLI writes the pid to `<state>/<name>/pid`.
-4. The CLI runs the probe every 0.5 s. The first of these events ends the wait:
-   - The probe passes. `up` prints the pid and the log.
-   - The process exits. The start fails at once. The CLI removes the pid file and prints the
-     last 20 lines of the log.
-   - `timeout_s` runs out. The start fails, and the CLI prints the last 20 lines of the log. The
-     process keeps running, so that you can look at it with `logs <name>`, then stop it with
-     `down <name>`.
+<p align="center">
+  <img src="figures/services-process.svg" width="1000" alt="The states of one process service under python -m sprout.services, with the trigger and the result of each transition. not running: there is no pid file, or its pid is not the service's process. From not running, up runs the prepare steps and starts the process detached, and the service is starting: the CLI polls the probe every 0.5 s. From starting: if the probe passes, the service is up. If the process exits first, the start failed, the CLI removes the pid file, and the service is not running. If timeout_s runs out, the start failed, and the process is left running with a failing probe. From up: if the probe fails while the process lives, the service runs with a failing probe. If the process exits on its own, the service is not running, and the next up starts it again. In the state runs with a failing probe, up fails and starts no second instance. From up, or from runs with a failing probe, down sends SIGTERM to the process group, and the service is stopping. From stopping: if the process is gone within 20 s of SIGTERM, down prints stopped. Else down sends SIGKILL, and if the process is gone within 5 s, down prints killed. Both go to not running, and down removes the pid file. If the process survives SIGKILL, down prints FAILED and exits 1."/>
+</p>
+<p align="center"><sub>The states of a process service, with the trigger and the result of each transition.</sub></p>
 
-For a probe of kind `process` or `none`, the probe passes after the process has stayed alive for
-2 s. A worker that fails on its config exits within the first second.
+`src/sprout/services/supervisor.py` follows these rules:
 
-A later command trusts the pid file only while both of these are true:
+| Subject | Rule |
+|---|---|
+| Program | For `command` and each `prepare` step, a path is used as written. A bare name is looked up on PATH, then in `~/.local/bin`, where the uv installer puts uv and which a cron shell lacks on PATH. If no program is found, the start fails. |
+| Start | The process runs in a session of its own (`setsid`), with stdin from `/dev/null` and its output appended to `<state>/<name>/log`. The CLI writes its pid to `<state>/<name>/pid`. |
+| Working directory | `<state>/<name>`, never the checkout. `conmon` can write an `oom` marker into its working directory, and it once dirtied the checkout that way. |
+| A failed start | The CLI prints the last 20 lines of the log. After a timeout, the process keeps running, so that you can read `logs <name>`, then run `down <name>`. |
+| Ownership | A pid counts as the service's only while the process exists, is not a zombie, and its `/proc/<pid>/cmdline` holds each argument of the expanded command. For a command without arguments, the base names of the programs must match. The program itself is not compared, because the `#!` line of a venv script runs it under python. |
+| Stop | `down` signals the process group. If the pid file does not name the service's process, `down` removes the pid file and signals nothing. If a placeholder in `command` has no value, `down` signals nothing and prints `FAILED`. |
 
-- The process exists and is not a zombie.
-- `/proc/<pid>/cmdline` holds each argument of the service's expanded command. If the command
-  has no arguments, the base names of the two programs must match.
-
-The CLI does not compare the program itself, because the `#!` line of a venv script runs it under
-python. So the CLI never signals a recycled pid. After a reboot, a stale pid file reads as
-`down`, and the next `down` removes it without a signal.
-
-`down` stops a process in these steps:
-
-1. If the pid file does not name the service's process, `down` removes the pid file and prints
-   `not running`. It signals nothing.
-2. `down` sends SIGTERM to the process group of the process.
-3. `down` waits up to 20 s. If the process is gone, `down` removes the pid file and prints
-   `stopped`.
-4. `down` sends SIGKILL and waits up to 5 s. If the process is gone, `down` removes the pid file
-   and prints `killed`.
-5. If the process survives SIGKILL, `down` prints a `FAILED` line and exits 1.
-
-`down` needs the expanded command to prove that a pid belongs to the service. If a placeholder in
-`command` has no value, `down` signals nothing and prints a `FAILED` line.
+By the ownership rule, the CLI never signals a recycled pid. After a reboot, a stale pid file reads
+as not running.

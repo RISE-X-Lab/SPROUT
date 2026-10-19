@@ -61,6 +61,7 @@ The repository has these gates:
 | Gate | Rejects | Exit codes |
 |---|---|---|
 | `comment_length.py` | A docstring or a comment over its length limit. | 0 pass, 1 finding |
+| `doc_length.py` | A tracked markdown document of more than 800 lines. | 0 pass, 1 finding |
 | `docs_layout.py` | An image outside `docs/figures/`, a file in `docs/` that nothing links to, or a file of the wrong type in `docs/`. | 0 pass, 1 finding |
 | `lint.py` | A finding of `ruff`, `gofmt`, `go vet`, `staticcheck` or `shellcheck`. | 0 pass, 1 finding, 2 tool missing |
 | `no_host_paths.py` | A path in a home directory, in a tracked file. | 0 pass, 1 finding |
@@ -102,6 +103,12 @@ for example `<file>:<line>: docstring is 7 lines (max 5)`.
 
 To fix a failure, shorten the comment to its limit. Put design rationale and measurements in
 `docs/*.md`, and the reason for a change in the commit message.
+
+### `doc_length.py`
+
+The gate rejects each tracked `.md` file of more than 800 lines, with
+`<path>: <lines> lines (max 800)`. To fix a failure, cut what the reader does not need, and draw
+complex logic as a figure.
 
 ### `docs_layout.py`
 

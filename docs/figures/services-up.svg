@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="912" viewBox="0 0 1240 912" role="img" aria-labelledby="title desc" font-family="-apple-system, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
+  <title id="title">What up does for one service</title>
+  <desc id="desc">The tests that python -m sprout.services up makes for each chosen service, in dependency order, from the top. First: did a dependency fail? If yes, the service is skipped and counts as failed. Second: is the kind check? If yes, the result is the verdict of the worker's doctor, and the service is up only if the verdict is ok. Third: does the health probe pass? If yes, the service is already healthy and up does nothing more. Otherwise the kind decides. An external service: up prints its start_hint, and the service counts as failed, because the server runs as root. A podman service: up starts the container. If the container runs, up does nothing to it. If it is stopped, up runs podman start. If it is absent, up runs podman run -d. Then up asks whether the probe passes within timeout_s: yes, the service is up; no, it failed. A process service: if its process runs although the probe failed, the service failed, because up starts no second instance. Otherwise up runs the prepare steps, then starts the process detached, and asks whether the probe passes within timeout_s: yes, the service is up; no, it failed. A failed service makes up skip each service that depends on it.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10Z" fill="#3A5047"/>
+    </marker>
+    <style>
+      .title { font-size: 24px; font-weight: 700; fill: #2F443E; }
+      .lead { font-size: 15px; fill: #63766F; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; }
+      .q { font-size: 16px; font-weight: 700; fill: #2F443E; text-anchor: middle; }
+      .act { font-size: 15px; fill: #2F443E; text-anchor: middle; }
+      .sub { font-size: 15px; fill: #63766F; text-anchor: middle; }
+      .word { font-size: 15px; fill: #2F443E; }
+      .note { font-size: 15px; fill: #63766F; }
+      .step { fill: #E6F1F7; stroke: #587E96; stroke-width: 2; }
+      .good { fill: #DFF0DB; stroke: #256348; stroke-width: 2; }
+      .bad { fill: #FBE3DC; stroke: #BC7168; stroke-width: 2; }
+      .flow { fill: none; stroke: #3A5047; stroke-width: 2; marker-end: url(#arrow); }
+      .bus { fill: none; stroke: #3A5047; stroke-width: 2; }
+    </style>
+  </defs>
+
+  <rect x="1" y="1" width="1238" height="910" rx="16" fill="#FFFDF6" stroke="#E5E2D2" stroke-width="2"/>
+  <text class="title" x="40" y="50">What <tspan class="mono">up</tspan> does for one service</text>
+
+  <!-- Lead and legend -->
+  <text class="lead" x="40" y="82"><tspan class="mono">up</tspan> tests each chosen service from the top, in dependency order. A label on an arrow answers the test.</text>
+  <rect class="step" x="40" y="104" width="24" height="16" rx="4"/>
+  <text class="lead" x="76" y="118">a test or an action</text>
+  <rect class="good" x="260" y="104" width="24" height="16" rx="4"/>
+  <text class="lead" x="296" y="118">the service is up</text>
+  <rect class="bad" x="460" y="104" width="24" height="16" rx="4"/>
+  <text class="lead" x="496" y="118">the service failed, and <tspan class="mono">up</tspan> skips each service that depends on it</text>
+
+  <!-- The tests of every kind -->
+  <rect class="step" x="40" y="150" width="360" height="56" rx="12"/>
+  <text class="q" x="220" y="184">Did a dependency fail?</text>
+  <rect class="step" x="40" y="242" width="360" height="56" rx="12"/>
+  <text class="q" x="220" y="276">Is the kind <tspan class="mono">check</tspan>?</text>
+  <rect class="step" x="40" y="334" width="360" height="56" rx="12"/>
+  <text class="q" x="220" y="368">Does the health probe pass?</text>
+  <rect class="step" x="40" y="426" width="360" height="56" rx="12"/>
+  <text class="q" x="220" y="460">Which kind is it?</text>
+
+  <path class="flow" d="M220 206 V240"/>
+  <text class="word" x="232" y="229">no</text>
+  <path class="flow" d="M220 298 V332"/>
+  <text class="word" x="232" y="321">no</text>
+  <path class="flow" d="M220 390 V424"/>
+  <text class="word" x="232" y="413">no</text>
+
+  <!-- The yes answers -->
+  <path class="flow" d="M400 178 H558"/>
+  <text class="word" x="480" y="170" text-anchor="middle">yes</text>
+  <rect class="bad" x="560" y="150" width="340" height="56" rx="12"/>
+  <text class="q" x="730" y="173">skipped</text>
+  <text class="sub" x="730" y="195">counts as failed</text>
+
+  <path class="flow" d="M400 270 H558"/>
+  <text class="word" x="480" y="262" text-anchor="middle">yes</text>
+  <rect class="step" x="560" y="242" width="340" height="56" rx="12"/>
+  <text class="q" x="730" y="265">the worker doctor's verdict</text>
+  <text class="sub" x="730" y="287">up only if it is <tspan class="mono">ok</tspan></text>
+
+  <path class="flow" d="M400 362 H558"/>
+  <text class="word" x="480" y="354" text-anchor="middle">yes</text>
+  <rect class="good" x="560" y="334" width="340" height="56" rx="12"/>
+  <text class="q" x="730" y="357">already healthy</text>
+  <text class="sub" x="730" y="379"><tspan class="mono">up</tspan> does nothing more</text>
+
+  <!-- The kinds -->
+  <path class="flow" d="M220 482 V548"/>
+  <path class="bus" d="M220 514 H1020"/>
+  <path class="flow" d="M620 514 V548"/>
+  <path class="flow" d="M1020 514 V548"/>
+  <text class="word mono" x="232" y="538">external</text>
+  <text class="word mono" x="632" y="538">podman</text>
+  <text class="word mono" x="1032" y="538">process</text>
+
+  <!-- external -->
+  <rect class="bad" x="40" y="550" width="360" height="90" rx="12"/>
+  <text class="q" x="220" y="580">prints <tspan class="mono">start_hint</tspan></text>
+  <text class="sub" x="220" y="604">counts as failed: the server runs</text>
+  <text class="sub" x="220" y="626">as root, so you start it by hand</text>
+
+  <!-- podman -->
+  <rect class="step" x="440" y="550" width="360" height="130" rx="12"/>
+  <text class="q" x="620" y="580">start the container</text>
+  <text class="act" x="620" y="606">running: no action</text>
+  <text class="act" x="620" y="630">stopped: <tspan class="mono">podman start</tspan></text>
+  <text class="act" x="620" y="654">absent: <tspan class="mono">podman run -d</tspan></text>
+  <path class="flow" d="M620 680 V714"/>
+  <rect class="step" x="440" y="716" width="360" height="60" rx="12"/>
+  <text class="q" x="620" y="741">Does the probe pass</text>
+  <text class="q" x="620" y="764">within <tspan class="mono">timeout_s</tspan>?</text>
+  <path class="flow" d="M520 776 V810"/>
+  <text class="word" x="532" y="799">yes</text>
+  <path class="flow" d="M720 776 V810"/>
+  <text class="word" x="732" y="799">no</text>
+  <rect class="good" x="440" y="812" width="160" height="40" rx="12"/>
+  <text class="q" x="520" y="838">up</text>
+  <rect class="bad" x="640" y="812" width="160" height="40" rx="12"/>
+  <text class="q" x="720" y="838">failed</text>
+
+  <!-- process -->
+  <rect class="step" x="840" y="550" width="310" height="50" rx="12"/>
+  <text class="q" x="995" y="581">Does its process run?</text>
+  <path class="flow" d="M1150 575 H1180 V810"/>
+  <text class="word" x="1165" y="567" text-anchor="middle">yes</text>
+  <path class="flow" d="M995 600 V624"/>
+  <text class="word" x="1007" y="617">no</text>
+  <rect class="step" x="840" y="626" width="310" height="54" rx="12"/>
+  <text class="act" x="995" y="648">runs the <tspan class="mono">prepare</tspan> steps,</text>
+  <text class="act" x="995" y="670">then starts the process detached</text>
+  <path class="flow" d="M995 680 V714"/>
+  <rect class="step" x="840" y="716" width="310" height="60" rx="12"/>
+  <text class="q" x="995" y="741">Does the probe pass</text>
+  <text class="q" x="995" y="764">within <tspan class="mono">timeout_s</tspan>?</text>
+  <path class="flow" d="M920 776 V810"/>
+  <text class="word" x="932" y="799">yes</text>
+  <path class="flow" d="M1100 776 V810"/>
+  <text class="word" x="1112" y="799">no</text>
+  <rect class="good" x="840" y="812" width="160" height="40" rx="12"/>
+  <text class="q" x="920" y="838">up</text>
+  <rect class="bad" x="1040" y="812" width="160" height="40" rx="12"/>
+  <text class="q" x="1120" y="838">failed</text>
+
+  <text class="note" x="40" y="890">Drawn from src/sprout/services/__main__.py: _up, Manager.up, Manager._up_container and Manager._up_process.</text>
+</svg>

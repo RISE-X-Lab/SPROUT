@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1300" height="780" viewBox="0 0 1300 780" role="img" aria-labelledby="title desc" font-family="-apple-system, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
+  <title id="title">RL driver: host affinity and a lost host</title>
+  <desc id="desc">The runs of one group and the host that holds their data. In run 1, every job carries the affinity key of the group id, and the Run Store binds the key to host A at the first claim. The root rollouts write their data on host A: snapshots, attempt directories and kept sandboxes. On the same host, a grade reads the final snapshot or the kept sandbox, a review reads the attempt directories of the failed roots, and a branch starts from a snapshot of its parent. When no worker on host A reported a heartbeat for 600 s, host A is lost, the Run Store fails each unfinished job of the key with the reason data_lost, and run_again() starts run 2 under the key group id -r1, with the roots planned again and run 1 kept in earlier_runs. If the host of run 2 is lost, run_again() starts run 3 under the key group id -r2, with runs 1 and 2 kept in earlier_runs. If the host of run 3 is lost too, the group is failed: ready is true, its error names the three keys, and Miles gets no trajectory. A group runs again at most 2 times. A branch takes the key of the job that it continues, and a cancelled group does not run again.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10Z" fill="#3A5047"/>
+    </marker>
+    <style>
+      .title { font-size: 28px; font-weight: 700; fill: #2F443E; }
+      .lead { font-size: 17px; fill: #63766F; }
+      .boundary { fill: #F3F1E6; stroke: #C9C5B1; stroke-width: 2; }
+      .label { font-size: 19px; font-weight: 700; fill: #2F443E; }
+      .name { font-size: 19px; font-weight: 700; fill: #2F443E; text-anchor: middle; }
+      .note { font-size: 16px; fill: #63766F; text-anchor: middle; }
+      .cond { font-size: 16px; fill: #63766F; }
+      .fn { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 16px; fill: #2F443E; }
+      .mid { text-anchor: middle; }
+      .end { text-anchor: end; }
+      .job { fill: #E6F1F7; stroke: #587E96; stroke-width: 2; }
+      .data { fill: #E4E3D4; stroke: #63766F; stroke-width: 2; }
+      .fail { fill: #FBE3DC; stroke: #BC7168; stroke-width: 2; }
+      .edge { fill: none; stroke: #3A5047; stroke-width: 2.5; }
+      .tip { marker-end: url(#arrow); }
+      .next { fill: none; stroke: #3A5047; stroke-width: 2.5; stroke-dasharray: 9 6; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect x="1" y="1" width="1298" height="778" rx="16" fill="#FFFDF6" stroke="#E5E2D2" stroke-width="2"/>
+  <text class="title" x="40" y="50">RL driver: host affinity and a lost host</text>
+  <text class="lead" x="40" y="80">Each job of a run carries the run's affinity key. The Run Store binds the key to the host of the first claim.</text>
+  <text class="lead" x="40" y="104">Solid arrows: the data that a job writes or reads on its host. Dashed arrows: what follows when that host is lost.</text>
+
+  <!-- Run 1 on host A -->
+  <rect class="boundary" x="40" y="140" width="580" height="420" rx="14"/>
+  <text x="64" y="176"><tspan class="label">run 1 · affinity</tspan><tspan class="fn" dx="8" font-weight="700">&lt;group id&gt;</tspan></text>
+  <text class="cond" x="64" y="200">The Run Store binds the key to host A at the first claim.</text>
+
+  <rect class="job" x="70" y="235" width="210" height="76" rx="12"/>
+  <text class="name" x="175" y="267">root rollouts</text>
+  <text class="note" x="175" y="292">run on host A</text>
+
+  <rect class="data" x="360" y="222" width="230" height="110" rx="12"/>
+  <text class="name" x="475" y="252">data on host A</text>
+  <text class="note" x="475" y="277">snapshots</text>
+  <text class="note" x="475" y="298">attempt directories</text>
+  <text class="note" x="475" y="319">kept sandboxes</text>
+
+  <path class="edge tip" d="M280 273 H358"/>
+  <text class="cond mid" x="319" y="262">write</text>
+
+  <path class="edge" d="M475 332 V385"/>
+  <path class="edge" d="M150 385 H530"/>
+  <path class="edge tip" d="M150 385 V433"/>
+  <path class="edge tip" d="M340 385 V433"/>
+  <path class="edge tip" d="M530 385 V433"/>
+  <text class="cond" x="160" y="375">read on the same host</text>
+
+  <rect class="job" x="62" y="435" width="176" height="96" rx="12"/>
+  <text class="name" x="150" y="466">grade</text>
+  <text class="note" x="150" y="490">final snapshot</text>
+  <text class="note" x="150" y="511">or kept sandbox</text>
+
+  <rect class="job" x="252" y="435" width="176" height="96" rx="12"/>
+  <text class="name" x="340" y="466">review</text>
+  <text class="note" x="340" y="490">attempt directories</text>
+  <text class="note" x="340" y="511">of the failed roots</text>
+
+  <rect class="job" x="442" y="435" width="176" height="96" rx="12"/>
+  <text class="name" x="530" y="466">branch</text>
+  <text class="note" x="530" y="490">a snapshot</text>
+  <text class="note" x="530" y="511">of its parent</text>
+
+  <!-- Run 1 to run 2 -->
+  <path class="next" d="M620 215 H878"/>
+  <text class="cond mid" x="749" y="172">host A lost: no worker</text>
+  <text class="cond mid" x="749" y="194">heartbeat for 600 s</text>
+  <text class="fn mid" x="749" y="241">data_lost</text>
+  <text class="fn mid" x="749" y="263">run_again()</text>
+
+  <!-- Run 2 -->
+  <rect class="job" x="880" y="150" width="380" height="120" rx="12"/>
+  <text x="1070" y="184" text-anchor="middle"><tspan class="label">run 2 · affinity</tspan><tspan class="fn" dx="8" font-weight="700">&lt;group id&gt;-r1</tspan></text>
+  <text class="note" x="1070" y="214">the roots planned again,</text>
+  <text class="note" x="1070" y="236">on the host of the first claim</text>
+  <text x="1070" y="258" text-anchor="middle"><tspan class="cond">run 1 kept in</tspan><tspan class="fn" dx="6">earlier_runs</tspan></text>
+
+  <!-- Run 2 to run 3 -->
+  <path class="next" d="M1070 270 V368"/>
+  <text class="cond end" x="1056" y="310">its host lost:</text>
+  <text class="fn end" x="1056" y="332">run_again()</text>
+
+  <!-- Run 3 -->
+  <rect class="job" x="880" y="370" width="380" height="110" rx="12"/>
+  <text x="1070" y="404" text-anchor="middle"><tspan class="label">run 3 · affinity</tspan><tspan class="fn" dx="8" font-weight="700">&lt;group id&gt;-r2</tspan></text>
+  <text class="note" x="1070" y="434">the roots planned again</text>
+  <text x="1070" y="458" text-anchor="middle"><tspan class="cond">runs 1 and 2 kept in</tspan><tspan class="fn" dx="6">earlier_runs</tspan></text>
+
+  <!-- Run 3 to failed -->
+  <path class="next" d="M1070 480 V578"/>
+  <text class="cond end" x="1056" y="520">its host lost:</text>
+  <text class="cond end" x="1056" y="542">no third run again</text>
+
+  <!-- Failed -->
+  <rect class="fail" x="880" y="580" width="380" height="110" rx="12"/>
+  <text x="1070" y="614" text-anchor="middle"><tspan class="label">group</tspan><tspan class="fn" dx="8" font-weight="700">failed</tspan></text>
+  <text x="1070" y="642" text-anchor="middle"><tspan class="fn">error</tspan><tspan class="cond" dx="6">names the three keys</tspan></text>
+  <text class="note" x="1070" y="668">Miles gets no trajectory</text>
+
+  <text class="cond" x="40" y="604">A branch takes the key of the job that it continues.</text>
+  <text class="cond" x="40" y="628">A cancelled group does not run again. Its lost job is a failed stage.</text>
+  <text class="cond" x="40" y="652">A group runs again at most 2 times (RUNS_AGAIN).</text>
+
+  <text class="cond" x="40" y="750">Source: src/sprout/search/stages.py, src/sprout/search/rerun.py, src/sprout/runstore/store.py, ADR-0007</text>
+</svg>

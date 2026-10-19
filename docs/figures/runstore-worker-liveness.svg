@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="630" viewBox="0 0 1080 630" role="img" aria-labelledby="title desc" font-family="-apple-system, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
+  <title id="title">Worker liveness: heartbeat, cut-off, dead worker, lost host</title>
+  <desc id="desc">A timeline in four columns, from the send time of the worker's last acknowledged heartbeat: 0 s, every 30 s (HEARTBEAT_S), 540 s (CUT_OFF_S) and 600 s (WORKER_LIVE_S). Two lanes: the worker, WorkerManager, and its running jobs in the Run Store, rs_jobs. At 0 s, worker_heartbeat() is acknowledged, or register_worker() registers the worker, and the lease_until of each running job becomes the heartbeat time plus 600 s. Every 30 s, worker_heartbeat() sends the next heartbeat. If it is acknowledged, the time goes back to 0 s. If no heartbeat is acknowledged for 540 s, the worker is cut off: it claims nothing, and the watchdogs stop the children with worker_cut_off. 60 s later the worker is dead and its leases expired. Any worker's settle_dead_workers() then settles each running job. If a row of the job's host had a heartbeat in the last 600 s, the job goes to queued (retry_wait), or to failed when no attempt is left or a stop was requested. If no row of the host had one, the host is lost: the running job goes to failed with the phase data_lost, and so does each queued job of an affinity key bound to the host.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10Z" fill="#3A5047"/>
+    </marker>
+    <style>
+      .title { font-size: 24px; font-weight: 700; fill: #2F443E; }
+      .lead { font-size: 14px; fill: #63766F; }
+      .head { font-size: 16px; font-weight: 700; fill: #2F443E; text-anchor: middle; }
+      .const { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 13px; fill: #63766F; text-anchor: middle; }
+      .lane { font-size: 15px; font-weight: 700; fill: #2F443E; }
+      .lanenote { font-size: 13px; fill: #63766F; }
+      .lanefn { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 13px; fill: #2F443E; }
+      .fn { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 13px; fill: #2F443E; text-anchor: middle; }
+      .txt { font-size: 13px; fill: #2F443E; text-anchor: middle; }
+      .bold { font-size: 14px; font-weight: 700; fill: #2F443E; text-anchor: middle; }
+      .cond { font-size: 13px; fill: #63766F; }
+      .rfn { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 13px; fill: #2F443E; text-anchor: end; }
+      .rcond { font-size: 13px; fill: #63766F; text-anchor: end; }
+      .src { font-size: 13px; fill: #63766F; }
+      .edge { fill: none; stroke: #3A5047; stroke-width: 2; marker-end: url(#arrow); }
+      .axis { fill: none; stroke: #63766F; stroke-width: 1.5; }
+    </style>
+  </defs>
+
+  <rect x="1" y="1" width="1078" height="628" rx="16" fill="#FFFDF6" stroke="#E5E2D2" stroke-width="2"/>
+  <text class="title" x="40" y="48">Worker liveness: heartbeat, cut-off, dead worker, lost host</text>
+  <text class="lead" x="40" y="76">Each column is a time after the send time of the last acknowledged heartbeat. The columns are not to scale.</text>
+  <text class="lead" x="40" y="96">An arrow to the right means that no heartbeat was acknowledged in between. Monospace names a function, a constant or a state.</text>
+
+  <!-- Time axis and column headers -->
+  <path class="axis" d="M205 160 H1045"/>
+  <path class="axis" d="M295 154 V166 M510 154 V166 M725 154 V166 M947 154 V166"/>
+  <text class="head" x="295" y="130">0 s</text>
+  <text class="head" x="510" y="130">every 30 s</text>
+  <text class="const" x="510" y="148">HEARTBEAT_S</text>
+  <text class="head" x="725" y="130">540 s</text>
+  <text class="const" x="725" y="148">CUT_OFF_S</text>
+  <text class="head" x="947" y="130">600 s</text>
+  <text class="const" x="947" y="148">WORKER_LIVE_S</text>
+
+  <!-- Lane 1: the worker -->
+  <rect x="24" y="174" width="1032" height="142" rx="12" fill="#F4F2E8" stroke="#E5E2D2" stroke-width="1.5"/>
+  <text class="lane" x="40" y="204">the worker</text>
+  <text class="lanefn" x="40" y="226">WorkerManager</text>
+  <text class="lanenote" x="40" y="246">one process</text>
+
+  <rect x="205" y="216" width="180" height="84" rx="10" fill="#E6F1F7" stroke="#587E96" stroke-width="2"/>
+  <text class="fn" x="295" y="242">worker_heartbeat()</text>
+  <text class="txt" x="295" y="262">acknowledged, or</text>
+  <text class="fn" x="295" y="282">register_worker()</text>
+
+  <rect x="420" y="216" width="180" height="84" rx="10" fill="#E6F1F7" stroke="#587E96" stroke-width="2"/>
+  <text class="fn" x="510" y="242">worker_heartbeat()</text>
+  <text class="txt" x="510" y="262">sends the next</text>
+  <text class="txt" x="510" y="282">heartbeat</text>
+
+  <!-- acknowledged: back to 0 s -->
+  <path class="edge" d="M510 216 V198 H295 V214"/>
+  <text class="cond" x="402" y="192" text-anchor="middle">acknowledged: back to 0 s</text>
+
+  <rect x="635" y="216" width="180" height="84" rx="10" fill="#FFE7A9" stroke="#B28745" stroke-width="2"/>
+  <text class="bold" x="725" y="238">cut off: no claims</text>
+  <text class="txt" x="725" y="257">the watchdogs stop</text>
+  <text class="txt" x="725" y="274">the children with</text>
+  <text class="fn" x="725" y="292">worker_cut_off</text>
+
+  <path class="edge" d="M600 258 H633"/>
+
+  <!-- Lane 2: the running jobs of the worker -->
+  <rect x="24" y="330" width="1032" height="252" rx="12" fill="#F4F2E8" stroke="#E5E2D2" stroke-width="1.5"/>
+  <text class="lane" x="40" y="360">its running jobs</text>
+  <text class="lanenote" x="40" y="382">in the Run Store</text>
+  <text class="lanefn" x="40" y="402">rs_jobs</text>
+
+  <rect x="205" y="350" width="180" height="76" rx="10" fill="#E6F1F7" stroke="#587E96" stroke-width="2"/>
+  <text class="fn" x="295" y="376">lease_until</text>
+  <text class="txt" x="295" y="396">= the heartbeat time</text>
+  <text class="txt" x="295" y="414">+ 600 s</text>
+
+  <!-- 60 s later: dead, settle_dead_workers() -->
+  <path class="edge" d="M725 300 V398 H848"/>
+  <path class="edge" d="M725 398 V516 H848"/>
+  <text class="rcond" x="712" y="364">60 s later: the worker is dead</text>
+  <text class="rcond" x="712" y="382">and its leases expired. Any worker's</text>
+  <text class="rfn" x="712" y="400">settle_dead_workers()</text>
+  <text class="rcond" x="712" y="418">settles each running job:</text>
+
+  <rect x="850" y="346" width="195" height="106" rx="10" fill="#E6F1F7" stroke="#587E96" stroke-width="2"/>
+  <text class="txt" x="947" y="368">a row of the host had a</text>
+  <text class="txt" x="947" y="386">heartbeat in 600 s:</text>
+  <text class="fn" x="947" y="406">queued (retry_wait)</text>
+  <text class="txt" x="947" y="426">or failed, if no attempt is</text>
+  <text class="txt" x="947" y="444">left or a stop was asked</text>
+
+  <rect x="850" y="464" width="195" height="106" rx="10" fill="#FBE3DC" stroke="#BC7168" stroke-width="2"/>
+  <text class="txt" x="947" y="486">no row of the host had one:</text>
+  <text class="txt" x="947" y="504">the host is lost</text>
+  <text class="fn" x="947" y="524">failed (data_lost)</text>
+  <text class="txt" x="947" y="544">the queued jobs of</text>
+  <text class="txt" x="947" y="562">its keys fail too</text>
+
+  <text class="src" x="40" y="610">Source: Heartbeat and WorkerManager in src/sprout/worker/manager.py, Store in src/sprout/runstore/store.py</text>
+</svg>
