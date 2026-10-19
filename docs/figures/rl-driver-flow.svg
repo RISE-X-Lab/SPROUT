@@ -1,0 +1,155 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1110" viewBox="0 0 1400 1110" role="img" aria-labelledby="title desc" font-family="-apple-system, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
+  <title id="title">RL driver: the flow of a rollout group</title>
+  <desc id="desc">Twelve components in three boundaries, and the requests between them. Miles sends POST, GET and DELETE requests on /rollout-groups to the HTTP API of the RL driver process, create_app() on port 11001. Inside the driver, the HTTP API hands the Miles routes to the Miles adapter, MessageAdapter, and the execution routes and the poller's tick() to the execution groups, Driver. MessageAdapter calls Driver with submit() and release(). Driver calls tick() on the search coordinator, Coordinator with Stages and Search. The coordinator calls active(), get() and save() on the group documents, Ledger, one SQLite file. The coordinator sends HTTP requests on /v1/jobs to the Run Store API, sprout.runstore serve on port 18110, to submit, branch, poll and stop jobs. The Run Store API reads and writes PostgreSQL through Store. PostgreSQL holds jobs, attempts, events and recovery points. The worker, python -m sprout.worker start, claims and finishes jobs in PostgreSQL directly. It runs three kinds of job: a rollout job (Runner, mini-swe-agent and Sprout tools in a podman or microvm sandbox), a grade job (the SWE-rebench grader, in two sandboxes) and a review job (SPROUT's analyst and reviewer). The rollout job sends Chat Completions requests through the inference gateway to the model server at the request's model_endpoint, and the review job sends its model calls to the same server.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10Z" fill="#3A5047"/>
+    </marker>
+    <style>
+      .title { font-size: 30px; font-weight: 700; fill: #2F443E; }
+      .lead { font-size: 18px; fill: #63766F; }
+      .boundary { fill: #F6F3E8; stroke: #B9B6A6; stroke-width: 2; }
+      .blabel { font-size: 20px; font-weight: 700; fill: #2F443E; }
+      .node { fill: #E6F1F7; stroke: #587E96; stroke-width: 2; }
+      .name { font-size: 20px; font-weight: 700; fill: #2F443E; text-anchor: middle; }
+      .text { font-size: 17px; fill: #2F443E; text-anchor: middle; }
+      .code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 17px; fill: #2F443E; }
+      .label { font-size: 17px; fill: #63766F; }
+      .mid { text-anchor: middle; }
+      .end { text-anchor: end; }
+      .http { fill: none; stroke: #3A5047; stroke-width: 2.5; marker-end: url(#arrow); }
+      .call { fill: none; stroke: #3A5047; stroke-width: 2; stroke-dasharray: 8 5; marker-end: url(#arrow); }
+      .sql { fill: none; stroke: #3A5047; stroke-width: 3; stroke-dasharray: 1 6; stroke-linecap: round; marker-end: url(#arrow); }
+      .both { marker-start: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect x="1" y="1" width="1398" height="1108" rx="16" fill="#FFFDF6" stroke="#E5E2D2" stroke-width="2"/>
+  <text class="title" x="40" y="52">RL driver: the flow of a rollout group</text>
+  <text class="lead" x="40" y="84">Each arrow names the route or the function that it calls.</text>
+
+  <!-- Legend -->
+  <path class="http" d="M930 38 H990"/>
+  <text class="label" x="1004" y="44">HTTP request</text>
+  <path class="call" d="M930 64 H990"/>
+  <text class="label" x="1004" y="70">call inside the driver process</text>
+  <path class="sql" d="M930 90 H990"/>
+  <text class="label" x="1004" y="96">PostgreSQL read or write</text>
+
+  <!-- Run Store boundary -->
+  <rect class="boundary" x="40" y="880" width="1320" height="170" rx="14"/>
+  <text class="blabel" x="64" y="912">Run Store</text>
+  <text x="64" y="938"><tspan class="code">sprout.runstore</tspan><tspan class="label">, port 18110</tspan></text>
+
+  <!-- Outside Sprout -->
+  <rect class="node" x="80" y="110" width="440" height="90" rx="12"/>
+  <text class="name" x="300" y="142">Miles</text>
+  <text class="code mid" x="300" y="168">SproutRolloutFn</text>
+  <text class="text" x="300" y="191">branch sprout-grpo</text>
+
+  <rect class="node" x="960" y="110" width="340" height="90" rx="12"/>
+  <text class="name" x="1130" y="142">Model server</text>
+  <text class="text" x="1130" y="168">at the request's</text>
+  <text class="code mid" x="1130" y="191">model_endpoint</text>
+
+  <!-- RL driver -->
+  <rect class="boundary" x="40" y="280" width="660" height="510" rx="14"/>
+  <text class="blabel" x="64" y="312">RL driver</text>
+  <text x="64" y="338"><tspan class="code">sprout.rl_driver</tspan><tspan class="label">, port 11001</tspan></text>
+
+  <rect class="node" x="80" y="356" width="580" height="72" rx="12"/>
+  <text class="name" x="370" y="386">HTTP API and poller</text>
+  <text class="code mid" x="370" y="414">create_app()</text>
+
+  <rect class="node" x="80" y="500" width="260" height="76" rx="12"/>
+  <text class="name" x="210" y="530">Miles adapter</text>
+  <text class="code mid" x="210" y="558">MessageAdapter</text>
+
+  <rect class="node" x="400" y="500" width="260" height="76" rx="12"/>
+  <text class="name" x="530" y="530">Execution groups</text>
+  <text class="code mid" x="530" y="558">Driver</text>
+
+  <rect class="node" x="80" y="650" width="260" height="90" rx="12"/>
+  <text class="name" x="210" y="680">Group documents</text>
+  <text class="code mid" x="210" y="706">Ledger</text>
+  <text class="text" x="210" y="729">one SQLite file</text>
+
+  <rect class="node" x="400" y="650" width="260" height="90" rx="12"/>
+  <text class="name" x="530" y="680">Search coordinator</text>
+  <text class="code mid" x="530" y="706">Coordinator</text>
+  <text class="code mid" x="530" y="729">Stages, Search</text>
+
+  <!-- Miles -> API -->
+  <path class="http" d="M450 200 V354"/>
+  <text class="code" x="464" y="232">/rollout-groups</text>
+  <text class="label" x="464" y="256">POST, GET, DELETE</text>
+
+  <!-- API -> adapter, API -> Driver -->
+  <path class="call" d="M210 428 V498"/>
+  <text class="label" x="224" y="470">Miles routes</text>
+  <path class="call" d="M470 428 V498"/>
+  <text class="label" x="484" y="458">execution routes</text>
+  <text class="code" x="484" y="482">tick()</text>
+
+  <!-- adapter -> Driver -->
+  <path class="call" d="M340 538 H398"/>
+  <text class="code mid" x="370" y="606">submit(), release()</text>
+
+  <!-- Driver -> coordinator -->
+  <path class="call" d="M530 576 V648"/>
+  <text class="code" x="544" y="618">tick()</text>
+
+  <!-- coordinator -> ledger -->
+  <path class="call" d="M400 716 H342"/>
+  <text class="code mid" x="370" y="768">active(), get(), save()</text>
+
+  <!-- coordinator -> Run Store API -->
+  <path class="http" d="M560 740 V948"/>
+  <text class="code" x="574" y="822">/v1/jobs</text>
+  <text class="label" x="574" y="846">submit, branch, poll, stop</text>
+
+  <!-- Worker host -->
+  <rect class="boundary" x="780" y="280" width="580" height="510" rx="14"/>
+  <text class="blabel" x="804" y="312">Worker</text>
+  <text class="code" x="804" y="338">python -m sprout.worker start</text>
+
+  <rect class="node" x="820" y="356" width="480" height="100" rx="12"/>
+  <text class="name" x="1060" y="386">Rollout job</text>
+  <text class="text" x="1060" y="414">Runner, mini-swe-agent, Sprout tools</text>
+  <text class="text" x="1060" y="440">in a podman or microvm sandbox</text>
+
+  <rect class="node" x="820" y="510" width="480" height="76" rx="12"/>
+  <text class="name" x="1060" y="540">Grade job</text>
+  <text class="text" x="1060" y="568">SWE-rebench grader, two sandboxes</text>
+
+  <rect class="node" x="820" y="640" width="480" height="76" rx="12"/>
+  <text class="name" x="1060" y="670">Review job</text>
+  <text class="text" x="1060" y="698">SPROUT's analyst and reviewer</text>
+
+  <!-- Rollout -> model, review -> model -->
+  <path class="http" d="M1150 356 V202"/>
+  <text class="label" x="1164" y="232">Chat Completions,</text>
+  <text class="label" x="1164" y="256">through the gateway</text>
+  <path class="http" d="M1300 678 H1336 V155 H1302"/>
+  <text class="label end" x="1324" y="489">model calls</text>
+
+  <!-- Run Store -->
+
+  <rect class="node" x="410" y="950" width="300" height="80" rx="12"/>
+  <text class="name" x="560" y="980">Run Store API</text>
+  <text class="code mid" x="560" y="1008">sprout.runstore serve</text>
+
+  <rect class="node" x="830" y="950" width="460" height="80" rx="12"/>
+  <text class="name" x="1060" y="980">PostgreSQL</text>
+  <text class="text" x="1060" y="1008">jobs, attempts, events, recovery points</text>
+
+  <!-- API -> PostgreSQL -->
+  <path class="sql" d="M710 990 H826"/>
+  <text class="code mid" x="768" y="976">Store</text>
+
+  <!-- PostgreSQL <-> worker host -->
+  <path class="sql both" d="M1060 948 V794"/>
+  <text class="code" x="1074" y="846">claim(), finish()</text>
+
+  <text class="label" x="40" y="1088">Source: src/sprout/rl_driver/, src/sprout/search/, src/sprout/worker/cli.py, resources/services/services.yaml</text>
+</svg>

@@ -1,31 +1,41 @@
+"""The result of one tool call, parsed from the runtime's JSON-RPC reply."""
+
 from __future__ import annotations
 
 import json
 from dataclasses import dataclass
 from typing import Any
 
-#: Fields of the runtime's CommandOutcome schema (runtime/tools/boundedlog.go),
-#: the shape `shell` answers in when there is more to say than bare stdout.
-_OUTCOME_FIELDS = frozenset({
-    "stdout", "stderr", "exit_code", "running", "timed_out",
-    "stdout_bytes", "stderr_bytes", "stdout_truncated", "stderr_truncated",
-    "max_per_stream",
-})
+#: The JSON fields of the runtime's ``CommandOutcome`` (``runtime/tools/boundedlog.go``).
+#: Keep the two sets equal: a reply with a field outside this set is read as plain output.
+_OUTCOME_FIELDS = frozenset(
+    {
+        "stdout",
+        "stderr",
+        "exit_code",
+        "running",
+        "timed_out",
+        "stdout_bytes",
+        "stderr_bytes",
+        "stdout_truncated",
+        "stderr_truncated",
+        "max_per_stream",
+    }
+)
 
 
 @dataclass
 class ToolResult:
+    """The text that one tool call returned, and whether the call failed.
+
+    The other fields hold the command outcome, when the runtime reported more than a plain stdout.
+    Then ``output`` is the outcome's JSON text. Otherwise every outcome field is ``None`` or false.
+    """
+
     output: str
     is_error: bool
-
-    # -- command outcome ----------------------------------------------------- #
-    # Set when the tool ran a command and had something to report beyond its
-    # stdout: a non-zero exit, output on stderr, a clipped stream, a process
-    # still running. A plain success leaves them None/False and puts the output
-    # in `output` alone -- there is nothing else to say about `echo hello`.
-    #
-    # `exit_code` is None when unknown: no command was run, or one is still
-    # running. Test it with `is None`, since 0 is a real answer.
+    #: The command's exit code, or ``None`` if the runtime did not report one.
+    #: Test it with ``is None``, because ``0`` is a real exit code.
     exit_code: int | None = None
     stdout: str | None = None
     stderr: str | None = None
@@ -42,15 +52,11 @@ class ToolResult:
         return self.stdout_truncated or self.stderr_truncated
 
     @classmethod
-    def from_response(cls, result: dict[str, Any]) -> "ToolResult":
-        """Build from one JSON-RPC ``tools/call`` result.
+    def from_response(cls, result: dict[str, Any]) -> ToolResult:
+        """The result in the ``result`` object of one JSON-RPC ``tools/call`` reply.
 
-        The one parser for the payload: a hand-rolled copy of this drifted the
-        moment the shape grew a field.
-
-        A text slot holding a CommandOutcome is unpacked into fields; any other
-        text is passed through as ``output``. Detection is by shape rather than
-        by tool name, so a command that prints JSON is not mistaken for one.
+        ``output`` is the first text slot, or ``""`` if there is none. A text with the shape of a
+        ``CommandOutcome`` also fills the outcome fields. Other JSON that a command printed does not.
         """
         content = result.get("content") or []
         text = content[0].get("text", "") if content else ""
@@ -70,11 +76,11 @@ class ToolResult:
         return self
 
 
-def _parse_outcome(text: str) -> "dict[str, Any] | None":
-    """The CommandOutcome in ``text``, or None if it is not one.
+def _parse_outcome(text: str) -> dict[str, Any] | None:
+    """The ``CommandOutcome`` that ``text`` encodes, or ``None`` if it encodes none.
 
-    Requires both streams and a recognised field set: a JSON document a *command*
-    happened to print must not be mistaken for the runtime's own report.
+    Both streams and no unknown field are required, so that a JSON document that a command
+    printed is not taken for the runtime's own report.
     """
     if not text.startswith("{"):
         return None

@@ -19,6 +19,8 @@ jobs:
         with:
           go-version: "1.22"
       - run: go mod download
+      # The ripgrep release grep_files embeds; not in git, so fetched first.
+      - run: go generate ./...
       - run: go test ./...
       - run: go build -o sprout-runtime .
       - run: go vet ./...
@@ -35,9 +37,9 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.22"
-      - run: go build -o sprout-runtime .
+      - run: go generate ./... && go build -o sprout-runtime .
 
-      - name: Serve JSON-RPC over HTTP and call the one tool
+      - name: Serve JSON-RPC over HTTP and call shell
         run: |
           ./sprout-runtime --port 19876 &
           sleep 2
@@ -45,8 +47,10 @@ jobs:
             -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | python3 -c "
           import sys, json
           tools = json.loads(sys.stdin.read())['result']
-          assert [t['name'] for t in tools] == ['shell'], f'Expected exactly shell, got {tools}'
-          print('OK: the runtime serves shell alone')
+          names = [t['name'] for t in tools]
+          expected = ['shell', 'text_editor', 'grep_files', 'web_fetch', 'web_search']
+          assert names == expected, f'Expected {expected}, got {names}'
+          print('OK: the runtime serves its five tools')
           "
           curl -sf -X POST http://localhost:19876 -H 'Content-Type: application/json' \
             -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"shell","arguments":{"command":"echo http_ok"}}}' | python3 -c "
@@ -82,7 +86,12 @@ jobs:
       # this job could pass while saying nothing.
       - name: Build sprout-runtime
         working-directory: runtime
-        run: go build -o sprout-runtime .
+        run: go generate ./... && go build -o sprout-runtime .
+
+      # The pre-commit gates (gate/README.md), here too because a hook can be skipped.
+      # After the install and the build: the gates run ruff, mypy and the runtime.
+      - name: Gates
+        run: ./gate/run.sh
 
       # The client the harness uses behind AgentENV's proxy, pointed straight at
       # that bare runtime (which ignores the routing headers): the one place the
@@ -117,14 +126,14 @@ jobs:
         run: python3 ops/contracts/ci_check.py
 
       # Asserted, not assumed. The check that keeps the checked-in schema honest
-      # skips when no binary is found, and a skipped guard reads exactly like a
+      # skips when go is not on PATH, and a skipped guard reads exactly like a
       # passing one in the summary.
       - name: The drift check actually ran
         run: |
-          python3 -m pytest tests/harness/test_runtime_schema.py -q \
-            -k "declaration_matches_the_runtime" -rs --no-header | tee /tmp/drift.txt
+          python3 -m pytest tests/worker/tools/test_schema.py -q \
+            -k "declaration_matches_what_the_runtime_declares" -rs --no-header | tee /tmp/drift.txt
           if grep -q -i "skipped" /tmp/drift.txt; then
-            echo "::error::the runtime drift check skipped; it needs runtime/sprout-runtime"
+            echo "::error::the runtime drift check skipped; it needs go on PATH"
             exit 1
           fi
           grep -q "1 passed" /tmp/drift.txt

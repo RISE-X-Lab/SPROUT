@@ -1,0 +1,139 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="980" viewBox="0 0 1080 980" role="img" aria-labelledby="title desc" font-family="-apple-system, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
+  <title id="title">Run Store job flow: submit, claim, settle</title>
+  <desc id="desc">A sequence diagram of one Run Store job with seven lifelines: client, Run Store API, PostgreSQL, WorkerManager, Worker, attempt child and sandbox. WorkerManager and Worker are inside one box, the sprout.worker start process. 1: the client sends POST /v1/jobs to the API. 2: the API calls Store.submit(), and the job is queued. 3: WorkerManager calls Store.claim(), and the job is running with a lease of 600 s, which the heartbeats of WorkerManager renew. 4: WorkerManager calls run_claimed() on Worker. 5: Worker calls freeze_payload(). 6: Worker starts the attempt child and sends the payload on stdin. In a loop until the child exits, 7: the child sends tool calls to the sandbox, and 8: Worker calls progress() at most every 5 s. 9: the child leaves outcome.json and the journal for Worker, a file relation drawn dashed. 10: Worker calls _cleanup() to check that each claimed sandbox is gone. 11: Worker calls finish(), and the job is settled. 12: the client calls Client.wait(), which polls the result.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10Z" fill="#3A5047"/>
+    </marker>
+    <style>
+      .title { font-size: 24px; font-weight: 700; fill: #2F443E; }
+      .lead { font-size: 14px; fill: #63766F; }
+      .name { font-size: 15px; font-weight: 700; fill: #2F443E; text-anchor: middle; }
+      .note { font-size: 13px; fill: #63766F; text-anchor: middle; }
+      .mnote { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 12px; fill: #63766F; text-anchor: middle; }
+      .fn { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 13px; fill: #2F443E; }
+      .num { font-size: 13px; font-weight: 700; fill: #278065; }
+      .label { font-size: 13px; fill: #2F443E; }
+      .cond { font-size: 13px; fill: #63766F; }
+      .mid { text-anchor: middle; }
+      .life { stroke: #9AAAA3; stroke-width: 1.5; stroke-dasharray: 4 4; }
+      .call { fill: none; stroke: #3A5047; stroke-width: 2; marker-end: url(#arrow); }
+      .file { fill: none; stroke: #3A5047; stroke-width: 2; stroke-dasharray: 7 5; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect x="1" y="1" width="1078" height="978" rx="16" fill="#FFFDF6" stroke="#E5E2D2" stroke-width="2"/>
+  <text class="title" x="40" y="48">Run Store job flow: submit, claim, settle</text>
+  <text class="lead" x="40" y="76">Each arrow is one step, numbered in order. Monospace names the function or the request.</text>
+
+  <!-- The worker process: WorkerManager and Worker are threads of one process -->
+  <rect x="456" y="94" width="312" height="102" rx="10" fill="#F4F2E8" stroke="#63766F" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="468" y="113" xml:space="preserve"><tspan class="fn">sprout.worker start</tspan><tspan class="cond"> process</tspan></text>
+
+  <!-- Lifeline heads -->
+  <rect x="12" y="124" width="136" height="60" rx="10" fill="#E6F1F7" stroke="#587E96" stroke-width="2"/>
+  <text class="name" x="80" y="150">client</text>
+  <text class="note" x="80" y="171">RL driver, eval</text>
+
+  <rect x="164" y="124" width="136" height="60" rx="10" fill="#E6F1F7" stroke="#587E96" stroke-width="2"/>
+  <text class="name" x="232" y="150">Run Store API</text>
+  <text class="mnote" x="232" y="171">sprout.runstore</text>
+
+  <rect x="316" y="124" width="136" height="60" rx="10" fill="#E6F1F7" stroke="#587E96" stroke-width="2"/>
+  <text class="name" x="384" y="150">PostgreSQL</text>
+  <text class="note" x="384" y="171">jobs, attempts</text>
+
+  <rect x="468" y="124" width="136" height="60" rx="10" fill="#E6F1F7" stroke="#587E96" stroke-width="2"/>
+  <text class="name" x="536" y="150">WorkerManager</text>
+  <text class="note" x="536" y="171">claim loop</text>
+
+  <rect x="620" y="124" width="136" height="60" rx="10" fill="#E6F1F7" stroke="#587E96" stroke-width="2"/>
+  <text class="name" x="688" y="150">Worker</text>
+  <text class="note" x="688" y="171">attempt thread</text>
+
+  <rect x="772" y="124" width="136" height="60" rx="10" fill="#E6F1F7" stroke="#587E96" stroke-width="2"/>
+  <text class="name" x="840" y="150">attempt child</text>
+  <text class="note" x="840" y="171">its own process</text>
+
+  <rect x="924" y="124" width="136" height="60" rx="10" fill="#E4E3D4" stroke="#63766F" stroke-width="2"/>
+  <text class="name" x="992" y="150">sandbox</text>
+  <text class="note" x="992" y="171">podman or microVM</text>
+
+  <!-- Lifelines -->
+  <path class="life" d="M80 184 V890"/>
+  <path class="life" d="M232 184 V890"/>
+  <path class="life" d="M384 184 V890"/>
+  <path class="life" d="M536 184 V890"/>
+  <path class="life" d="M688 184 V890"/>
+  <path class="life" d="M840 184 V890"/>
+  <path class="life" d="M992 184 V890"/>
+
+  <!-- 1 submit -->
+  <path class="call" d="M80 232 H230"/>
+  <text class="mid" x="156" y="223" xml:space="preserve"><tspan class="num">1</tspan><tspan class="fn"> POST /v1/jobs</tspan></text>
+
+  <!-- 2 Store.submit() -->
+  <path class="call" d="M232 276 H382"/>
+  <text class="mid" x="308" y="267" xml:space="preserve"><tspan class="num">2</tspan><tspan class="fn"> Store.submit()</tspan></text>
+  <text class="mid" x="308" y="293" xml:space="preserve"><tspan class="cond">job </tspan><tspan class="fn">queued</tspan></text>
+
+  <!-- 3 Store.claim() -->
+  <path class="call" d="M536 330 H386"/>
+  <text class="mid" x="460" y="321" xml:space="preserve"><tspan class="num">3</tspan><tspan class="fn"> Store.claim()</tspan></text>
+  <text class="mid" x="460" y="347" xml:space="preserve"><tspan class="fn">running</tspan><tspan class="cond">, 600 s lease</tspan></text>
+
+  <!-- 4 run_claimed() -->
+  <path class="call" d="M536 380 H686"/>
+  <text class="mid" x="612" y="371" xml:space="preserve"><tspan class="num">4</tspan><tspan class="fn"> run_claimed()</tspan></text>
+
+  <!-- 5 freeze_payload() -->
+  <path class="call" d="M688 424 H386"/>
+  <text class="mid" x="460" y="415" xml:space="preserve"><tspan class="num">5</tspan><tspan class="fn"> freeze_payload()</tspan></text>
+
+  <!-- 6 start the child -->
+  <path class="call" d="M688 468 H838"/>
+  <text class="mid" x="764" y="459" xml:space="preserve"><tspan class="num">6</tspan><tspan class="label"> start the child</tspan></text>
+  <text class="cond mid" x="764" y="485">payload on stdin</text>
+
+  <!-- Loop while the child runs -->
+  <rect x="300" y="506" width="766" height="134" rx="6" fill="none" stroke="#B28745" stroke-width="1.5"/>
+  <path d="M300 506 H520 V522 L510 532 H300 Z" fill="#FFE7A9" stroke="#B28745" stroke-width="1.5"/>
+  <text class="label" x="310" y="524">loop: until the child exits</text>
+
+  <!-- 7 tool calls -->
+  <path class="call" d="M840 560 H990"/>
+  <text class="mid" x="916" y="551" xml:space="preserve"><tspan class="num">7</tspan><tspan class="label"> tool calls</tspan></text>
+
+  <!-- 8 progress() -->
+  <path class="call" d="M688 604 H386"/>
+  <text class="mid" x="460" y="595" xml:space="preserve"><tspan class="num">8</tspan><tspan class="fn"> progress()</tspan></text>
+  <text class="cond mid" x="460" y="621">at most every 5 s</text>
+
+  <!-- 9 outcome.json, a file -->
+  <path class="file" d="M840 684 H690"/>
+  <text class="mid" x="764" y="675" xml:space="preserve"><tspan class="num">9</tspan><tspan class="fn"> outcome.json</tspan></text>
+  <text class="cond mid" x="764" y="701">and the journal</text>
+
+  <!-- 10 _cleanup() -->
+  <path class="call" d="M688 740 H990"/>
+  <text class="mid" x="764" y="731" xml:space="preserve"><tspan class="num">10</tspan><tspan class="fn"> _cleanup()</tspan></text>
+  <text class="cond mid" x="764" y="757">sandboxes gone?</text>
+
+  <!-- 11 finish() -->
+  <path class="call" d="M688 796 H386"/>
+  <text class="mid" x="460" y="787" xml:space="preserve"><tspan class="num">11</tspan><tspan class="fn"> finish()</tspan></text>
+  <text class="cond mid" x="460" y="813">settled state</text>
+
+  <!-- 12 Client.wait() -->
+  <path class="call" d="M80 852 H230"/>
+  <text class="mid" x="156" y="843" xml:space="preserve"><tspan class="num">12</tspan><tspan class="fn"> Client.wait()</tspan></text>
+  <text class="cond mid" x="156" y="869">polls the result</text>
+
+  <!-- Legend -->
+  <path d="M40 916 H84" fill="none" stroke="#3A5047" stroke-width="2"/>
+  <text class="cond" x="94" y="920">a call, a request or a process start</text>
+  <path d="M370 916 H414" fill="none" stroke="#3A5047" stroke-width="2" stroke-dasharray="7 5"/>
+  <text class="cond" x="424" y="920">a file in the attempt directory</text>
+
+  <text class="cond" x="40" y="954">Source: src/sprout/runstore/api.py and store.py, src/sprout/worker/manager.py, attempts.py and jobs/rollout.py</text>
+</svg>

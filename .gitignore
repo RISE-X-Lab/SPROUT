@@ -10,6 +10,9 @@ Cargo.lock
 *.swo
 .claude
 .pytest_cache
+.mypy_cache/
+# Plots and throwaway scripts (CLAUDE.md)
+/scratch/
 # OS
 .DS_Store
 Thumbs.db
@@ -20,6 +23,8 @@ Thumbs.db
 # Generated man pages (runtime)
 /man/
 runtime/sprout-runtime
+# The ripgrep release grep_files embeds; `go generate ./...` downloads it
+runtime/tools/ripgrep/*.tar.gz*
 k8s-scaffold/gateway/k8s-gateway
 __pycache__/
 results/*
@@ -39,12 +44,10 @@ runs/
 /SPROUT_ICLR.zip
 
 # Regenerable paper figures (.claude/skills/paper-figures writes here)
-figures/
+/figures/
 
-# Docs images the README does not show; docs/gen_*.py regenerate them
+# Docs images outside docs/figures/ (gate/checks/docs_layout.py refuses them)
 /docs/**/*.svg
 /docs/**/*.pdf
 /docs/**/*.png
-!/docs/architecture.svg
-!/docs/assets/logo.svg
-!/docs/assets/logo-dark.svg
+!/docs/figures/*.svg

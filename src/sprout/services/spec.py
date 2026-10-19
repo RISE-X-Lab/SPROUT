@@ -1,68 +1,39 @@
 """``services.yaml``: the data model, its loader and the placeholder language.
 
-The file names each service, its kind and how to tell it is alive; the code
-knows how to start a process or a container and how to probe, nothing about any
-particular service. So adding a service, moving a port or pointing the proxy
-at another venv is an edit to the file, never to the code, and the packaged
-template (``templates/services.yaml``) is one example of the file rather than
-a special case.
+The file names each service, its kind and how to tell that it is alive. The code
+knows how to start a process or a container and how to probe it, and nothing
+about a particular service. The packaged template
+(``resources/services/services.yaml``) is one example of the file, not a special case.
 
-Everything is validated at load time with the service and field named in the
-error, because the alternative is a traceback from ``up`` half way through a
-start sequence: an unknown dependency, a cycle, a kind or health kind outside
-the known sets, a port that is not an int, a malformed placeholder. Only the
-*values* placeholders stand for -- secrets, paths, the environment -- are
-resolved later, by :func:`expand` with a :class:`Context`, so loading never
-creates a secret or reads one.
+``load_spec`` and ``parse_spec`` validate the whole file at load time, and raise
+``SpecError`` with the service and the field named. Loading never creates or reads
+a secret. :func:`expand` resolves the values of the placeholders later, against a
+:class:`Context`. A ``{secret:NAME}`` may appear only where its value becomes a
+process's environment or is printed on request.
 
-Kinds: ``process`` (a command this CLI starts detached and supervises),
-``podman`` (a container, through the podman CLI), ``external`` (something
-started by hand; ``up`` prints its ``start_hint``) and ``check`` (a host fact
-``doctor`` verifies; nothing to start). Health kinds: ``http`` (a GET must
-answer 200), ``pg_isready``, ``process`` (the pid is alive and is ours),
-``none``.
-
-Placeholders: ``{python}`` the interpreter ``python:`` names (default: the
-checkout's ``.venv``), ``{repo}`` the checkout, ``{config}`` the directory of
-``services.yaml``, ``{state}`` the state directory, ``{secret:NAME}`` a
-generated secret, ``{env:NAME}`` a variable of the shell running the CLI,
-``{podman_bin}`` the podman the sandboxes run on and ``{store}`` their btrfs
-store (``$SPROUT_PODMAN_BIN`` / ``$SPROUT_PODMAN_STORE``, else the defaults). A
-leading ``~`` is the home directory. They work in every string but a
-container's ``image`` and ``container``: the name is the key ``inspect``,
-``start``, ``stop`` and ``podman logs`` all look the container up by, so it is
-one literal, the same in the file and in ``podman ps`` (podman allows no brace
-in a name anyway). A ``{secret:NAME}`` may stand only where its value travels
-as a process's environment or is printed on request -- ``env``, ``exports``,
-``health.headers`` -- never in ``command``, ``prepare``, ``volumes``,
-``publish``, ``health.url`` or ``path``: those are written to the service log
-as typed, echoed by ``up``, and an argv is readable by every user in
-``/proc/<pid>/cmdline``. The loader refuses it, naming the field, so a one-line
-slip in the file cannot leak a secret silently.
-
-A process receives its own ``exports`` and those of every service it depends
-on, transitively, plus its ``env``: ``exports`` are what a *consumer* of the
-service needs (the DSN, a token, a base URL), and a dependent is a consumer.
-``env`` prints every service's exports as shell export lines.
+docs/SERVICES.md ("services.yaml") lists the kinds, the health kinds, the
+placeholders and the fields that may hold a secret.
 """
 
 from __future__ import annotations
 
 import os
 import re
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Iterable, Mapping
+from typing import Any
 
 import yaml
 
+from sprout.resource import resource
 from sprout.services.state import Paths
 
 KINDS = ("process", "podman", "external", "check")
 HEALTH_KINDS = ("http", "pg_isready", "process", "none")
 CHECKS = ("btrfs_store", "podman")
 NAME = re.compile(r"^[a-z][a-z0-9-]*$")
-#: podman's own rule for a container name; a placeholder cannot pass it.
+#: podman's rule for a container name. A placeholder cannot match it.
 CONTAINER_NAME = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_.-]*$")
 
 #: What a service of each kind may say. A key outside the set is an error, so
@@ -78,7 +49,9 @@ _HEALTH_KEYS = {"kind", "url", "headers", "host", "port", "user", "container"}
 _STEP_KEYS = {"run", "unless"}
 
 #: The placeholders :func:`expand` knows ...
-PLACEHOLDER = re.compile(r"\{(python|repo|config|state|podman_bin|store|secret:[a-z0-9][a-z0-9-]*|env:[A-Za-z_][A-Za-z0-9_]*)\}")
+PLACEHOLDER = re.compile(
+    r"\{(python|repo|config|state|podman_bin|store|secret:[a-z0-9][a-z0-9-]*|env:[A-Za-z_][A-Za-z0-9_]*)\}"
+)
 #: ... and the shape of anything that was probably meant as one. A JSON object
 #: in an argument (`{"mini": ...}`) does not match, so it is left alone.
 _BRACED_WORD = re.compile(r"\{[A-Za-z_][\w:.-]*\}")
@@ -89,20 +62,23 @@ class SpecError(ValueError):
 
 
 class ExpandError(ValueError):
-    """A placeholder the file allows but this run cannot resolve: an unset
-    ``{env:NAME}``, or a ``{secret:NAME}`` that ``init`` has not made yet when
-    the command must not create one. The callers turn it into one line about
-    the service; it is never a traceback."""
+    """A placeholder that the file allows but this run cannot resolve.
+
+    Examples are an unset ``{env:NAME}``, a ``{secret:NAME}`` that ``init`` has not made when the
+    command must not create one, and a ``{podman_bin}`` or ``{store}`` that the worker's doctor did not
+    report."""
 
 
 @dataclass(frozen=True)
 class Health:
+    """How to tell that a service is alive. The comment on a field names the probe kinds that read it."""
+
     kind: str = "none"
-    url: str = ""                                   # http
-    headers: tuple[tuple[str, str], ...] = ()       # http; values may carry placeholders
-    host: str = "127.0.0.1"                         # pg_isready
-    port: int | None = None                         # pg_isready
-    user: str = ""                                  # pg_isready: -U, when given
+    url: str = ""  # http
+    headers: tuple[tuple[str, str], ...] = ()  # http. The values may carry placeholders.
+    host: str = "127.0.0.1"  # pg_isready
+    port: int | None = None  # pg_isready
+    user: str = ""  # pg_isready: -U, when given
     #: pg_isready: the container to `podman exec` the probe in when the host
     #: has no pg_isready. Filled from the service's own container when unset.
     container: str = ""
@@ -110,7 +86,7 @@ class Health:
 
 @dataclass(frozen=True)
 class Step:
-    """One command run before a start; skipped while ``unless`` names an existing path."""
+    """One command run before a start. It is skipped while ``unless`` names an existing path."""
 
     run: tuple[str, ...]
     unless: str = ""
@@ -118,6 +94,8 @@ class Step:
 
 @dataclass(frozen=True)
 class Service:
+    """One service of the file. The fields under a kind's comment belong to services of that kind."""
+
     name: str
     kind: str
     enabled: bool = True
@@ -125,7 +103,7 @@ class Service:
     health: Health = field(default_factory=Health)
     port: int | None = None
     exports: tuple[tuple[str, str], ...] = ()
-    #: How long `up` waits for the health probe (default 60 s; the proxy needs more).
+    #: How long ``up`` waits for the health probe, in seconds. The proxy needs more than the default.
     timeout_s: float = 60.0
     # process
     command: tuple[str, ...] = ()
@@ -151,6 +129,8 @@ class Service:
 
 @dataclass(frozen=True)
 class Spec:
+    """A loaded file: where it came from, its ``python`` and its services in the order of the file."""
+
     source: str
     python: str | None
     services: tuple[Service, ...]
@@ -160,6 +140,7 @@ class Spec:
         return tuple(service.name for service in self.services)
 
     def get(self, name: str) -> Service:
+        """The service ``name``. Raises KeyError for an unknown name."""
         for service in self.services:
             if service.name == name:
                 return service
@@ -168,9 +149,8 @@ class Spec:
     def order(self, names: Iterable[str] | None = None) -> tuple[Service, ...]:
         """The named services and their dependencies, dependencies first.
 
-        Declaration order among independents, so the start sequence is the
-        order the file reads in and the same on every run. ``None`` is every
-        enabled service.
+        Independent services keep the order of the file, so every run starts them in the same order.
+        ``None`` names every enabled service. Raises KeyError for an unknown name.
         """
         wanted = list(names) if names is not None else [s.name for s in self.services if s.enabled]
         ordered: list[Service] = []
@@ -190,10 +170,9 @@ class Spec:
         return tuple(ordered)
 
     def with_dependents(self, names: Iterable[str]) -> tuple[Service, ...]:
-        """The named services plus everything that depends on them, in start order.
+        """The named services plus each service that depends on them, transitively, in the order of the file.
 
-        What ``down`` stops: a service whose dependency goes away is broken
-        anyway, and stopping it first is what the reverse of this order does.
+        A service whose dependency stops is broken, so a stop of the named services also stops these.
         """
         closure = set(names)
         changed = True
@@ -214,7 +193,7 @@ class Spec:
         return tuple(merged.items())
 
     def secret_names(self) -> tuple[str, ...]:
-        """Every ``{secret:NAME}`` the file mentions, in first-use order; what ``init`` creates."""
+        """The name of each ``{secret:NAME}`` that the file mentions, in the order of first use."""
         names: list[str] = []
         for service in self.services:
             for _, text, _ in _placeholder_fields(service):
@@ -226,46 +205,27 @@ class Spec:
 
 # --- expansion ----------------------------------------------------------------
 
-def installed_podman() -> Path:
-    """Where ``ops/setup_podman.sh`` installs podman: a static build, off PATH so
-    the distribution's podman, if any, is left alone. The same path as
-    ``sprout_sandbox.podman.installed_podman`` (this package imports no layer it
-    starts, so the path is spelled twice and a test keeps the two in step)."""
-    return Path.home() / ".local" / "opt" / "podman" / "bin" / "podman"
-
-
-def podman_bin_for(environ: Mapping[str, str]) -> str:
-    """The podman the sandboxes run on: ``$SPROUT_PODMAN_BIN``, else the one
-    ``ops/setup_podman.sh`` installed, else ``podman`` on PATH -- the rule of
-    ``sprout_sandbox.podman.default_podman_bin``. What the ``{podman_bin}``
-    placeholder, the ``podman`` check and the database container resolve to."""
-    chosen = environ.get("SPROUT_PODMAN_BIN")
-    if chosen:
-        return os.path.expanduser(chosen)
-    installed = installed_podman()
-    if installed.is_file() and os.access(installed, os.X_OK):
-        return str(installed)
-    return "podman"
-
-
-def store_for(environ: Mapping[str, str]) -> Path:
-    """The btrfs store: ``$SPROUT_PODMAN_STORE``, else ``~/sprout-btrfs`` (every entry point's default)."""
-    return Path(environ.get("SPROUT_PODMAN_STORE") or Path.home() / "sprout-btrfs")
-
 
 @dataclass(frozen=True)
 class Context:
-    """What placeholders stand for at run time; the spec itself holds none of it."""
+    """What the placeholders stand for at run time. The spec holds none of these values."""
 
     paths: Paths
     python: str
+    #: The value of ``{secret:NAME}``, by name. Raises ``ValueError`` when it cannot give one.
     secret: Callable[[str], str]
+    #: The value of ``{podman_bin}`` or ``{store}``, by name. Raises ``ValueError`` when it is unknown.
+    host: Callable[[str], str]
     environ: Mapping[str, str]
 
 
 def expand(text: str, ctx: Context) -> str:
-    """``text`` with every placeholder resolved against ``ctx``; :class:`ExpandError` when one cannot be."""
-    def value(match: "re.Match[str]") -> str:
+    """``text`` with each placeholder resolved against ``ctx``, and with a leading ``~`` expanded.
+
+    Raises :class:`ExpandError` when a placeholder cannot be resolved.
+    """
+
+    def value(match: re.Match[str]) -> str:
         key = match.group(1)
         if key == "python":
             return ctx.python
@@ -275,14 +235,15 @@ def expand(text: str, ctx: Context) -> str:
             return str(ctx.paths.config)
         if key == "state":
             return str(ctx.paths.state)
-        if key == "podman_bin":
-            return podman_bin_for(ctx.environ)
-        if key == "store":
-            return str(store_for(ctx.environ))
+        if key in ("podman_bin", "store"):
+            try:
+                return ctx.host(key)
+            except ValueError as error:  # `WorkerDoctor.fact`: the doctor gave no report.
+                raise ExpandError(str(error)) from None
         if key.startswith("secret:"):
             try:
                 return ctx.secret(key[7:])
-            except ValueError as error:          # `secrets.require`: not made yet
+            except ValueError as error:  # `secrets.require`: the secret is not made yet.
                 raise ExpandError(str(error)) from None
         name = key[4:]
         if name not in ctx.environ:
@@ -294,17 +255,20 @@ def expand(text: str, ctx: Context) -> str:
 
 
 def expand_all(pairs: Iterable[tuple[str, str]], ctx: Context) -> dict[str, str]:
+    """Each ``(name, text)`` pair as a mapping, with ``text`` expanded. Raises :class:`ExpandError`."""
     return {key: expand(value, ctx) for key, value in pairs}
 
 
 # --- loading ------------------------------------------------------------------
 
+
 def template_path(name: str) -> Path:
-    """A file shipped in ``templates/`` beside this module (hatchling packages them)."""
-    return Path(__file__).with_name("templates") / name
+    """A template the service manager seeds a host's config from (``resources/services/<name>``)."""
+    return resource(f"services/{name}")
 
 
 def load_spec(path: Path) -> Spec:
+    """The spec in the YAML file ``path``. Raises SpecError for invalid YAML or an invalid spec."""
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
     except yaml.YAMLError as error:
@@ -313,6 +277,7 @@ def load_spec(path: Path) -> Spec:
 
 
 def parse_spec(data: Any, source: str = "services.yaml") -> Spec:
+    """The spec in ``data``, the parsed YAML of ``source``. Raises SpecError at the first invalid part."""
     if not isinstance(data, dict):
         raise SpecError("%s: the file must be a mapping with a `services` key" % source)
     unknown = set(data) - {"python", "services"}
@@ -330,30 +295,40 @@ def parse_spec(data: Any, source: str = "services.yaml") -> Spec:
     for service in services:
         for dependency in service.depends_on:
             if dependency not in names:
-                raise SpecError("%s: service %r, field 'depends_on': unknown service %r"
-                                % (source, service.name, dependency))
+                raise SpecError(
+                    "%s: service %r, field 'depends_on': unknown service %r"
+                    % (source, service.name, dependency)
+                )
             if dependency == service.name:
-                raise SpecError("%s: service %r, field 'depends_on': depends on itself" % (source, service.name))
+                raise SpecError(
+                    "%s: service %r, field 'depends_on': depends on itself" % (source, service.name)
+                )
     spec = Spec(source=source, python=python, services=services)
     _check_cycles(spec)
     for service in services:
         for field_name, text, secret_ok in _placeholder_fields(service):
             for braced in _BRACED_WORD.findall(text):
                 if not PLACEHOLDER.fullmatch(braced):
-                    raise SpecError("%s: service %r, field %r: unknown placeholder %s (known: {python} {repo} "
-                                    "{config} {state} {podman_bin} {store} {secret:name} {env:NAME})"
-                                    % (source, service.name, field_name, braced))
+                    raise SpecError(
+                        "%s: service %r, field %r: unknown placeholder %s (known: {python} {repo} "
+                        "{config} {state} {podman_bin} {store} {secret:name} {env:NAME})"
+                        % (source, service.name, field_name, braced)
+                    )
                 if braced.startswith("{secret:") and not secret_ok:
-                    raise SpecError("%s: service %r, field %r: a secret may not appear here: an argv, a mount, a URL "
-                                    "or a path is logged and printed as typed; pass it through `env` or `exports` "
-                                    "(or `health.headers`) instead" % (source, service.name, field_name))
+                    raise SpecError(
+                        "%s: service %r, field %r: a secret may not appear here: an argv, a mount, a URL "
+                        "or a path is logged and printed as typed; pass it through `env` or `exports` "
+                        "(or `health.headers`) instead" % (source, service.name, field_name)
+                    )
     return spec
 
 
 def _parse_service(source: str, name: Any, body: Any) -> Service:
     if not isinstance(name, str) or not NAME.match(name):
-        raise SpecError("%s: service name %r: lower-case letters, digits and dashes, starting with a letter"
-                        % (source, name))
+        raise SpecError(
+            "%s: service name %r: lower-case letters, digits and dashes, starting with a letter"
+            % (source, name)
+        )
 
     def fail(field_name: str, problem: str) -> SpecError:
         return SpecError("%s: service %r, field %r: %s" % (source, name, field_name, problem))
@@ -365,7 +340,10 @@ def _parse_service(source: str, name: Any, body: Any) -> Service:
         raise fail("kind", "%r is not one of %s" % (kind, ", ".join(KINDS)))
     unknown = set(body) - _KEYS[kind]
     if unknown:
-        raise fail(sorted(unknown)[0], "not a field of a %s service (known: %s)" % (kind, ", ".join(sorted(_KEYS[kind]))))
+        raise fail(
+            sorted(unknown)[0],
+            "not a field of a %s service (known: %s)" % (kind, ", ".join(sorted(_KEYS[kind]))),
+        )
 
     enabled = body.get("enabled", True)
     if not isinstance(enabled, bool):
@@ -384,16 +362,18 @@ def _parse_service(source: str, name: Any, body: Any) -> Service:
         raise fail("command", "a process needs a non-empty argv list")
     image, container = body.get("image", ""), body.get("container", "")
     if kind == "podman":
-        # Neither is expanded: the name is what every verb looks the container
-        # up by, and a reference has no brace. Refusing here beats podman's
-        # exit 125 half way through `up`.
+        # Neither is expanded: every podman verb finds the container by this name, and a reference has
+        # no brace. A refusal here is better than a podman exit 125 half way through `up`.
         if not isinstance(image, str) or not image:
             raise fail("image", "a podman service needs an image reference")
         if "{" in image:
             raise fail("image", "an image reference is used as written; placeholders are not expanded in it")
         if not isinstance(container, str) or not CONTAINER_NAME.match(container):
-            raise fail("container", "a podman service needs a container name: letters, digits, `_`, `.`, `-` "
-                                    "(podman's rule); placeholders are not expanded in it")
+            raise fail(
+                "container",
+                "a podman service needs a container name: letters, digits, `_`, `.`, `-` "
+                "(podman's rule); placeholders are not expanded in it",
+            )
     check = body.get("check", "")
     if kind == "check" and check not in CHECKS:
         raise fail("check", "%r is not one of %s" % (check, ", ".join(CHECKS)))
@@ -406,12 +386,25 @@ def _parse_service(source: str, name: Any, body: Any) -> Service:
     prepare = tuple(_parse_step(step, fail, index) for index, step in enumerate(steps))
 
     return Service(
-        name=name, kind=kind, enabled=enabled, depends_on=tuple(depends_on), health=health, port=port,
-        exports=exports, timeout_s=float(timeout_s), command=command, env=env,
-        unset_env=tuple(_strings_list(body.get("unset_env", []), fail, "unset_env")), prepare=prepare,
-        image=image, container=container, publish=body.get("publish") or "",
+        name=name,
+        kind=kind,
+        enabled=enabled,
+        depends_on=tuple(depends_on),
+        health=health,
+        port=port,
+        exports=exports,
+        timeout_s=float(timeout_s),
+        command=command,
+        env=env,
+        unset_env=tuple(_strings_list(body.get("unset_env", []), fail, "unset_env")),
+        prepare=prepare,
+        image=image,
+        container=container,
+        publish=body.get("publish") or "",
         volumes=tuple(_strings_list(body.get("volumes", []), fail, "volumes")),
-        start_hint=body.get("start_hint") or "", check=check, path=body.get("path") or "",
+        start_hint=body.get("start_hint") or "",
+        check=check,
+        path=body.get("path") or "",
     )
 
 
@@ -422,7 +415,10 @@ def _parse_health(body: Any, fail: Callable[[str, str], SpecError], container: s
         raise fail("health", "must be a mapping with a `kind`")
     unknown = set(body) - _HEALTH_KEYS
     if unknown:
-        raise fail("health.%s" % sorted(unknown)[0], "not a health field (known: %s)" % ", ".join(sorted(_HEALTH_KEYS)))
+        raise fail(
+            "health.%s" % sorted(unknown)[0],
+            "not a health field (known: %s)" % ", ".join(sorted(_HEALTH_KEYS)),
+        )
     kind = body.get("kind")
     if kind not in HEALTH_KINDS:
         raise fail("health.kind", "%r is not one of %s" % (kind, ", ".join(HEALTH_KINDS)))
@@ -435,9 +431,15 @@ def _parse_health(body: Any, fail: Callable[[str, str], SpecError], container: s
     for key in ("host", "user", "container"):
         if body.get(key) is not None and not isinstance(body.get(key), str):
             raise fail("health.%s" % key, "must be a string")
-    return Health(kind=kind, url=url, headers=_string_pairs(body.get("headers", {}), fail, "health.headers"),
-                  host=body.get("host") or "127.0.0.1", port=port, user=body.get("user") or "",
-                  container=body.get("container") or container)
+    return Health(
+        kind=kind,
+        url=url,
+        headers=_string_pairs(body.get("headers", {}), fail, "health.headers"),
+        host=body.get("host") or "127.0.0.1",
+        port=port,
+        user=body.get("user") or "",
+        container=body.get("container") or container,
+    )
 
 
 def _parse_step(body: Any, fail: Callable[[str, str], SpecError], index: int) -> Step:
@@ -472,9 +474,11 @@ def _strings_list(value: Any, fail: Callable[[str, str], SpecError], where: str)
     return out
 
 
-def _string_pairs(value: Any, fail: Callable[[str, str], SpecError], where: str) -> tuple[tuple[str, str], ...]:
-    """A mapping of names to strings; a number is accepted and spelled out, since
-    YAML reads `--port 4000`'s 4000 or a bare `user: 70` as numbers."""
+def _string_pairs(
+    value: Any, fail: Callable[[str, str], SpecError], where: str
+) -> tuple[tuple[str, str], ...]:
+    """The ``(name, string)`` pairs of a mapping. A number becomes its string, because YAML reads
+    the 4000 of `--port 4000` or a bare `user: 70` as numbers."""
     if not isinstance(value, dict):
         raise fail(where, "must be a mapping of name -> string")
     pairs = []
@@ -488,14 +492,16 @@ def _string_pairs(value: Any, fail: Callable[[str, str], SpecError], where: str)
 
 
 def _check_cycles(spec: Spec) -> None:
-    """Depth-first with a path, so the error shows the loop rather than naming one member."""
+    """Raise SpecError for a dependency cycle. The error shows the whole loop, not one member."""
     done: set[str] = set()
 
     def visit(name: str, path: list[str]) -> None:
         if name in path:
-            loop = path[path.index(name):] + [name]
-            raise SpecError("%s: service %r, field 'depends_on': dependency cycle %s"
-                            % (spec.source, name, " -> ".join(loop)))
+            loop = path[path.index(name) :] + [name]
+            raise SpecError(
+                "%s: service %r, field 'depends_on': dependency cycle %s"
+                % (spec.source, name, " -> ".join(loop))
+            )
         if name in done:
             return
         for dependency in spec.get(name).depends_on:
@@ -507,21 +513,20 @@ def _check_cycles(spec: Spec) -> None:
 
 
 def _placeholder_fields(service: Service) -> Iterable[tuple[str, str, bool]]:
-    """Every ``(field, text, secret allowed)`` a placeholder may appear in.
+    """Each ``(field, text, secret allowed)`` that a placeholder may appear in.
 
-    This is the one list the loader validates and the code expands, so a field
-    is never in one and not the other (``volumes`` once was validated and then
-    handed to podman raw). ``start_hint`` is printed verbatim and ``image`` /
-    ``container`` are literal, so none of the three is here. A secret is
-    allowed only where the value becomes a process's environment or is printed
-    on request; everywhere else the text is logged and echoed as typed.
-    """
+    The loader validates these fields, so each field that the code expands must be here. ``start_hint``,
+    ``image`` and ``container`` are literal. A secret is allowed only where the value becomes a process's
+    environment or is printed on request. Each other field is logged and echoed as typed."""
     for text in service.command:
         yield "command", text, False
     for text in service.unset_env:
         yield "unset_env", text, False
-    for field_name, pairs in (("env", service.env), ("exports", service.exports),
-                              ("health.headers", service.health.headers)):
+    for field_name, pairs in (
+        ("env", service.env),
+        ("exports", service.exports),
+        ("health.headers", service.health.headers),
+    ):
         for key, value in pairs:
             yield "%s.%s" % (field_name, key), value, True
     for index, step in enumerate(service.prepare):

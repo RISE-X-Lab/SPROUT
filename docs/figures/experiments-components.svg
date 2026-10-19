@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="800" viewBox="0 0 1000 800" role="img" aria-labelledby="title desc" font-family="-apple-system, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
+  <title id="title">What runs on the experiment host</title>
+  <desc id="desc">One experiment host holds seven parts. The runner, examples.qwen.run, runs one thread per task and starts one sprout.eval.evaluate process, the evaluator, for each stage. The evaluator submits the jobs of its stage to runstore-api, the Run Store API, and polls them. runstore-worker, the worker, claims the jobs from the Run Store and starts the sandboxes, on podman with a btrfs store or on AgentENV microVMs, and takes their checkpoints. Two parts are files. The runner writes the manifest, the stage receipts and the metrics into the root that --output names, and the evaluator writes each stage's summary.json there. The worker writes the journals and the verifier logs into its artifact_root directory, and the evaluator reads them from there. Solid arrows mean that a process starts or calls another. Dotted arrows show data that a process writes into files or reads from them.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10Z" fill="#3A5047"/>
+    </marker>
+    <style>
+      .title { font-size: 24px; font-weight: 700; fill: #2F443E; }
+      .lead { font-size: 15px; fill: #63766F; }
+      .boundary { fill: none; stroke: #63766F; stroke-width: 2; stroke-dasharray: 10 6; }
+      .boundary-label { font-size: 15px; font-weight: 700; fill: #63766F; }
+      .process { fill: #E6F1F7; stroke: #587E96; stroke-width: 2; }
+      .files { fill: #E4E3D4; stroke: #63766F; stroke-width: 2; }
+      .name { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 16px; font-weight: 700; fill: #2F443E; text-anchor: middle; }
+      .name-sans { font-size: 17px; font-weight: 700; fill: #2F443E; text-anchor: middle; }
+      .note { font-size: 15px; fill: #63766F; text-anchor: middle; }
+      .label { font-size: 15px; fill: #2F443E; }
+      .calls { fill: none; stroke: #3A5047; stroke-width: 2; marker-end: url(#arrow); }
+      .data { fill: none; stroke: #3A5047; stroke-width: 2; stroke-dasharray: 2 5; stroke-linecap: round; marker-end: url(#arrow); }
+      .source { font-size: 13px; fill: #63766F; }
+    </style>
+  </defs>
+
+  <rect x="1" y="1" width="998" height="798" rx="16" fill="#FFFDF6" stroke="#E5E2D2" stroke-width="2"/>
+  <text class="title" x="40" y="46">What runs on the experiment host</text>
+  <text class="lead" x="40" y="78">Solid arrows: a process starts or calls another. Dotted arrows: data that a process writes or reads.</text>
+
+  <rect class="boundary" x="20" y="112" width="960" height="590" rx="14"/>
+  <text class="boundary-label" x="40" y="140">experiment host: one machine</text>
+
+  <!-- Row A: processes -->
+  <rect class="process" x="40" y="170" width="220" height="90" rx="12"/>
+  <text class="name" x="150" y="202">examples.qwen.run</text>
+  <text class="note" x="150" y="226">the runner,</text>
+  <text class="note" x="150" y="246">one thread per task</text>
+
+  <rect class="process" x="390" y="170" width="230" height="90" rx="12"/>
+  <text class="name" x="505" y="202">sprout.eval.evaluate</text>
+  <text class="note" x="505" y="226">the evaluator,</text>
+  <text class="note" x="505" y="246">one process per stage</text>
+
+  <rect class="process" x="750" y="170" width="210" height="90" rx="12"/>
+  <text class="name" x="855" y="202">runstore-api</text>
+  <text class="note" x="855" y="226">the Run Store API,</text>
+  <text class="note" x="855" y="246">jobs in PostgreSQL db</text>
+
+  <!-- Row B -->
+  <rect class="files" x="40" y="370" width="220" height="90" rx="12"/>
+  <text class="name" x="150" y="402">--output</text>
+  <text class="note" x="150" y="426">the root: manifest</text>
+  <text class="note" x="150" y="446">and stage directories</text>
+
+  <rect class="process" x="750" y="370" width="210" height="90" rx="12"/>
+  <text class="name" x="855" y="402">runstore-worker</text>
+  <text class="note" x="855" y="426">the worker, which</text>
+  <text class="note" x="855" y="446">serves the profiles</text>
+
+  <!-- Row C -->
+  <rect class="files" x="390" y="570" width="230" height="90" rx="12"/>
+  <text class="name" x="505" y="602">artifact_root</text>
+  <text class="note" x="505" y="626">the worker's directory:</text>
+  <text class="note" x="505" y="646">journals, verifier logs</text>
+
+  <rect class="process" x="750" y="570" width="210" height="90" rx="12"/>
+  <text class="name-sans" x="855" y="602">sandboxes</text>
+  <text class="note" x="855" y="626">podman + btrfs store,</text>
+  <text class="note" x="855" y="646">or AgentENV microVMs</text>
+
+  <!-- runner -> evaluator -->
+  <path class="calls" d="M260 215 H388"/>
+  <text class="label" x="325" y="186" text-anchor="middle">starts one</text>
+  <text class="label" x="325" y="205" text-anchor="middle">per stage</text>
+
+  <!-- evaluator -> Run Store API -->
+  <path class="calls" d="M620 215 H748"/>
+  <text class="label" x="685" y="186" text-anchor="middle">submits jobs</text>
+  <text class="label" x="685" y="205" text-anchor="middle">and polls</text>
+
+  <!-- worker -> Run Store API -->
+  <path class="calls" d="M855 370 V262"/>
+  <text class="label" x="867" y="321">claims jobs</text>
+
+  <!-- worker -> sandboxes -->
+  <path class="calls" d="M855 460 V568"/>
+  <text class="label" x="843" y="508" text-anchor="end">starts sandboxes,</text>
+  <text class="label" x="843" y="527" text-anchor="end">takes checkpoints</text>
+
+  <!-- runner -> root -->
+  <path class="data" d="M150 260 V368"/>
+  <text class="label" x="162" y="306">writes manifest,</text>
+  <text class="label" x="162" y="325">receipts, metrics</text>
+
+  <!-- evaluator -> root -->
+  <path class="data" d="M430 260 V415 H262"/>
+  <text class="label" x="346" y="405" text-anchor="middle">writes summary.json</text>
+
+  <!-- evaluator reads the artifact directory -->
+  <path class="data" d="M500 570 V262"/>
+  <text class="label" x="488" y="508" text-anchor="end">reads journals</text>
+  <text class="label" x="488" y="527" text-anchor="end">and logs</text>
+
+  <!-- worker -> artifact directory -->
+  <path class="data" d="M750 440 H600 V568"/>
+  <text class="label" x="675" y="430" text-anchor="middle">writes journals</text>
+
+  <!-- Legend -->
+  <rect class="process" x="40" y="722" width="34" height="20" rx="5"/>
+  <text class="label" x="84" y="738">process or service</text>
+  <rect class="files" x="260" y="722" width="34" height="20" rx="5"/>
+  <text class="label" x="304" y="738">files</text>
+  <path class="calls" d="M400 732 H450"/>
+  <text class="label" x="462" y="738">starts or calls</text>
+  <path class="data" d="M620 732 H670"/>
+  <text class="label" x="682" y="738">data written or read</text>
+
+  <text class="source" x="40" y="778">Source: examples/qwen/run.py, src/sprout/eval/evaluate.py, resources/services/services.yaml, resources/runstore/config.example.json</text>
+</svg>

@@ -7,25 +7,23 @@ import (
 )
 
 const (
-	// defaultMaxOutputBytes is the budget for each output stream when a call
-	// names none: generous, because deciding how much belongs in an LLM
-	// context is a consumer-side concern. The runtime's job is only to stay
-	// alive.
+	// The budget of a call that names none. It is large because the consumer
+	// decides what fits a model's context. The runtime only bounds its memory.
 	defaultMaxOutputBytes = 15 << 20 // 15 MiB
 	minMaxOutputBytes     = 1024
 	// maxMaxOutputBytes caps what a caller may ask for, so a single call
 	// cannot OOM the runtime (and with it the sandbox).
 	maxMaxOutputBytes = 64 << 20 // 64 MiB
-	// Over-long output keeps its head and its tail in this proportion (40/60):
-	// a test run's verdict is at the end, the command that produced it at the
-	// start, and the middle is what a reader scrolls past.
+	// Over-long output keeps its head and its tail at 40/60. A test run prints
+	// its command first and its verdict last, and a reader skips the middle.
 	headWeight = 2
 	tailWeight = 3
 )
 
-// BoundedLog stores command output with a fixed memory ceiling. Once the
-// output exceeds the limit, Render keeps the head and tail sections in the
-// headWeight:tailWeight proportion and says so.
+// BoundedLog is an io.Writer that keeps command output within a fixed memory
+// ceiling. When the output exceeds the ceiling, Render keeps the head and the
+// tail in the headWeight:tailWeight proportion and says so. Write never fails,
+// and all methods are safe for concurrent use.
 type BoundedLog struct {
 	mu    sync.Mutex
 	max   int
@@ -35,7 +33,7 @@ type BoundedLog struct {
 }
 
 // NewBoundedLog creates a log bounded to max bytes, clamped to the runtime's
-// floor and ceiling.
+// floor and ceiling. A max of zero or less means defaultMaxOutputBytes.
 func NewBoundedLog(max int) *BoundedLog {
 	return &BoundedLog{max: normalizeMaxOutputBytes(max)}
 }
@@ -59,6 +57,25 @@ func outputBytesArg(args map[string]any) int {
 		max = int(v)
 	}
 	return normalizeMaxOutputBytes(max)
+}
+
+// outputBytesSchema is the max_output_bytes schema of a tool that returns one
+// block of text. Each such tool shares it, so the bound reads alike on each.
+func outputBytesSchema() map[string]any {
+	return map[string]any{
+		"type":        "integer",
+		"default":     defaultMaxOutputBytes,
+		"description": "Total bytes of output to return. Larger output is truncated to the first 40% and last 60% of the budget, and the output says so.",
+	}
+}
+
+// boundText bounds text that a tool already holds in memory to max bytes, with
+// the same head and tail rule as command output. So every tool truncates alike.
+func boundText(text string, max int) string {
+	log := NewBoundedLog(max)
+	log.Write([]byte(text))
+	out, _ := log.Render()
+	return out
 }
 
 func (b *BoundedLog) Write(p []byte) (int, error) {
@@ -87,6 +104,8 @@ func (b *BoundedLog) Write(p []byte) (int, error) {
 	return n, nil
 }
 
+// Render returns the output and whether it was truncated. Truncated output is
+// its head and its tail around a marker line that gives the byte counts.
 func (b *BoundedLog) Render() (string, bool) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -129,14 +148,15 @@ func (b *BoundedLog) Render() (string, bool) {
 	return string(head) + marker + string(tail), true
 }
 
+// TotalBytes is the number of bytes written, the dropped ones included.
 func (b *BoundedLog) TotalBytes() int64 {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	return b.total
 }
 
-// headLimit is the byte budget for the head section; tailLimit is whatever the
-// head does not claim.
+// headLimit is the byte budget of the head section. tailLimit, below, gets the
+// rest of max.
 func (b *BoundedLog) headLimit() int {
 	return b.max * headWeight / (headWeight + tailWeight)
 }
@@ -145,20 +165,13 @@ func (b *BoundedLog) tailLimit() int {
 	return b.max - b.headLimit()
 }
 
-// CommandOutcome is what running a command produced.
-//
-// Streams stay separate. Merging them into one blob was lossy in three ways: the
-// "[stderr]" divider it inserted is forgeable by any command that prints one,
-// the exit code had nowhere to go (`exit 5` prints nothing and arrived as an
-// empty string), and truncation was described in prose a consumer had to grep.
-//
-// Every field is always present. `running: false` and `timed_out: false` are
-// answers, not absences, and omitempty would make a consumer unable to tell "it
-// finished" from "this runtime never said". A foreground command has always
-// finished by the time it is reported, so `running` is false and `exit_code`
-// is set; both stay in the schema because the harness parses an outcome by its
-// field set.
+// CommandOutcome is what running a command produced, as the JSON that the
+// harness parses. Every field is always encoded: a false `running` or
+// `timed_out` is an answer, not an absence. A foreground command has finished
+// when it is reported, so `running` is false and `exit_code` is set.
 type CommandOutcome struct {
+	// A new field also goes into _OUTCOME_FIELDS (src/sprout_sandbox/result.py).
+	// The harness reads JSON with any other field as plain output, not as an outcome.
 	Stdout          string `json:"stdout"`
 	Stderr          string `json:"stderr"`
 	ExitCode        *int   `json:"exit_code"`
@@ -171,7 +184,8 @@ type CommandOutcome struct {
 	MaxPerStream    int    `json:"max_per_stream"`
 }
 
-// commandOutcome reads both logs into the shared schema.
+// commandOutcome reads both logs into an outcome that is not running. The
+// caller sets ExitCode and TimedOut.
 func commandOutcome(stdout, stderr *BoundedLog) CommandOutcome {
 	stdoutText, stdoutTruncated := stdout.Render()
 	stderrText, stderrTruncated := stderr.Render()
@@ -186,14 +200,10 @@ func commandOutcome(stdout, stderr *BoundedLog) CommandOutcome {
 	}
 }
 
-// Result renders an outcome for the wire: `shell`'s own success is the
-// command's success.
-//
-// A plain success -- exit 0, nothing on stderr, nothing clipped -- is returned
-// as bare stdout: there is nothing to say beyond it, and wrapping `echo hello`
-// in JSON would make every consumer parse a payload to find one word. Anything
-// else carries the schema, because something about the run cannot be read off
-// the text.
+// Result renders an outcome for the wire. Its Success is the command's success.
+// A plain success (exit 0, empty stderr, nothing truncated, not running) is bare
+// stdout, so `echo hello` reaches the consumer as one word. Any other outcome is
+// its JSON encoding, because the text alone cannot say what happened.
 func (o CommandOutcome) Result() Result {
 	success := o.commandSucceeded()
 	if success && o.plain() {
@@ -205,14 +215,15 @@ func (o CommandOutcome) Result() Result {
 func (o CommandOutcome) encode() string {
 	payload, err := json.Marshal(o)
 	if err != nil {
-		// Unreachable for this struct; degrade to the merged text rather than
-		// losing the output entirely.
+		// json.Marshal cannot fail on this struct. If it ever does, return the
+		// merged text rather than nothing.
 		return o.Stdout + o.Stderr
 	}
 	return string(payload)
 }
 
-// commandSucceeded reports whether the command itself came out clean.
+// commandSucceeded reports whether the command did not time out and exited 0.
+// An outcome without an exit code counts as a success.
 func (o CommandOutcome) commandSucceeded() bool {
 	return !o.TimedOut && (o.ExitCode == nil || *o.ExitCode == 0)
 }

@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1060" height="900" viewBox="0 0 1060 900" role="img" aria-labelledby="title desc" font-family="-apple-system, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
+  <title id="title">An evaluation or a gate is a client of the Run Store</title>
+  <desc id="desc">The worker's host holds the client process, the Run Store, the worker, the sandboxes, the artifact directory and the output directory. In the client process, Evaluation or Gate builds group requests and hands them to Groups and the search Coordinator, which submit the jobs to the Run Store API over HTTP, poll them and stop them. The Run Store API keeps the jobs in PostgreSQL. The worker claims the jobs in PostgreSQL and finishes them there. The worker starts the sandboxes, on podman or a microVM, and runs the agent and the verifier in them. The worker sends the model requests of rollouts and reviews to the model endpoint, outside the host. The worker writes journals, verifier logs and review plans into its artifact directory, and the client process reads them there. The client process writes summary.json, the group documents in groups/ and the plans into the output directory. For bpo and shepherd, the selector in the client process sends its own requests to the model endpoint.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10Z" fill="#3A5047"/>
+    </marker>
+    <style>
+      .title { font-size: 26px; font-weight: 700; fill: #2F443E; }
+      .lead { font-size: 16px; fill: #63766F; }
+      .name { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 16px; font-weight: 700; fill: #2F443E; text-anchor: middle; }
+      .plain { font-size: 17px; font-weight: 700; fill: #2F443E; text-anchor: middle; }
+      .note { font-size: 15px; fill: #63766F; text-anchor: middle; }
+      .code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 14px; fill: #63766F; text-anchor: middle; }
+      .frame { fill: none; stroke: #63766F; stroke-width: 1.5; }
+      .framelabel { font-size: 15px; font-weight: 700; fill: #63766F; }
+      .label { font-size: 15px; fill: #2F443E; }
+      .box { fill: #E6F1F7; stroke: #587E96; stroke-width: 2; }
+      .files { fill: #E4E3D4; stroke: #63766F; stroke-width: 2; }
+      .external { fill: #FFE7A9; stroke: #B28745; stroke-width: 2; }
+      .edge { fill: none; stroke: #3A5047; stroke-width: 2; marker-end: url(#arrow); }
+      .file { fill: none; stroke: #3A5047; stroke-width: 2; stroke-dasharray: 8 6; marker-end: url(#arrow); }
+      .rule { stroke: #E5E2D2; stroke-width: 2; }
+      .source { font-size: 14px; fill: #63766F; }
+    </style>
+  </defs>
+
+  <rect x="1" y="1" width="1058" height="898" rx="16" fill="#FFFDF6" stroke="#E5E2D2" stroke-width="2"/>
+  <text class="title" x="30" y="48">An evaluation or a gate is a client of the Run Store</text>
+  <text class="lead" x="30" y="78">A solid arrow is a call or a request. A dashed arrow is a file that one side writes and the other reads.</text>
+
+  <!-- The worker's host -->
+  <rect class="frame" x="30" y="132" width="810" height="680" rx="14"/>
+  <text class="framelabel" x="824" y="798" text-anchor="end">the worker's host</text>
+
+  <!-- Client process -->
+  <rect class="frame" x="50" y="160" width="280" height="240" rx="12"/>
+  <text class="framelabel" x="66" y="184">client process</text>
+  <rect class="box" x="70" y="198" width="240" height="64" rx="10"/>
+  <text class="name" x="190" y="225">Evaluation, Gate</text>
+  <text class="note" x="190" y="249">build group requests</text>
+  <path class="edge" d="M190 262 V310"/>
+  <text class="label" x="200" y="292">group request</text>
+  <rect class="box" x="70" y="312" width="240" height="64" rx="10"/>
+  <text class="name" x="190" y="339">Groups, Coordinator</text>
+  <text class="note" x="190" y="363">submit, follow the jobs</text>
+
+  <!-- Run Store -->
+  <rect class="frame" x="385" y="290" width="200" height="270" rx="12"/>
+  <text class="framelabel" x="401" y="314">Run Store</text>
+  <rect class="box" x="400" y="326" width="170" height="64" rx="10"/>
+  <text class="plain" x="485" y="353">API</text>
+  <text class="code" x="485" y="377">sprout.runstore</text>
+  <path class="edge" d="M310 358 H398"/>
+  <text class="label" x="357" y="349" text-anchor="middle">HTTP</text>
+  <path class="edge" d="M485 390 V474"/>
+  <text class="label" x="495" y="438">jobs</text>
+  <rect class="box" x="400" y="476" width="170" height="64" rx="10"/>
+  <text class="plain" x="485" y="503">PostgreSQL</text>
+  <text class="note" x="485" y="527">jobs, points</text>
+
+  <!-- Worker and sandboxes -->
+  <rect class="box" x="650" y="476" width="170" height="64" rx="10"/>
+  <text class="plain" x="735" y="503">worker</text>
+  <text class="code" x="735" y="527">sprout.worker</text>
+  <path class="edge" d="M650 508 H572"/>
+  <text class="label" x="611" y="498" text-anchor="middle">claim,</text>
+  <text class="label" x="611" y="530" text-anchor="middle">finish</text>
+  <rect class="box" x="650" y="198" width="170" height="64" rx="10"/>
+  <text class="plain" x="735" y="225">sandboxes</text>
+  <text class="note" x="735" y="249">podman, microVM</text>
+  <path class="edge" d="M735 476 V264"/>
+  <text class="label" x="725" y="350" text-anchor="end">runs the agent</text>
+  <text class="label" x="725" y="370" text-anchor="end">and the verifier</text>
+
+  <!-- Model endpoint, outside the host -->
+  <rect class="external" x="870" y="198" width="160" height="64" rx="10"/>
+  <text class="plain" x="950" y="225">model</text>
+  <text class="note" x="950" y="249">endpoint</text>
+  <path class="edge" d="M820 508 H950 V264"/>
+  <text class="label" x="960" y="380">rollout and</text>
+  <text class="label" x="960" y="400">review</text>
+  <text class="label" x="960" y="420">requests</text>
+  <path class="edge" d="M190 160 V112 H950 V196"/>
+  <text class="label" x="560" y="104" text-anchor="middle">bpo, shepherd: the selector's requests</text>
+
+  <!-- Files -->
+  <rect class="files" x="470" y="620" width="350" height="64" rx="10"/>
+  <text class="plain" x="645" y="647">artifact directory</text>
+  <text class="note" x="645" y="671">journals, verifier logs, review plans</text>
+  <path class="file" d="M735 540 V618"/>
+  <text class="label" x="745" y="584">writes</text>
+  <path class="file" d="M470 652 H250 V402"/>
+  <text class="label" x="260" y="560">reads</text>
+
+  <rect class="files" x="50" y="720" width="280" height="64" rx="10"/>
+  <text class="plain" x="190" y="747">output directory</text>
+  <text class="note" x="190" y="771">summary.json, groups/, plans</text>
+  <path class="file" d="M110 400 V718"/>
+  <text class="label" x="120" y="560">writes</text>
+
+  <!-- Legend -->
+  <path class="edge" d="M30 846 H78"/>
+  <text class="lead" x="88" y="851">a call or a request</text>
+  <path class="file" d="M280 846 H328"/>
+  <text class="lead" x="338" y="851">a file: written, then read</text>
+  <rect class="files" x="580" y="836" width="22" height="20" rx="4"/>
+  <text class="lead" x="610" y="851">a directory</text>
+  <rect class="external" x="740" y="836" width="22" height="20" rx="4"/>
+  <text class="lead" x="770" y="851">outside the host</text>
+  <text class="source" x="30" y="882">Source: src/sprout/eval/ (evaluate.py, gate.py, groups.py), src/sprout/search/coordinator.py</text>
+</svg>

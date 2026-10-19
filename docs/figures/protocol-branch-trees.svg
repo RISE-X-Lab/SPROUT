@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="990" viewBox="0 0 1000 990" role="img" aria-labelledby="title desc" font-family="-apple-system, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
+  <title id="title">Where each branch method branches, under the default budget of 8 rollouts</title>
+  <desc id="desc">Three fork trees over the same failed parent, attempt-1. Each horizontal line is a rollout, time runs to the right, and a dot is a checkpoint. sprout: before each round, a review job reads every rollout so far. In round 1, the reviewer picks up to 4 checkpoints on the parent, and a branch starts at each one with an assistant turn that the reviewer wrote. In round 2, the reviewer picks up to 3 checkpoints on any rollout so far, here on round-1 branches. The branches of a round run at the same time, and the rounds stop at the first resolved rollout. bpo: the selector scores the checkpoints of the parent by first-token entropy and takes up to 7 of them, at least 64 completion tokens apart. It deals 7 branches over them in turn, here 2, 2, 2 and 1 over 4 points. Each branch samples from the restored state with no guidance. shepherd: a meta-agent picks one checkpoint of the parent, and all 7 branches start there with no guidance. bpo and shepherd branches run one at a time and stop at the first resolved one.</desc>
+  <defs>
+    <style>
+      .title { font-size: 24px; font-weight: 700; fill: #2F443E; }
+      .lead { font-size: 15px; fill: #63766F; }
+      .method { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 18px; font-weight: 700; fill: #2F443E; }
+      .note { font-size: 15px; fill: #63766F; }
+      .small { font-size: 15px; fill: #2F443E; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 14px; fill: #2F443E; }
+      .r1 { font-size: 15px; font-weight: 700; fill: #587E96; }
+      .r2 { font-size: 15px; font-weight: 700; fill: #278065; }
+      .parent { fill: none; stroke: #3A5047; stroke-width: 4; stroke-linecap: round; }
+      .branch { fill: none; stroke: #587E96; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+      .branch2 { fill: none; stroke: #278065; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+      .ckpt { fill: #FFFDF6; stroke: #3A5047; stroke-width: 2; }
+      .picked { fill: #3A5047; stroke: #3A5047; stroke-width: 2; }
+      .rule { stroke: #E5E2D2; stroke-width: 2; }
+      .source { font-size: 13px; fill: #63766F; }
+    </style>
+  </defs>
+
+  <rect x="1" y="1" width="998" height="988" rx="16" fill="#FFFDF6" stroke="#E5E2D2" stroke-width="2"/>
+  <text class="title" x="40" y="46">Where each branch method branches, with the default budget of 8</text>
+  <text class="lead" x="40" y="78">Each horizontal line is a rollout, and time runs to the right. A dot is a checkpoint.</text>
+  <text class="lead" x="40" y="100">A filled dot is a checkpoint that the method picked. A branch leaves its rollout there.</text>
+
+  <!-- ===== sprout ===== -->
+  <text class="method" x="40" y="150">sprout</text>
+  <text class="note" x="40" y="176">a reviewer picks</text>
+  <text class="note" x="40" y="196">the checkpoints and</text>
+  <text class="note" x="40" y="216">writes the first</text>
+  <text class="note" x="40" y="236">assistant turn of</text>
+  <text class="note" x="40" y="256">each branch</text>
+
+  <text class="mono" x="270" y="136">attempt-1, the parent</text>
+  <path class="parent" d="M270 150 H900"/>
+  <text class="small" x="912" y="155">failed</text>
+
+  <!-- round 1: four branches from the parent -->
+  <path class="branch" d="M660 150 V180 H820"/>
+  <path class="branch" d="M540 150 V205 H700"/>
+  <path class="branch" d="M420 150 V230 H580"/>
+  <path class="branch" d="M300 150 V255 H460"/>
+  <text class="r1" x="832" y="185">round 1, up to 4</text>
+
+  <!-- round 2: three branches from round-1 rollouts -->
+  <path class="branch2" d="M760 180 V280 H900"/>
+  <path class="branch2" d="M640 205 V305 H780"/>
+  <path class="branch2" d="M520 230 V330 H660"/>
+  <text class="r2" x="792" y="310">round 2, up to 3</text>
+
+  <!-- checkpoints of the parent -->
+  <circle class="ckpt" cx="360" cy="150" r="5"/>
+  <circle class="ckpt" cx="480" cy="150" r="5"/>
+  <circle class="ckpt" cx="600" cy="150" r="5"/>
+  <circle class="ckpt" cx="720" cy="150" r="5"/>
+  <circle class="ckpt" cx="780" cy="150" r="5"/>
+  <circle class="ckpt" cx="840" cy="150" r="5"/>
+  <circle class="picked" cx="300" cy="150" r="6"/>
+  <circle class="picked" cx="420" cy="150" r="6"/>
+  <circle class="picked" cx="540" cy="150" r="6"/>
+  <circle class="picked" cx="660" cy="150" r="6"/>
+  <!-- checkpoints of round-1 branches that round 2 picked -->
+  <circle class="picked" cx="760" cy="180" r="6"/>
+  <circle class="picked" cx="640" cy="205" r="6"/>
+  <circle class="picked" cx="520" cy="230" r="6"/>
+
+  <text class="small" x="270" y="372">Before each round, a review job reads every rollout so far.</text>
+  <text class="small" x="270" y="394">The branches of a round run at the same time. The rounds stop at the first resolved one.</text>
+
+  <line class="rule" x1="30" y1="420" x2="970" y2="420"/>
+
+  <!-- ===== bpo ===== -->
+  <text class="method" x="40" y="470">bpo</text>
+  <text class="note" x="40" y="496">the checkpoints with</text>
+  <text class="note" x="40" y="516">the highest first-token</text>
+  <text class="note" x="40" y="536">entropy, at least 64</text>
+  <text class="note" x="40" y="556">completion tokens</text>
+  <text class="note" x="40" y="576">apart, up to 7</text>
+
+  <text class="mono" x="270" y="456">attempt-1, the parent</text>
+  <path class="parent" d="M270 470 H900"/>
+  <text class="small" x="912" y="475">failed</text>
+
+  <path class="branch" d="M780 470 V495 H900"/>
+  <path class="branch" d="M660 470 V520 H790"/>
+  <path class="branch" d="M660 470 V540 H790"/>
+  <path class="branch" d="M480 470 V565 H610"/>
+  <path class="branch" d="M480 470 V585 H610"/>
+  <path class="branch" d="M360 470 V610 H490"/>
+  <path class="branch" d="M360 470 V630 H490"/>
+
+  <circle class="ckpt" cx="300" cy="470" r="5"/>
+  <circle class="ckpt" cx="420" cy="470" r="5"/>
+  <circle class="ckpt" cx="540" cy="470" r="5"/>
+  <circle class="ckpt" cx="600" cy="470" r="5"/>
+  <circle class="ckpt" cx="720" cy="470" r="5"/>
+  <circle class="ckpt" cx="840" cy="470" r="5"/>
+  <circle class="picked" cx="360" cy="470" r="6"/>
+  <circle class="picked" cx="480" cy="470" r="6"/>
+  <circle class="picked" cx="660" cy="470" r="6"/>
+  <circle class="picked" cx="780" cy="470" r="6"/>
+
+  <text class="small" x="270" y="672">7 branches, dealt over the picked checkpoints in turn, with no guidance.</text>
+  <text class="small" x="270" y="694">They run one at a time and stop at the first resolved one.</text>
+
+  <line class="rule" x1="30" y1="720" x2="970" y2="720"/>
+
+  <!-- ===== shepherd ===== -->
+  <text class="method" x="40" y="770">shepherd</text>
+  <text class="note" x="40" y="796">a meta-agent picks</text>
+  <text class="note" x="40" y="816">one checkpoint</text>
+
+  <text class="mono" x="270" y="756">attempt-1, the parent</text>
+  <path class="parent" d="M270 770 H900"/>
+  <text class="small" x="912" y="775">failed</text>
+
+  <path class="branch" d="M600 770 V792 H760"/>
+  <path class="branch" d="M600 770 V810 H760"/>
+  <path class="branch" d="M600 770 V828 H760"/>
+  <path class="branch" d="M600 770 V846 H760"/>
+  <path class="branch" d="M600 770 V864 H760"/>
+  <path class="branch" d="M600 770 V882 H760"/>
+  <path class="branch" d="M600 770 V900 H760"/>
+
+  <circle class="ckpt" cx="300" cy="770" r="5"/>
+  <circle class="ckpt" cx="360" cy="770" r="5"/>
+  <circle class="ckpt" cx="420" cy="770" r="5"/>
+  <circle class="ckpt" cx="480" cy="770" r="5"/>
+  <circle class="ckpt" cx="540" cy="770" r="5"/>
+  <circle class="ckpt" cx="660" cy="770" r="5"/>
+  <circle class="ckpt" cx="720" cy="770" r="5"/>
+  <circle class="ckpt" cx="780" cy="770" r="5"/>
+  <circle class="ckpt" cx="840" cy="770" r="5"/>
+  <circle class="picked" cx="600" cy="770" r="6"/>
+
+  <text class="small" x="772" y="851">7 branches,</text>
+  <text class="small" x="772" y="871">no guidance</text>
+  <text class="small" x="270" y="938">They run one at a time and stop at the first resolved one.</text>
+
+  <text class="source" x="40" y="974">Source: _sprout and _sample in src/sprout/eval/evaluate.py, bpo_select and shepherd_select in src/sprout/eval/policies.py</text>
+</svg>

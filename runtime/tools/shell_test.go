@@ -1,144 +1,185 @@
-package tools
+// Tests of the shell tool. The harness parses its Output in two ways: bare stdout for a plain
+// success, and the CommandOutcome JSON for any other outcome (src/sprout_sandbox/result.py).
+
+package tools_test
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
+	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
+
+	"github.com/dreamyang-liu/sprout/runtime/tools"
 )
 
-// countProcessesMatching counts live processes whose cmdline contains needle,
-// skipping the scanning process itself.
-func countProcessesMatching(t *testing.T, needle string) int {
+// assertOutcome checks that a shell result has the success wantSuccess, no Error, and an Output
+// that is the JSON value wantJSON.
+func assertOutcome(t *testing.T, got tools.Result, wantSuccess bool, wantJSON string) {
 	t.Helper()
-	entries, err := os.ReadDir("/proc")
+	var gotValue, wantValue any
+	if err := json.Unmarshal([]byte(got.Output), &gotValue); err != nil {
+		t.Fatalf("Output %q is not JSON: %v", got.Output, err)
+	}
+	if err := json.Unmarshal([]byte(wantJSON), &wantValue); err != nil {
+		t.Fatalf("the expected outcome is not JSON: %v", err)
+	}
+	if got.Success != wantSuccess || got.Error != "" || !reflect.DeepEqual(gotValue, wantValue) {
+		t.Errorf("result = Success %v, Error %q, Output\n%s\nwant Success %v, no Error, Output\n%s",
+			got.Success, got.Error, got.Output, wantSuccess, wantJSON)
+	}
+}
+
+// decodeOutcome is the CommandOutcome that a shell result carries in its Output.
+func decodeOutcome(t *testing.T, got tools.Result) tools.CommandOutcome {
+	t.Helper()
+	var outcome tools.CommandOutcome
+	if err := json.Unmarshal([]byte(got.Output), &outcome); err != nil {
+		t.Fatalf("Output %q is not a CommandOutcome: %v", got.Output, err)
+	}
+	return outcome
+}
+
+// emit is a shell command that writes n bytes of char to stdout.
+func emit(char byte, n int) string {
+	return fmt.Sprintf("head -c %d /dev/zero | tr '\\0' '%c'", n, char)
+}
+
+// processEnds waits up to 5 s for the process pid to end, and reports whether it did. A zombie
+// counts as ended, because it runs nothing and only waits for its parent to reap it.
+func processEnds(pid int) bool {
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		stat, err := os.ReadFile("/proc/" + strconv.Itoa(pid) + "/stat")
+		if errors.Is(err, fs.ErrNotExist) || strings.Contains(string(stat), ") Z ") {
+			return true
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	return false
+}
+
+func intPointer(n int) *int { return &n }
+
+func TestAPlainSuccessIsReportedAsBareStdout(t *testing.T) {
+	got := (&tools.ShellTool{}).Execute(map[string]any{"command": "echo hello"})
+
+	assertResult(t, got, tools.Result{Success: true, Output: "hello\n"})
+}
+
+func TestAnyOtherOutcomeIsReportedAsTheCommandOutcomeJSON(t *testing.T) {
+	cases := []struct {
+		name        string
+		args        map[string]any
+		wantSuccess bool
+		wantJSON    string
+	}{
+		{"a non-zero exit", map[string]any{"command": "echo partial; exit 7"}, false,
+			`{"stdout": "partial\n", "stderr": "", "exit_code": 7, "running": false, "timed_out": false,
+			  "stdout_bytes": 8, "stderr_bytes": 0, "stdout_truncated": false, "stderr_truncated": false,
+			  "max_per_stream": 15728640}`},
+		{"output on stderr", map[string]any{"command": "echo warn >&2"}, true,
+			`{"stdout": "", "stderr": "warn\n", "exit_code": 0, "running": false, "timed_out": false,
+			  "stdout_bytes": 0, "stderr_bytes": 5, "stdout_truncated": false, "stderr_truncated": false,
+			  "max_per_stream": 15728640}`},
+		// SIGKILL ends a timed-out command, and a death by signal N is exit code 128+N.
+		{"a timeout", map[string]any{"command": "sleep 30", "timeout": 1.0}, false,
+			`{"stdout": "", "stderr": "", "exit_code": 137, "running": false, "timed_out": true,
+			  "stdout_bytes": 0, "stderr_bytes": 0, "stdout_truncated": false, "stderr_truncated": false,
+			  "max_per_stream": 15728640}`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := (&tools.ShellTool{}).Execute(tc.args)
+
+			assertOutcome(t, got, tc.wantSuccess, tc.wantJSON)
+		})
+	}
+}
+
+func TestATimeoutAlsoKillsTheBackgroundProcessesOfTheCommand(t *testing.T) {
+	t.Parallel()
+	pidFile := filepath.Join(t.TempDir(), "pid")
+
+	(&tools.ShellTool{}).Execute(map[string]any{
+		"command": "sleep 300 & echo $! > " + pidFile + "; wait",
+		"timeout": 1.0,
+	})
+
+	pid, err := strconv.Atoi(strings.TrimSpace(readFile(t, pidFile)))
 	if err != nil {
-		t.Skipf("no /proc on this platform: %v", err)
+		t.Fatalf("the command wrote no pid: %v", err)
 	}
-	self := strconv.Itoa(os.Getpid())
-	count := 0
-	for _, entry := range entries {
-		if !entry.IsDir() || entry.Name() == self {
-			continue
-		}
-		if _, err := strconv.Atoi(entry.Name()); err != nil {
-			continue
-		}
-		raw, err := os.ReadFile("/proc/" + entry.Name() + "/cmdline")
-		if err != nil {
-			continue // exited between listing and reading
-		}
-		if strings.Contains(strings.ReplaceAll(string(raw), "\x00", " "), needle) {
-			count++
-		}
-	}
-	return count
-}
-
-func TestForegroundTimeoutKillsDescendantsAndReturns(t *testing.T) {
-	// CommandContext's default cancellation kills only the direct `sh`. A
-	// backgrounded descendant then keeps stdout/stderr open, so cmd.Run waits
-	// forever even though the requested timeout elapsed.
-	marker := fmt.Sprintf("SPROUT_TIMEOUT_PROBE_%d_%d", os.Getpid(), time.Now().UnixNano())
-	start := time.Now()
-	result := (&ShellTool{}).Execute(map[string]any{
-		"command": "sh -c 'sleep 7117 # " + marker + "' & wait",
-		"timeout": float64(1),
-	})
-	elapsed := time.Since(start)
-
-	if result.Success {
-		t.Fatal("a timed-out command must fail")
-	}
-	if elapsed > 4*time.Second {
-		t.Fatalf("timeout returned after %v, want no more than 4s", elapsed)
-	}
-	var outcome struct {
-		ExitCode *int `json:"exit_code"`
-		TimedOut bool `json:"timed_out"`
-		Running  bool `json:"running"`
-	}
-	if err := json.Unmarshal([]byte(result.Output), &outcome); err != nil {
-		t.Fatalf("decode timeout outcome %q: %v", result.Output, err)
-	}
-	if !outcome.TimedOut || outcome.Running {
-		t.Fatalf("timeout outcome = %+v, want timed_out and not running", outcome)
-	}
-	// 128+signal, the convention every shell reports for a signalled death.
-	if outcome.ExitCode == nil || *outcome.ExitCode != 128+9 {
-		t.Fatalf("exit_code = %v, want %d", outcome.ExitCode, 128+9)
-	}
-	if n := countProcessesMatching(t, marker); n != 0 {
-		t.Fatalf("%d descendant(s) survived the foreground timeout", n)
-	}
-
-	// A leaked pipe or process must not poison the runtime after the timeout.
-	if followUp := (&ShellTool{}).Execute(map[string]any{
-		"command": "printf follow-up-ok",
-		"timeout": float64(2),
-	}); !followUp.Success || followUp.Output != "follow-up-ok" {
-		t.Fatalf("follow-up shell failed after timeout: %#v", followUp)
+	t.Cleanup(func() { syscall.Kill(pid, syscall.SIGKILL) })
+	if !processEnds(pid) {
+		t.Errorf("the background sleep (pid %d) still runs after the timeout of its command", pid)
 	}
 }
 
-// TestForegroundFailureStillFails: a command that ran and came out non-zero is a
-// failed tool call, because for `shell` the command's success IS the tool's
-// success -- and the exit code travels in the outcome, not in Error.
-func TestForegroundFailureStillFails(t *testing.T) {
-	r := (&ShellTool{}).Execute(map[string]any{"command": "exit 7"})
-	if r.Success {
-		t.Fatal("a command exiting 7 must report failure")
-	}
-	if r.Error != "" {
-		t.Fatalf("a failed command is an observation, not a tool error: %q", r.Error)
-	}
-	var snap struct {
-		ExitCode *int `json:"exit_code"`
-	}
-	if err := json.Unmarshal([]byte(r.Output), &snap); err != nil {
-		t.Fatalf("decode: %v", err)
-	}
-	if snap.ExitCode == nil || *snap.ExitCode != 7 {
-		t.Fatalf("exit_code = %v, want 7", snap.ExitCode)
+func TestACommandRunsInItsWorkingDir(t *testing.T) {
+	dir := t.TempDir()
+
+	(&tools.ShellTool{}).Execute(map[string]any{"command": "echo here > marker", "working_dir": dir})
+
+	if got := readFile(t, filepath.Join(dir, "marker")); got != "here\n" {
+		t.Errorf("marker in working_dir = %q, want %q", got, "here\n")
 	}
 }
 
-// TestOutputBeyondTheBudgetIsClippedAndSaysSo pins the one output knob the
-// harness drives (`max_output_bytes`, from the Harbor exec path) and the flags
-// it reads back: a clipped success is not bare stdout, it carries the outcome
-// with `stdout_truncated` set, and both ends of the output survive.
-func TestOutputBeyondTheBudgetIsClippedAndSaysSo(t *testing.T) {
-	r := (&ShellTool{}).Execute(map[string]any{
-		"command":          "seq 1 200000",
-		"max_output_bytes": float64(4096),
-	})
-	if !r.Success {
-		t.Fatalf("command failed: %#v", r)
+func TestEachStreamIsBoundedOnItsOwnAndTheOutcomeSaysWhichWasCut(t *testing.T) {
+	command := emit('h', 409) + "; " + emit('m', 1976) + "; " + emit('t', 615) + "; " + emit('e', 1000) + " >&2"
+
+	got := (&tools.ShellTool{}).Execute(map[string]any{"command": command, "max_output_bytes": 1024.0})
+
+	want := tools.CommandOutcome{
+		Stdout: strings.Repeat("h", 409) +
+			"\n... [output truncated: 3000 bytes total, showing first 409 bytes and last 615 bytes] ...\n" +
+			strings.Repeat("t", 615),
+		Stderr:          strings.Repeat("e", 1000),
+		ExitCode:        intPointer(0),
+		StdoutBytes:     3000,
+		StderrBytes:     1000,
+		StdoutTruncated: true,
+		StderrTruncated: false,
+		MaxPerStream:    1024,
 	}
-	var outcome struct {
-		Stdout          string `json:"stdout"`
-		StdoutBytes     int64  `json:"stdout_bytes"`
-		StdoutTruncated bool   `json:"stdout_truncated"`
-		StderrTruncated bool   `json:"stderr_truncated"`
-		MaxPerStream    int    `json:"max_per_stream"`
+	if outcome := decodeOutcome(t, got); !got.Success || !reflect.DeepEqual(outcome, want) {
+		t.Errorf("result = Success %v, outcome\n%+v\nwant Success true, outcome\n%+v", got.Success, outcome, want)
 	}
-	if err := json.Unmarshal([]byte(r.Output), &outcome); err != nil {
-		t.Fatalf("a clipped success must carry the outcome schema, got %.80q: %v", r.Output, err)
+}
+
+func TestTheBudgetOfAStreamIsMaxOutputBytesClampedTo1KiBThrough64MiB(t *testing.T) {
+	// "exit 1" makes each result an outcome, which reports the budget. The values are those on
+	// each side of 0 (below it, the default of 15 MiB applies), 1024 and 64 MiB.
+	cases := []struct {
+		name string
+		args map[string]any
+		want int
+	}{
+		{"absent", map[string]any{"command": "exit 1"}, 15728640},
+		{"0", map[string]any{"command": "exit 1", "max_output_bytes": 0.0}, 15728640},
+		{"1", map[string]any{"command": "exit 1", "max_output_bytes": 1.0}, 1024},
+		{"1023", map[string]any{"command": "exit 1", "max_output_bytes": 1023.0}, 1024},
+		{"1024", map[string]any{"command": "exit 1", "max_output_bytes": 1024.0}, 1024},
+		{"64 MiB", map[string]any{"command": "exit 1", "max_output_bytes": 67108864.0}, 67108864},
+		{"64 MiB + 1", map[string]any{"command": "exit 1", "max_output_bytes": 67108865.0}, 67108864},
 	}
-	if !outcome.StdoutTruncated || outcome.StderrTruncated {
-		t.Fatalf("outcome = %+v, want stdout clipped and stderr not", outcome)
-	}
-	if outcome.MaxPerStream != 4096 || outcome.StdoutBytes <= 4096 {
-		t.Fatalf("outcome = %+v, want a 4096-byte budget the output exceeded", outcome)
-	}
-	if !strings.HasPrefix(outcome.Stdout, "1\n") || !strings.HasSuffix(strings.TrimRight(outcome.Stdout, "\n"), "200000") {
-		t.Fatalf("clipped output should keep the first line and the last, got %.60q ... %.60q",
-			outcome.Stdout, outcome.Stdout[len(outcome.Stdout)-60:])
-	}
-	if !strings.Contains(outcome.Stdout, "truncated") {
-		t.Fatalf("clipped output must say so in the text too: %.200q", outcome.Stdout)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := (&tools.ShellTool{}).Execute(tc.args)
+
+			if budget := decodeOutcome(t, got).MaxPerStream; budget != tc.want {
+				t.Errorf("max_per_stream = %d, want %d", budget, tc.want)
+			}
+		})
 	}
 }

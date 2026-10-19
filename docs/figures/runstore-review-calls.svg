@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="630" viewBox="0 0 1080 630" role="img" aria-labelledby="title desc" font-family="-apple-system, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
+  <title id="title">Calls of a review job</title>
+  <desc id="desc">Two dependency graphs of the calls of one review over two failed attempts, with two points and two candidates. Top, one point review, the default: analyst-1 and analyst-2 each send their report to points, which sends point 1 to point1-candidate1 and point1-candidate2, and point 2 to point2-candidate1 and point2-candidate2. Bottom, with points_per_attempt: analyst-1 sends its report to points-1, which sends its point to point1.1-candidate1 and point1.1-candidate2. analyst-2 sends its report to points-2, which sends its point to point2.1-candidate1 and point2.1-candidate2. The two chains do not wait for each other.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10Z" fill="#3A5047"/>
+    </marker>
+    <style>
+      .title { font-size: 24px; font-weight: 700; fill: #2F443E; }
+      .lead { font-size: 14px; fill: #63766F; }
+      .panel { font-size: 15px; font-weight: 700; fill: #2F443E; }
+      .stage { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 13px; fill: #63766F; text-anchor: middle; }
+      .call { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 14px; fill: #2F443E; text-anchor: middle; }
+      .cond { font-size: 13px; fill: #63766F; }
+      .mid { text-anchor: middle; }
+      .box { fill: #E6F1F7; stroke: #587E96; stroke-width: 2; }
+      .edge { fill: none; stroke: #3A5047; stroke-width: 2; marker-end: url(#arrow); }
+      .line { fill: none; stroke: #3A5047; stroke-width: 2; }
+    </style>
+  </defs>
+
+  <rect x="1" y="1" width="1078" height="628" rx="16" fill="#FFFDF6" stroke="#E5E2D2" stroke-width="2"/>
+  <text class="title" x="40" y="48">Calls of a review job</text>
+  <text class="lead" x="40" y="76">Each arrow points from a call to a call that needs its answer. Calls without a path between them run side by side.</text>
+
+  <!-- Stage headers: the Call stages of worker/jobs/review/job.py -->
+  <text class="stage" x="145" y="112">ANALYSIS</text>
+  <text class="stage" x="470" y="112">POINTS</text>
+  <text class="stage" x="860" y="112">CANDIDATE</text>
+
+  <!-- Panel A: one point review over every analysis -->
+  <rect x="24" y="124" width="1032" height="206" rx="12" fill="#F4F2E8" stroke="#E5E2D2" stroke-width="1.5"/>
+  <text class="panel" x="40" y="148">One point review (the default)</text>
+
+  <rect class="box" x="60" y="170" width="170" height="34" rx="8"/>
+  <text class="call" x="145" y="192">analyst-1</text>
+  <rect class="box" x="60" y="250" width="170" height="34" rx="8"/>
+  <text class="call" x="145" y="272">analyst-2</text>
+
+  <rect class="box" x="390" y="210" width="160" height="34" rx="8"/>
+  <text class="call" x="470" y="232">points</text>
+
+  <rect class="box" x="760" y="158" width="200" height="32" rx="8"/>
+  <text class="call" x="860" y="179">point1-candidate1</text>
+  <rect class="box" x="760" y="200" width="200" height="32" rx="8"/>
+  <text class="call" x="860" y="221">point1-candidate2</text>
+  <rect class="box" x="760" y="246" width="200" height="32" rx="8"/>
+  <text class="call" x="860" y="267">point2-candidate1</text>
+  <rect class="box" x="760" y="288" width="200" height="32" rx="8"/>
+  <text class="call" x="860" y="309">point2-candidate2</text>
+
+  <path class="edge" d="M230 187 H320 V220 H388"/>
+  <text class="cond mid" x="275" y="179">report</text>
+  <path class="edge" d="M230 267 H320 V234 H388"/>
+  <text class="cond mid" x="275" y="259">report</text>
+
+  <path class="line" d="M550 220 H600 V195 H680"/>
+  <path class="edge" d="M680 195 V174 H758"/>
+  <path class="edge" d="M680 195 V216 H758"/>
+  <text class="cond mid" x="640" y="187">point 1</text>
+  <path class="line" d="M550 234 H600 V283 H680"/>
+  <path class="edge" d="M680 283 V262 H758"/>
+  <path class="edge" d="M680 283 V304 H758"/>
+  <text class="cond mid" x="640" y="275">point 2</text>
+
+  <!-- Panel B: points_per_attempt, one pipeline for each failed attempt -->
+  <rect x="24" y="346" width="1032" height="230" rx="12" fill="#F4F2E8" stroke="#E5E2D2" stroke-width="1.5"/>
+  <text x="40" y="370" xml:space="preserve"><tspan class="panel">With </tspan><tspan class="stage" style="text-anchor: start; font-size: 15px; font-weight: 700; fill: #2F443E;">points_per_attempt</tspan><tspan class="panel">: one pipeline for each failed attempt</tspan></text>
+
+  <rect class="box" x="60" y="397" width="170" height="34" rx="8"/>
+  <text class="call" x="145" y="419">analyst-1</text>
+  <rect class="box" x="390" y="397" width="160" height="34" rx="8"/>
+  <text class="call" x="470" y="419">points-1</text>
+  <rect class="box" x="750" y="378" width="220" height="32" rx="8"/>
+  <text class="call" x="860" y="399">point1.1-candidate1</text>
+  <rect class="box" x="750" y="418" width="220" height="32" rx="8"/>
+  <text class="call" x="860" y="439">point1.1-candidate2</text>
+
+  <path class="edge" d="M230 414 H388"/>
+  <text class="cond mid" x="309" y="406">report</text>
+  <path class="line" d="M550 414 H680"/>
+  <path class="edge" d="M680 414 V394 H748"/>
+  <path class="edge" d="M680 414 V434 H748"/>
+  <text class="cond mid" x="612" y="406">point 1.1</text>
+
+  <rect class="box" x="60" y="487" width="170" height="34" rx="8"/>
+  <text class="call" x="145" y="509">analyst-2</text>
+  <rect class="box" x="390" y="487" width="160" height="34" rx="8"/>
+  <text class="call" x="470" y="509">points-2</text>
+  <rect class="box" x="750" y="468" width="220" height="32" rx="8"/>
+  <text class="call" x="860" y="489">point2.1-candidate1</text>
+  <rect class="box" x="750" y="508" width="220" height="32" rx="8"/>
+  <text class="call" x="860" y="529">point2.1-candidate2</text>
+
+  <path class="edge" d="M230 504 H388"/>
+  <text class="cond mid" x="309" y="496">report</text>
+  <path class="line" d="M550 504 H680"/>
+  <path class="edge" d="M680 504 V484 H748"/>
+  <path class="edge" d="M680 504 V524 H748"/>
+  <text class="cond mid" x="612" y="496">point 2.1</text>
+
+  <text class="cond" x="40" y="606">Source: Call and _Review in src/sprout/worker/jobs/review/job.py. Two failed attempts, two candidates at each point.</text>
+</svg>

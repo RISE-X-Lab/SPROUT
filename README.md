@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.svg">
-    <img src="docs/assets/logo.svg" width="420" alt="sprout: branch an agent rollout from any step"/>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/figures/logo-dark.svg">
+    <img src="docs/figures/logo.svg" width="420" alt="sprout: branch an agent rollout from any step"/>
   </picture>
 </p>
 
@@ -11,9 +11,9 @@
 </p>
 
 <p align="center">
-  <a href="https://arxiv.org/abs/2610.14405"><img src="docs/assets/btn-paper.svg" height="40" alt="Paper on arXiv"></a>&nbsp;
-  <a href="https://rise-x-lab.github.io/SPROUT/"><img src="docs/assets/btn-project.svg" height="40" alt="Project page"></a>&nbsp;
-  <a href="#citation"><img src="docs/assets/btn-citation.svg" height="40" alt="Citation"></a>
+  <a href="https://arxiv.org/abs/2610.14405"><img src="docs/figures/btn-paper.svg" height="40" alt="Paper on arXiv"></a>&nbsp;
+  <a href="https://rise-x-lab.github.io/SPROUT/"><img src="docs/figures/btn-project.svg" height="40" alt="Project page"></a>&nbsp;
+  <a href="#citation"><img src="docs/figures/btn-citation.svg" height="40" alt="Citation"></a>
 </p>
 
 <p align="center">
@@ -24,171 +24,139 @@
   <a href="https://github.com/SWE-agent/mini-swe-agent"><img src="https://img.shields.io/badge/agent-mini--swe--agent-4BB85E.svg?style=flat-square&amp;labelColor=1F4A33" alt="Agent: mini-swe-agent"></a>
 </p>
 
+Sprout lets a coding agent go back to any turn of a rollout and continue from there, instead of
+starting over. At each turn, Sprout saves a checkpoint: a disk snapshot of the agent's sandbox,
+paired with the agent's history up to that turn. When a rollout fails, SPROUT, the method of the
+paper, reviews it, picks the checkpoints before the mistake and branches from them. Benchmark
+evaluation and RL training run as the same jobs, which workers claim from the Run Store.
+
 <p align="center">
-  <img src="docs/architecture.svg" width="1000" alt="Sprout architecture. A task and its verifier go to a strategy (SPROUT's analyst and reviewer), which queues rollout jobs in the Run Store; a worker claims a job and checkpoints every turn; a verifier grades the finished rollout, and its feedback informs the next attempt. Inside each worker, mini-swe-agent reaches the model through a gateway and the sandbox through ToolAccess and the Sprout runtime, on podman + btrfs or Firecracker / AgentENV. Below, branches grow from saved checkpoints C2 and C4 and pass where the original continuation failed; each checkpoint pairs the agent's context with an environment snapshot."/>
-</p>
-<p align="center">
-  <sub>A checkpoint pairs the agent's context with a snapshot of its sandbox. When a rollout fails,
-  SPROUT's analyst and reviewer pick the checkpoints before the mistake and branch from there.</sub>
+  <img src="docs/figures/overview.svg" width="1000" alt="An overview of Sprout. Across the top are the task sets of evaluation and RL, each with its verifier: DeepSWE, TerminalBench 2.1, SWE-bench Pro v2 HARD-51 and SWE-rebench V2. Below, five stages go from left to right. A coding task with its verifier goes to the search, where SPROUT's analyst and reviewer plan attempts and branches. The search runs in the evaluation or in the RL driver. It queues rollout, grade and review jobs in the Run Store, a job queue in PostgreSQL. A worker claims a rollout job and checkpoints every turn. A grade job runs the task's verifier in the kept sandbox or in a new one, with pass or fail, and the result goes back to the search for the next attempt. Inside each worker, a claim loop runs one child process per job. mini-swe-agent reaches the model endpoint through the model gateway, and reaches the sandbox through ToolAccess and the Sprout runtime, on podman with btrfs or on Firecracker with AgentENV. The checkpoints and the journal pair each state with the trace. The rollouts and their rewards go through the RL driver to Miles. At the bottom, a failed rollout of a task saves its progress at checkpoints C2 and C4. New branches grow from them, and two of the branches pass. Each checkpoint pairs the agent context, the messages and tool results, with the sandbox's disk at a turn boundary."/>
 </p>
 
 ## Quick start
 
-On a Linux host with Python 3.12 and Go 1.25:
+You need a Linux host with Python 3.12 and Go 1.25.
+
+### 1. Set up the host
 
 ```bash
 git clone https://github.com/dreamyang-liu/sprout.git sprout && cd sprout
-ops/setup_podman.sh                # podman 6 for this user, a btrfs store, .venv, the runtime binary
+ops/setup_podman.sh
 source .venv/bin/activate
-export OPENAI_BASE_URL=<url> OPENAI_API_KEY=<key>   # any OpenAI-compatible Chat Completions endpoint
-python -m sprout.harness run --model <model> --runtime-bin runtime/sprout-runtime \
-    --sandbox-image docker.io/library/python:3.11-slim --cwd /tmp --journal runs/first.jsonl \
-    "write fizzbuzz.py, run it, and check that 15 prints FizzBuzz"
-python -m sprout.inspect snapshots runs/first.jsonl            # every snapshot the run took
-python -m sprout.inspect export runs/first.jsonl -o first.md   # the trajectory as markdown
+python -m sprout.worker doctor
 ```
 
-`ops/setup_podman.sh` installs podman 6 under `~/.local/opt/podman`, apart from any
-distribution podman, and uses sudo only for packages, the subordinate id range, cgroup
-delegation and the btrfs store; everything after that is rootless. Each step is skipped when
-already done, and `--check` only reports. Every snapshot id listed there is a sandbox image: a second run
-with `--sandbox-image <snapshot id>` and the conversation up to it as `extra.native_prefix`
-is a branch. A provider that is not plain Chat Completions (a native messages API, a provider
-SDK) goes behind the bundled LiteLLM proxy, `python -m sprout.services init && python -m
-sprout.services up proxy`; see [model endpoints](docs/MODEL_ENDPOINTS.md).
+`ops/setup_podman.sh` installs these items, and skips each one that is already there:
 
-To retry a benchmark task with SPROUT, gate the task set first (its oracle must score 1 and
-doing nothing 0), then run the method on one task.
+- rootless podman 6, under `~/.local/opt/podman`
+- a btrfs store for the sandboxes, at `~/sprout-btrfs`
+- `.venv`, with the `mini`, `harbor` and `dev` extras
+- the runtime binary, `runtime/sprout-runtime`
+
+The script uses sudo only for the packages, the btrfs store and the cgroup and user id settings.
+`doctor` prints one line for each check of the host. If a check fails, it exits 1.
+
+### 2. Run one agent
 
 ```bash
-python -m sprout.methods.gate --tasks-dir ~/datasets/deep-swe/tasks \
-    --output runs/gate --runtime-bin runtime/sprout-runtime --workers 8
-python -m sprout.methods.evaluate --task-dir ~/datasets/deep-swe/tasks/<task> \
-    --dataset-digest sha256:... --preparation-manifest runs/prep.json \
-    --output runs/<task>-sprout --method sprout \
-    --model <model> --model-endpoint <url> --model-key-env OPENAI_API_KEY \
-    --runtime-bin runtime/sprout-runtime --rounds 2 --branches 4 3
-python -m sprout.inspect task runs/<task>-sprout          # the fork tree
+export OPENAI_BASE_URL=<url> OPENAI_API_KEY=<key>
+python -m sprout.worker run --model <model> --runtime-bin runtime/sprout-runtime \
+    --sandbox-image docker.io/library/python:3.11-slim --cwd /tmp --journal runs/first.jsonl \
+    "write fizzbuzz.py, run it, and check that 15 prints FizzBuzz"
+python -m ops.report snapshots runs/first.jsonl
+python -m ops.report export runs/first.jsonl -o runs/first.md
 ```
 
-`--rounds 2 --branches 4 3` is two review rounds, up to 4 branches and then 3.
-`--model-key-env` names the variable that holds the key. `--dataset-digest` and
-`--preparation-manifest` pin the task set; `python -m examples.qwen.run` computes both and
-runs the whole benchmark × method grid with one shared baseline per task (`--plan` prints
-the commands without calling a model). Tasks are the benchmarks' own task directories,
-cloned as in the [experiments guide](docs/EXPERIMENTS.md): every attempt on
-[DeepSWE](https://github.com/datacurve-ai/deep-swe),
-[TerminalBench 2.1](https://github.com/harbor-framework/terminal-bench-2-1) and
-[SWE-bench Pro v2 HARD-51](https://github.com/scaleapi/SWE-bench_Pro-os/tree/main/v2) is a
-[Harbor](https://github.com/harbor-framework/harbor) `Trial`, graded afterwards by the
-task's own verifier, in a separate sandbox for the patch-graded datasets. Leaked sandboxes,
-on either backend:
-`python -m sprout.harness reap`.
+The endpoint can be any OpenAI-compatible Chat Completions API. The run prints its outcome, and
+the journal `runs/first.jsonl` records each turn. `snapshots` lists the snapshot of each turn,
+and `export` writes the trajectory as Markdown. If your provider does not serve plain Chat
+Completions, put it behind the bundled
+[LiteLLM proxy](docs/MODEL_ENDPOINTS.md#providers-without-such-an-endpoint-the-litellm-proxy).
 
-## Checkpoint every turn
+### 3. Start the Run Store and a worker
 
-An orchestrator owns each run. It starts the sandbox, hands
-[mini-swe-agent](https://github.com/SWE-agent/mini-swe-agent) a single `bash` tool, and
-snapshots the sandbox's disk at the end of every model turn that ran a command. Each
-snapshot is paired with the agent's conversation at that point, and the pair is a
-**branch point**: start a run from the snapshot with that conversation and the agent picks
-up there, with the same past and a different future.
+Evaluation and RL submit their rollouts, grades and reviews as jobs to the Run Store. A worker
+on the same host claims and runs them.
 
-Every command counts as a change. The runtime's shell is stateless, and a command's effect
-is not in its text (`ls` reads, `ls > out` writes), so no turn that ran one goes uncaptured.
-
-- **podman** (the default). A rootless container whose root filesystem is a btrfs
-  subvolume; a snapshot is a read-only btrfs snapshot of it, taken while the container
-  runs. Stock podman 6 (the setup script installs it), no daemon, and a network of its own per
-  sandbox, so egress can be
-  switched while it runs.
-- **microvm** (`--backend microvm`). A Firecracker microVM served by
-  [AgentENV](https://github.com/dreamyang-liu/AgentENV); a snapshot is one layer on the VM
-  disk's chain, compacted on the server, and a memory snapshot is available where a grader
-  needs the VM's processes alive.
-
-A branch runs on its parent's backend, and on podman in its parent's store: the parent's
-snapshots are its branch points.
-
-Per-turn snapshots are disk-only, which keeps them cheap. Over a 113-task DeepSWE run on
-podman, with up to 80 sandboxes at once, 22,077 per-turn snapshots took a median of 153 ms
-and checkpointing was 2.4% of rollout wall time. On one long attempt, disk-only snapshots
-came to 37 MB per episode; with memory they came to 2.2–4.7 GB.
-See [snapshot cost](docs/SNAPSHOT_COST.md).
-
-## Branch from where it went wrong
-
-A failed attempt rarely goes wrong at its first step, and the agent usually believes it
-succeeded. Sampling again from the start repeats every step it got right. Sprout keeps the
-steps before the mistake and branches after them. Four methods spend the same rollout
-budget:
-
-| Method | Where it branches |
-|---|---|
-| `baseline` | nowhere: independent rollouts |
-| `sprout` | an analyst reads the failed trajectory and the verdict; a reviewer picks branch points and writes each branch's first turn |
-| `bpo` | the checkpoints where the policy's first-token entropy is highest |
-| `shepherd` | one restart point chosen by a meta-agent; siblings sample from it |
-
-In SPROUT, an analyst reads each failed attempt on its own: the trajectory, the patch and
-the grading verdict. A reviewer reads every analysis, picks branch points, each on its own
-attempt and step, and writes each branch's first assistant turn: probe, then fix, then
-verify. That turn runs through the normal tool path, so the branch's history and its disk
-agree, and the actor continues from it. Rounds repeat until a branch resolves the task or
-`--rounds` is spent. The analyst and reviewer can run on a stronger model than the actor
-(`--review-model`, `--review-endpoint`), and every analyst, reviewer and Shepherd prompt
-lives in [prompts.yaml](src/sprout/methods/prompts.yaml), whose sha256 each run records.
-
-The same branch points feed RL. [Run Store](docs/RUNSTORE.md) queues rollout, grade and
-review jobs on PostgreSQL and grades [SWE-rebench V2](https://github.com/SWE-rebench/SWE-rebench-V2)
-with a port of its official harness. The [RL driver](docs/RL_DRIVER.md) serves
-[Miles](https://github.com/radixark/miles) rollout groups from it and branches a failed
-rollout at the reviewer's points. Training export marks every message no policy sampled:
-the restored prefix and every inserted turn.
-
-## Layout
-
-```
-.
-├── src/sprout/harness/        # the agent runtime: one run, end to end
-├── src/sprout/harbor_plugin/  # Sprout as a Harbor environment and agent
-├── src/sprout/methods/        # evaluate (one task, one method), branching, prompts, gate
-├── src/sprout/inspect/        # read-only CLI over run output
-├── src/sprout/runstore/       # PostgreSQL job queue, worker, SWE-rebench grader, training export
-├── src/sprout/rl_driver/      # the RL trainer's (Miles) rollout adapter over the Run Store
-├── src/sprout/services/       # the host's long-running pieces: db, LiteLLM proxy, Run Store, RL driver
-├── src/sprout_sandbox/        # the sandbox clients: AgentENV microVMs and rootless podman
-├── runtime/                   # the Go binary inside every sandbox: one tool, shell, over JSON-RPC
-└── tests/  docs/  examples/  ops/
+```bash
+pip install -e ".[runstore]"
+python -m sprout.services init
+# In ~/.config/sprout/runstore.json, set each "store" to the absolute path of your btrfs store.
+export SPROUT_MODEL_API_KEY=<key>
+python -m sprout.services up runstore-api runstore-worker
+eval "$(python -m sprout.services env)"
 ```
 
-Imports point down only, and `tests/harness/test_layering.py` enforces it: the harness knows
-nothing about benchmarks, what counts as an answer lives in the task's verifier, and what to
-do when the answer is wrong lives in `methods`.
+`init` writes the configs and the secrets under `~/.config/sprout/`, and keeps each file that
+already exists. The worker passes `SPROUT_MODEL_API_KEY` to its jobs. The last command exports
+the Run Store token into the shell ([Services](docs/SERVICES.md)).
+
+### 4. Evaluate a task with SPROUT
+
+The tasks are the Harbor task directories of these benchmarks. Clone them as the
+[experiments guide](docs/EXPERIMENTS.md) says.
+
+- [DeepSWE](https://github.com/datacurve-ai/deep-swe)
+- [TerminalBench 2.1](https://github.com/harbor-framework/terminal-bench-2-1)
+- [SWE-bench Pro v2 HARD-51](https://github.com/scaleapi/SWE-bench_Pro-os/tree/main/v2)
+
+```bash
+python -m sprout.eval.gate --tasks-dir ~/datasets/deep-swe/tasks --output runs/gate --workers 8
+python -m sprout.eval.evaluate --task-dir ~/datasets/deep-swe/tasks/<task> \
+    --dataset-digest sha256:... --preparation-manifest runs/prep.json --output runs/<task>-sprout \
+    --method sprout --model <model> --model-endpoint <url> --model-key-env SPROUT_MODEL_API_KEY \
+    --rounds 2 --branches 4 3
+python -m ops.report task runs/<task>-sprout
+```
+
+The commands do these steps:
+
+1. The gate checks that the oracle of each task scores 1 and that doing nothing scores 0.
+2. The evaluation runs the agent on the task. If the attempt fails, the review picks
+   checkpoints, and the agent branches from them. `--rounds 2 --branches 4 3` gives two rounds,
+   with up to 4 branches and then up to 3.
+3. `ops.report task` prints the tree of the attempts and their rewards.
+
+`--dataset-digest` and `--preparation-manifest` pin the task set. `python -m examples.qwen.run`
+writes both, and runs a whole benchmark. The evaluation refuses a checkout with uncommitted
+changes, because its summary records the commit. [Evaluation](docs/EVALUATION.md) gives every
+option.
+
+### 5. Train with RL
+
+The [RL driver](docs/RL_DRIVER.md) serves [Miles](https://github.com/radixark/miles) rollout
+groups from the same jobs. Start it with `python -m sprout.services up rl-driver`, next to the
+worker of step 3. The worker grades
+[SWE-rebench V2](https://github.com/SWE-rebench/SWE-rebench-V2) tasks with a port of its official
+harness.
 
 ## Learn more
 
 | Guide | What it covers |
 | --- | --- |
-| [AGENTS.md](AGENTS.md) | The operational reference: layout and layering, what a run produces, branching in detail, cleanup, the pitfalls |
-| [Experiments](docs/EXPERIMENTS.md) | The benchmark × method grid: datasets, task selection, smoke tests, resuming, the comparison export |
-| [Harbor plugin](docs/HARBOR_PLUGIN.md) | Sprout inside a Harbor trial: checkpoints on the live tool path, branching, verifier separation |
-| [Model endpoints](docs/MODEL_ENDPOINTS.md) | What an endpoint must provide, the LiteLLM proxy, schema-constrained review |
-| [Services](docs/SERVICES.md) | PostgreSQL, the LiteLLM proxy, Run Store and the RL driver as one host's services |
-| [Run Store](docs/RUNSTORE.md) | The job queue, the worker, the SWE-rebench grader and training export |
-| [RL driver](docs/RL_DRIVER.md) | The Miles `/rollout-groups` adapter over Run Store |
-| [Leak judge](docs/LEAK_JUDGE.md) | Whether a reviewer-written turn copies hidden-test content |
-| [Snapshot cost](docs/SNAPSHOT_COST.md) | Per-turn snapshot latency on each backend, idle and under load |
+| [Architecture](docs/ARCHITECTURE.md) | Checkpoints, SPROUT branching, the processes around the Run Store |
+| [Experiments](docs/EXPERIMENTS.md) | Datasets, task selection, smoke tests, resuming, the comparison export |
+| [Experiment protocol](examples/qwen/PROTOCOL.md) | The fixed settings, the rollout budget and the metrics |
+| [Evaluation](docs/EVALUATION.md) | The options and the output of an evaluation and of the task gate |
+| [Model endpoints](docs/MODEL_ENDPOINTS.md) | What an endpoint must provide, and the LiteLLM proxy for other providers |
+| [Services](docs/SERVICES.md) | PostgreSQL, the LiteLLM proxy, the Run Store, its worker and the RL driver |
+| [Run Store](docs/RUNSTORE.md) | The job queue, the worker, the graders and the training export |
+| [RL driver](docs/RL_DRIVER.md) | The Miles `/rollout-groups` adapter over the Run Store |
+| [Harbor plugin](docs/HARBOR_PLUGIN.md) | Harbor's own trials on a Sprout sandbox, the reference for the Harbor grade |
+| [Runtime](runtime/README.md) | The tools inside each sandbox |
+| [Gate](gate/README.md) | The checks that every commit must pass |
+| [Decisions](docs/decisions/README.md) | The architecture decisions that one revert cannot undo |
 
 ## Acknowledgments
 
 [mini-swe-agent](https://github.com/SWE-agent/mini-swe-agent) is the agent, run unmodified
-over Sprout's tool transport. [Harbor](https://github.com/harbor-framework/harbor) loads the
-tasks and grades each trial with the task's own verifier. The microVMs run on our
+over Sprout's tool transport. Sprout reads tasks in the format of
+[Harbor](https://github.com/harbor-framework/harbor), and runs each task's verifier as Harbor 0.22
+does. The microVMs run on our
 [customized Firecracker](https://github.com/dreamyang-liu/firecracker), served by
 [AgentENV](https://github.com/dreamyang-liu/AgentENV); the container backend is stock
 rootless [podman](https://podman.io) over [btrfs](https://btrfs.readthedocs.io) snapshots.
-BPO and Shepherd follow the branch-point selection of their papers.
 
 ## Citation
 

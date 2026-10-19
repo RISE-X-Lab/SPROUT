@@ -55,11 +55,8 @@ func (s *ShellTool) Execute(args map[string]any) Result {
 
 	cmd := exec.CommandContext(ctx, "sh", "-c", command)
 	setProcessGroup(cmd)
-	// CommandContext's default Cancel kills only cmd.Process. A shell pipeline
-	// or backgrounded job leaves descendants alive, and they can keep the
-	// stdout/stderr pipes open after the shell dies so Run never returns.
-	// Cancel the whole process group, then bound pipe cleanup in case a child
-	// escaped the group or retained an inherited descriptor.
+	// The default Cancel kills only `sh`, and its descendants keep the pipes open.
+	// So kill the whole group. WaitDelay ends the wait on a pipe held outside it.
 	cmd.Cancel = func() error { return cancelProcessGroup(cmd) }
 	cmd.WaitDelay = 2 * time.Second
 	if workingDir != "" {
@@ -73,24 +70,20 @@ func (s *ShellTool) Execute(args map[string]any) Result {
 
 	err := cmd.Run()
 
-	// A command that ran and failed is not a tool error. Success=false says it
-	// failed and the exit code says how; Error stays reserved for the tool
-	// refusing the request (bad arguments) -- the meaning it carries at every
-	// other Err() call site.
+	// A command that ran and failed is not a tool error: Success is false and the
+	// exit code says how. Error means only that the tool refused the request.
 	outcome := commandOutcome(stdout, stderr)
-	// exitCodeFromErr: Run() has already waited, and a second Wait() fails with
-	// "already called" -- not an ExitError, so every command would report a
-	// generic 1, successes included.
+	// Take the code from Run's error. Run has already waited, and a second Wait
+	// returns an error that is not an ExitError, so every command would get 1.
 	code := exitCodeFromErr(err)
 	outcome.ExitCode = &code
 	outcome.TimedOut = ctx.Err() == context.DeadlineExceeded
 	return outcome.Result()
 }
 
-// setProcessGroup puts the command in its own process group, so the whole job
-// can be signalled later. Killing only the direct child left grandchildren
-// running -- and a `cmd &` or a pipeline is the usual shape of a long job --
-// which also held the output pipes open and stalled cmd.Wait() indefinitely.
+// setProcessGroup puts the command in its own process group, so that
+// cancelProcessGroup can signal the whole job. A pipeline or a `cmd &` has
+// descendants, and they hold the output pipes open after `sh` dies.
 func setProcessGroup(cmd *exec.Cmd) {
 	if cmd.SysProcAttr == nil {
 		cmd.SysProcAttr = &syscall.SysProcAttr{}
@@ -98,9 +91,9 @@ func setProcessGroup(cmd *exec.Cmd) {
 	cmd.SysProcAttr.Setpgid = true
 }
 
-// cancelProcessGroup signals the entire job, falling back to the direct child
-// if signalling the group fails. Returning the error lets exec.CommandContext
-// distinguish a successful cancellation from a process that already exited.
+// cancelProcessGroup sends SIGKILL to the whole job, or to the direct child if
+// the group signal fails. It returns the error of that kill, so that exec.Cmd
+// can tell a cancellation from a process that had already exited.
 func cancelProcessGroup(cmd *exec.Cmd) error {
 	if cmd == nil || cmd.Process == nil {
 		return os.ErrProcessDone
@@ -113,9 +106,9 @@ func cancelProcessGroup(cmd *exec.Cmd) error {
 	return cmd.Process.Kill()
 }
 
-// exitCodeFromErr turns the error from Run() into an exit code, using the shell
-// convention a caller already knows: 128+signal for a signalled death. Go's
-// ExitCode() returns -1 there, which says only "not a normal exit".
+// exitCodeFromErr turns the error from Run() into an exit code. A signalled
+// death is 128+signal, the shell convention, where Go's ExitCode() says only -1.
+// An error that is not an ExitError, such as a failure to start, is 1.
 func exitCodeFromErr(err error) int {
 	if err == nil {
 		return 0

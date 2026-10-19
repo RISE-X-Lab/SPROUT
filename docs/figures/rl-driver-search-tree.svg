@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1300" height="830" viewBox="0 0 1300 830" role="img" aria-labelledby="title desc" font-family="-apple-system, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
+  <title id="title">RL driver: the branches of one failed root</title>
+  <desc id="desc">The trajectories that a search makes from one failed root of an FF task, under the launcher's search settings: one point, one student, one repair turn with one repair, and three repair rounds. Root A, in the first slot and in the group root, failed. The review in slot search picks point P, a recovery point of root A. From P, one student in the group student:P continues with nothing added, and one repair in the group repair:P:1 continues after the reviewer's turn 1, inserted at P. If repair 1 has a verdict, a student at P was graded and nothing at P resolved, the review in slot search-r2 picks point Q1 in the history of repair 1, and repair 2 in the group repair:P:2 continues after turn 2, inserted at Q1. In the same way, the review in slot search-r3 picks point Q2 in repair 2, and repair 3 in the group repair:P:3 continues after turn 3, inserted at Q2. Root B, in the second slot and also in the group root, failed too and gets the same four branches at its own point. The task uses 2 roots plus 2 times 4 branches, 10 slots.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10Z" fill="#3A5047"/>
+    </marker>
+    <style>
+      .title { font-size: 28px; font-weight: 700; fill: #2F443E; }
+      .lead { font-size: 17px; fill: #63766F; }
+      .name { font-size: 19px; font-weight: 700; fill: #2F443E; text-anchor: middle; }
+      .group { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 18px; font-weight: 700; fill: #2F443E; text-anchor: middle; }
+      .note { font-size: 16px; fill: #63766F; text-anchor: middle; }
+      .fn { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 16px; fill: #2F443E; }
+      .cond { font-size: 16px; fill: #63766F; }
+      .mid { text-anchor: middle; }
+      .traj { fill: #E6F1F7; stroke: #587E96; stroke-width: 2; }
+      .root { fill: #FBE3DC; stroke: #BC7168; stroke-width: 2; }
+      .point { fill: #FFFDF6; stroke: #587E96; stroke-width: 2; stroke-dasharray: 6 4; }
+      .edge { fill: none; stroke: #3A5047; stroke-width: 2.5; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect x="1" y="1" width="1298" height="828" rx="16" fill="#FFFDF6" stroke="#E5E2D2" stroke-width="2"/>
+  <text class="title" x="40" y="50">RL driver: the branches of one failed root</text>
+  <text class="lead" x="40" y="80">An FF task under the launcher's settings: 1 point, 1 student, 1 repair turn with 1 repair, 3 repair rounds.</text>
+  <text class="lead" x="40" y="104">A solid box is a trajectory, with its group. A dashed box is a recovery point. An arrow starts a branch.</text>
+
+  <!-- Roots -->
+  <rect class="root" x="40" y="230" width="230" height="90" rx="12"/>
+  <text class="name" x="155" y="260">root A</text>
+  <text class="group" x="155" y="286">root</text>
+  <text class="note" x="155" y="308">first slot, failed</text>
+
+  <rect class="root" x="40" y="470" width="230" height="90" rx="12"/>
+  <text class="name" x="155" y="500">root B</text>
+  <text class="group" x="155" y="526">root</text>
+  <text class="note" x="155" y="548">second slot, failed</text>
+  <text class="cond" x="40" y="590">Root B gets the same four</text>
+  <text class="cond" x="40" y="612">branches at its own point.</text>
+
+  <!-- Point P -->
+  <rect class="point" x="400" y="245" width="170" height="60" rx="12"/>
+  <text class="name" x="485" y="270">point P</text>
+  <text class="note" x="485" y="292">in root A</text>
+  <path class="edge" d="M270 275 H398"/>
+  <text class="cond mid" x="334" y="240">review in slot</text>
+  <text class="fn mid" x="334" y="262">search</text>
+
+  <!-- Student and repair round 1 -->
+  <rect class="traj" x="740" y="130" width="300" height="80" rx="12"/>
+  <text class="group" x="890" y="162">student:P</text>
+  <text class="note" x="890" y="190">nothing added at P</text>
+
+  <rect class="traj" x="740" y="300" width="300" height="80" rx="12"/>
+  <text class="group" x="890" y="332">repair:P:1</text>
+  <text class="note" x="890" y="360">turn 1 inserted at P, round 1</text>
+
+  <path class="edge" d="M570 262 H640 V170 H738"/>
+  <text class="cond mid" x="689" y="160">1 student</text>
+  <path class="edge" d="M570 288 H640 V340 H738"/>
+  <text class="cond mid" x="689" y="364">1 repair</text>
+
+  <!-- Repair round 2 -->
+  <rect class="traj" x="740" y="470" width="300" height="80" rx="12"/>
+  <text class="group" x="890" y="502">repair:P:2</text>
+  <text class="note" x="890" y="530">turn 2 inserted at Q1, round 2</text>
+  <path class="edge" d="M840 380 V468"/>
+  <text x="854" y="404"><tspan class="fn">search-r2</tspan><tspan class="cond" dx="8">picks point Q1 in repair 1,</tspan></text>
+  <text class="cond" x="854" y="426">when repair 1 has a verdict, a student at P</text>
+  <text class="cond" x="854" y="448">was graded and nothing at P resolved</text>
+
+  <!-- Repair round 3 -->
+  <rect class="traj" x="740" y="640" width="300" height="80" rx="12"/>
+  <text class="group" x="890" y="672">repair:P:3</text>
+  <text class="note" x="890" y="700">turn 3 inserted at Q2, round 3</text>
+  <path class="edge" d="M840 550 V638"/>
+  <text x="854" y="574"><tspan class="fn">search-r3</tspan><tspan class="cond" dx="8">picks point Q2 in repair 2,</tspan></text>
+  <text class="cond" x="854" y="596">when repair 2 has a verdict and nothing</text>
+  <text class="cond" x="854" y="618">at P resolved</text>
+
+  <text class="cond" x="40" y="770">Slots: 2 roots + 2 × (1 student + 3 repairs) = 10. Each later round reviews each repair that qualifies on its own.</text>
+  <text class="cond" x="40" y="800">Source: src/sprout/search/rounds.py (_point_branches, _chain_parents, _plan_chain)</text>
+</svg>

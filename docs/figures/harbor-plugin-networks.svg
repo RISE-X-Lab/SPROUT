@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="560" viewBox="0 0 1000 560" role="img" aria-labelledby="title desc" font-family="-apple-system, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
+  <title id="title">Each podman sandbox has a bridge network of its own</title>
+  <desc id="desc">Two sandboxes on one host. The container of sandbox A connects to the network named after sandbox A, and the container of sandbox B connects to the network named after sandbox B. Each network is a bridge that podman creates with --disable-dns and isolate=true. A container is connected to its network only while its sandbox is online: podman network connect and podman network disconnect switch it. Each network carries its container's traffic, DNS included, to the host, whose upstream resolvers the container's resolv.conf names. No aardvark-dns runs. The two networks have no route to each other, because of isolate=true.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10Z" fill="#3A5047"/>
+    </marker>
+    <style>
+      .title { font-size: 26px; font-weight: 700; fill: #2F443E; }
+      .lead { font-size: 16px; fill: #63766F; }
+      .plain { font-size: 17px; font-weight: 700; fill: #2F443E; text-anchor: middle; }
+      .note { font-size: 15px; fill: #63766F; text-anchor: middle; }
+      .code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 14px; fill: #63766F; text-anchor: middle; }
+      .frame { fill: none; stroke: #63766F; stroke-width: 1.5; }
+      .framelabel { font-size: 15px; font-weight: 700; fill: #63766F; }
+      .label { font-size: 15px; fill: #2F443E; }
+      .refused { font-size: 15px; fill: #BC7168; }
+      .box { fill: #E6F1F7; stroke: #587E96; stroke-width: 2; }
+      .host { fill: #E4E3D4; stroke: #63766F; stroke-width: 2; }
+      .edge { fill: none; stroke: #3A5047; stroke-width: 2; marker-end: url(#arrow); }
+      .noroute { fill: none; stroke: #BC7168; stroke-width: 2; stroke-dasharray: 6 5; }
+      .cross { stroke: #BC7168; stroke-width: 3; }
+      .source { font-size: 14px; fill: #63766F; }
+    </style>
+  </defs>
+
+  <rect x="1" y="1" width="998" height="558" rx="16" fill="#FFFDF6" stroke="#E5E2D2" stroke-width="2"/>
+  <text class="title" x="30" y="48">Each podman sandbox has a bridge network of its own</text>
+  <text class="lead" x="30" y="78">A solid arrow carries traffic. The red dashed line is a route that does not exist.</text>
+
+  <rect class="frame" x="30" y="104" width="940" height="372" rx="14"/>
+  <text class="framelabel" x="954" y="462" text-anchor="end">one host</text>
+
+  <!-- Sandbox A -->
+  <rect class="box" x="60" y="140" width="220" height="64" rx="10"/>
+  <text class="plain" x="170" y="167">container</text>
+  <text class="code" x="170" y="191">sandbox &lt;id A&gt;</text>
+  <path class="edge" d="M280 172 H418"/>
+  <text class="label" x="349" y="162" text-anchor="middle">connected</text>
+  <text class="label" x="349" y="196" text-anchor="middle">when online</text>
+  <rect class="box" x="420" y="140" width="220" height="64" rx="10"/>
+  <text class="plain" x="530" y="167">network &lt;id A&gt;</text>
+  <text class="code" x="530" y="191">--disable-dns</text>
+
+  <!-- Sandbox B -->
+  <rect class="box" x="60" y="340" width="220" height="64" rx="10"/>
+  <text class="plain" x="170" y="367">container</text>
+  <text class="code" x="170" y="391">sandbox &lt;id B&gt;</text>
+  <path class="edge" d="M280 372 H418"/>
+  <text class="label" x="349" y="362" text-anchor="middle">connected</text>
+  <text class="label" x="349" y="396" text-anchor="middle">when online</text>
+  <rect class="box" x="420" y="340" width="220" height="64" rx="10"/>
+  <text class="plain" x="530" y="367">network &lt;id B&gt;</text>
+  <text class="code" x="530" y="391">--disable-dns</text>
+
+  <!-- No route between the networks -->
+  <path class="noroute" d="M530 204 V340"/>
+  <line class="cross" x1="518" y1="260" x2="542" y2="284"/>
+  <line class="cross" x1="542" y1="260" x2="518" y2="284"/>
+  <text class="refused" x="506" y="262" text-anchor="end">no route:</text>
+  <text class="refused" x="506" y="282" text-anchor="end">isolate=true</text>
+
+  <!-- The host's network -->
+  <rect class="host" x="740" y="240" width="200" height="64" rx="10"/>
+  <text class="plain" x="840" y="267">host network</text>
+  <text class="note" x="840" y="291">upstream resolvers</text>
+  <path class="edge" d="M640 172 H690 V262 H738"/>
+  <path class="edge" d="M640 372 H690 V282 H738"/>
+  <text class="label" x="700" y="216">traffic,</text>
+  <text class="label" x="700" y="236">DNS too</text>
+
+  <text class="lead" x="30" y="508">No aardvark-dns runs: resolv.conf in each container names the host's upstream resolvers.</text>
+  <text class="source" x="30" y="540">Source: NETWORK_OPTIONS and PodmanContainers in src/sprout_sandbox/podman_containers.py</text>
+</svg>

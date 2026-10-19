@@ -1,0 +1,4 @@
+#!/bin/sh
+# Runs every gate (gate/run.sh) before each commit. A failed gate stops the commit.
+# Enable the hook once per clone: git config core.hooksPath gate/hooks
+exec gate/run.sh

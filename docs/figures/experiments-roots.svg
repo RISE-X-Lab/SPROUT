@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="800" viewBox="0 0 1000 800" role="img" aria-labelledby="title desc" font-family="-apple-system, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
+  <title id="title">The roots of one dataset, and what reads each root</title>
+  <desc id="desc">One dataset has four roots and one comparison. examples.qwen.run with --method baseline writes the baseline root, $RUNS/&lt;dataset&gt;-baseline, which holds manifest-baseline.json, tasks/&lt;task&gt;/baseline/attempt-1 to attempt-N and metrics-baseline.json. The runs with --method sprout, bpo and shepherd each write a root of their own, which holds manifest-&lt;method&gt;.json and tasks/&lt;task&gt;/&lt;method&gt;/. Each of these three runs reads the baseline root through --baseline-root. examples.qwen.compare reads the four roots through --baseline, --sprout, --bpo and --shepherd, and writes comparison.csv and comparison.json into the directory that --output names. Each arrow is a data flow, labeled with the option that names the root or the output directory.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10Z" fill="#3A5047"/>
+    </marker>
+    <style>
+      .title { font-size: 24px; font-weight: 700; fill: #2F443E; }
+      .lead { font-size: 15px; fill: #63766F; }
+      .process { fill: #E6F1F7; stroke: #587E96; stroke-width: 2; }
+      .files { fill: #E4E3D4; stroke: #63766F; stroke-width: 2; }
+      .name { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 16px; font-weight: 700; fill: #2F443E; text-anchor: middle; }
+      .file { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 14px; fill: #2F443E; text-anchor: middle; }
+      .note { font-size: 15px; fill: #63766F; text-anchor: middle; }
+      .option { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 14px; fill: #2F443E; }
+      .label { font-size: 15px; fill: #2F443E; }
+      .flow { fill: none; stroke: #3A5047; stroke-width: 2; marker-end: url(#arrow); }
+      .source { font-size: 13px; fill: #63766F; }
+    </style>
+  </defs>
+
+  <rect x="1" y="1" width="998" height="798" rx="16" fill="#FFFDF6" stroke="#E5E2D2" stroke-width="2"/>
+  <text class="title" x="40" y="46">The roots of one dataset, and what reads each root</text>
+  <text class="lead" x="40" y="78">Each arrow is a data flow. Its label is the option that names the root or the output directory.</text>
+
+  <!-- Baseline root -->
+  <rect class="files" x="250" y="110" width="500" height="135" rx="12"/>
+  <text class="name" x="500" y="140">$RUNS/&lt;dataset&gt;-baseline</text>
+  <text class="note" x="500" y="164">written by --method baseline</text>
+  <text class="file" x="500" y="190">manifest-baseline.json</text>
+  <text class="file" x="500" y="210">tasks/&lt;task&gt;/baseline/attempt-1 … attempt-N</text>
+  <text class="file" x="500" y="230">metrics-baseline.json</text>
+
+  <!-- Branch method roots -->
+  <rect class="files" x="40" y="355" width="280" height="120" rx="12"/>
+  <text class="name" x="180" y="385">$RUNS/&lt;dataset&gt;-sprout</text>
+  <text class="note" x="180" y="409">written by --method sprout</text>
+  <text class="file" x="180" y="435">manifest-sprout.json</text>
+  <text class="file" x="180" y="455">tasks/&lt;task&gt;/sprout/</text>
+
+  <rect class="files" x="360" y="355" width="280" height="120" rx="12"/>
+  <text class="name" x="500" y="385">$RUNS/&lt;dataset&gt;-bpo</text>
+  <text class="note" x="500" y="409">written by --method bpo</text>
+  <text class="file" x="500" y="435">manifest-bpo.json</text>
+  <text class="file" x="500" y="455">tasks/&lt;task&gt;/bpo/</text>
+
+  <rect class="files" x="680" y="355" width="280" height="120" rx="12"/>
+  <text class="name" x="820" y="385">$RUNS/&lt;dataset&gt;-shepherd</text>
+  <text class="note" x="820" y="409">written by --method shepherd</text>
+  <text class="file" x="820" y="435">manifest-shepherd.json</text>
+  <text class="file" x="820" y="455">tasks/&lt;task&gt;/shepherd/</text>
+
+  <!-- Comparison -->
+  <rect class="process" x="360" y="570" width="280" height="80" rx="12"/>
+  <text class="name" x="500" y="602">examples.qwen.compare</text>
+  <text class="note" x="500" y="627">one comparison per dataset</text>
+
+  <rect class="files" x="720" y="640" width="240" height="80" rx="12"/>
+  <text class="file" x="840" y="672">comparison.csv</text>
+  <text class="file" x="840" y="696">comparison.json</text>
+
+  <!-- baseline root -> branch runs -->
+  <path class="flow" d="M300 245 V300 H180 V353"/>
+  <text class="option" x="292" y="291" text-anchor="end">--baseline-root</text>
+  <path class="flow" d="M500 245 V353"/>
+  <text class="option" x="512" y="305">--baseline-root</text>
+  <path class="flow" d="M700 245 V300 H820 V353"/>
+  <text class="option" x="708" y="291">--baseline-root</text>
+
+  <!-- roots -> compare -->
+  <path class="flow" d="M180 475 V610 H358"/>
+  <text class="option" x="192" y="540">--sprout</text>
+  <path class="flow" d="M500 475 V568"/>
+  <text class="option" x="512" y="525">--bpo</text>
+  <path class="flow" d="M820 475 V590 H642"/>
+  <text class="option" x="808" y="540" text-anchor="end">--shepherd</text>
+  <path class="flow" d="M250 175 H20 V632 H358"/>
+  <text class="option" x="36" y="624">--baseline</text>
+
+  <!-- compare -> outputs -->
+  <path class="flow" d="M600 650 V680 H718"/>
+  <text class="option" x="660" y="672" text-anchor="middle">--output</text>
+
+  <!-- Legend -->
+  <rect class="files" x="40" y="740" width="34" height="20" rx="5"/>
+  <text class="label" x="84" y="756">root or files</text>
+  <rect class="process" x="230" y="740" width="34" height="20" rx="5"/>
+  <text class="label" x="274" y="756">command</text>
+
+  <text class="source" x="40" y="784">Source: examples/qwen/run.py (run_task, SHARED_BASELINE_KEYS), examples/qwen/compare.py</text>
+</svg>

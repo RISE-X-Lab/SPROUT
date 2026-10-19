@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="660" viewBox="0 0 1080 660" role="img" aria-labelledby="title desc" font-family="-apple-system, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
+  <title id="title">Run Store job states</title>
+  <desc id="desc">Five Run Store job states and the functions that move a job between them. Store.submit() creates a job in queued. queued goes to running through claim(), when ready_at has passed and attempts are left, the job's affinity key is unbound or bound to the worker's host, the job is not bound to another worker, and the worker holds the checksums of a swe-rebench-v2 grade. A queued bound grade goes to succeeded with the result sandbox_lost through settle_dead_workers() or claim() after its keep_until, also on a lost host. queued goes to failed with the phase data_lost through settle_dead_workers() when the host of its affinity key is lost, a bound grade too before its keep_until. queued goes to cancelled through cancel_queued() or request_stop(). running goes back to queued through finish(rerun=True) after an infrastructure failure or a lost attempt, through settle_dead_workers() when the worker is dead, the lease expired and the host of the job's key is not lost, and through release() when the worker shuts down. A rerun needs an attempt left, and none of the three goes back to queued after a stop request: then release() moves running to cancelled, and the other two to failed. running goes to succeeded through finish() when the attempt completed or was truncated. A bound grade without an attempt left goes from running to succeeded with the result sandbox_lost, through finish() or settle_dead_workers(). running goes to failed through finish() when the attempt failed and does not run again, and through settle_dead_workers() when no attempt is left, or with the phase data_lost when the host of the job's key is lost. succeeded, failed and cancelled are terminal.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10Z" fill="#3A5047"/>
+    </marker>
+    <style>
+      .title { font-size: 24px; font-weight: 700; fill: #2F443E; }
+      .lead { font-size: 14px; fill: #63766F; }
+      .state { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 18px; font-weight: 700; fill: #2F443E; text-anchor: middle; }
+      .note { font-size: 13px; fill: #63766F; text-anchor: middle; }
+      .fn { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 14px; fill: #2F443E; }
+      .cond { font-size: 13px; fill: #63766F; }
+      .edge { fill: none; stroke: #3A5047; stroke-width: 2; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect x="1" y="1" width="1078" height="658" rx="16" fill="#FFFDF6" stroke="#E5E2D2" stroke-width="2"/>
+  <text class="title" x="40" y="48">Run Store job states</text>
+  <text class="lead" x="40" y="76">Each arrow is one transition. Monospace names the function that makes it. Plain text gives the condition.</text>
+
+  <!-- States -->
+  <rect x="60" y="250" width="190" height="72" rx="12" fill="#E6F1F7" stroke="#587E96" stroke-width="2"/>
+  <text class="state" x="155" y="281">queued</text>
+  <text class="note" x="155" y="305">waits for ready_at</text>
+
+  <rect x="470" y="250" width="180" height="72" rx="12" fill="#E6F1F7" stroke="#587E96" stroke-width="2"/>
+  <text class="state" x="560" y="281">running</text>
+  <text class="note" x="560" y="305">its worker renews the lease</text>
+
+  <rect x="870" y="150" width="170" height="64" rx="12" fill="#DFF0DB" stroke="#256348" stroke-width="2"/>
+  <text class="state" x="955" y="179">succeeded</text>
+  <text class="note" x="955" y="201">terminal</text>
+
+  <rect x="870" y="300" width="170" height="64" rx="12" fill="#FBE3DC" stroke="#BC7168" stroke-width="2"/>
+  <text class="state" x="955" y="329">failed</text>
+  <text class="note" x="955" y="351">terminal</text>
+
+  <rect x="60" y="500" width="190" height="64" rx="12" fill="#E4E3D4" stroke="#63766F" stroke-width="2"/>
+  <text class="state" x="155" y="529">cancelled</text>
+  <text class="note" x="155" y="551">terminal</text>
+
+  <!-- submit -> queued -->
+  <circle cx="80" cy="158" r="7" fill="#3A5047"/>
+  <path class="edge" d="M80 165 V248"/>
+  <text class="fn" x="92" y="198">Store.submit()</text>
+  <text class="cond" x="92" y="216">new idempotency key</text>
+
+  <!-- queued -> succeeded: a bound grade whose sandbox is lost -->
+  <path class="edge" d="M238 250 V124 H955 V148"/>
+  <text x="250" y="114" xml:space="preserve"><tspan class="fn">settle_dead_workers()</tspan><tspan class="cond"> or </tspan><tspan class="fn">claim()</tspan><tspan class="cond"> after its </tspan><tspan class="fn">keep_until</tspan><tspan class="cond"> settles a queued bound grade: result </tspan><tspan class="fn">sandbox_lost</tspan></text>
+
+  <!-- queued -> running -->
+  <path class="edge" d="M250 272 H468"/>
+  <text class="fn" x="360" y="174" text-anchor="middle">claim()</text>
+  <text class="cond" x="360" y="192" text-anchor="middle">ready_at passed, attempts left,</text>
+  <text class="cond" x="360" y="210" text-anchor="middle">key unbound or bound to this host,</text>
+  <text class="cond" x="360" y="228" text-anchor="middle">job unbound or bound here,</text>
+  <text class="cond" x="360" y="246" text-anchor="middle">a grade's checksums held here</text>
+
+  <!-- running -> queued: a rerun, or a release -->
+  <path class="edge" d="M470 304 H252"/>
+  <text class="fn" x="370" y="330" text-anchor="middle">finish(rerun=True)</text>
+  <text class="cond" x="370" y="348" text-anchor="middle">lost or infrastructure failure</text>
+  <text class="fn" x="370" y="374" text-anchor="middle">settle_dead_workers()</text>
+  <text class="cond" x="370" y="392" text-anchor="middle">dead worker, lease expired,</text>
+  <text class="cond" x="370" y="410" text-anchor="middle">host of its key not lost</text>
+  <text class="cond" x="370" y="428" text-anchor="middle">both: attempts left, no stop request</text>
+  <text class="fn" x="370" y="454" text-anchor="middle">release()</text>
+  <text class="cond" x="370" y="472" text-anchor="middle">worker shutdown, no stop request</text>
+
+  <!-- queued -> cancelled -->
+  <path class="edge" d="M120 322 V498"/>
+  <text class="fn" x="132" y="374">cancel_queued()</text>
+  <text class="fn" x="132" y="392">request_stop()</text>
+  <text class="cond" x="132" y="410">cancel or stop request</text>
+
+  <!-- queued -> failed: a job of a lost host -->
+  <path class="edge" d="M60 304 H36 V600 H1060 V332 H1042"/>
+  <text x="360" y="592" xml:space="preserve"><tspan class="fn">settle_dead_workers()</tspan><tspan class="cond"> fails a queued job whose key's host is lost, a bound grade too: phase </tspan><tspan class="fn">data_lost</tspan></text>
+
+  <!-- running -> cancelled: a release after a stop request -->
+  <path class="edge" d="M500 322 V532 H252"/>
+  <text class="fn" x="272" y="556">release()</text>
+  <text class="cond" x="272" y="574">stop requested</text>
+
+  <!-- running -> succeeded / failed -->
+  <path class="edge" d="M650 272 H700 V182 H868"/>
+  <path class="edge" d="M700 272 V332 H868"/>
+  <text class="fn" x="712" y="172">finish()</text>
+  <text class="cond" x="712" y="200">completed or truncated</text>
+  <text class="cond" x="712" y="236">or a bound grade without an attempt left:</text>
+  <text class="fn" x="712" y="254">sandbox_lost</text>
+  <text class="fn" x="712" y="322">finish()</text>
+  <text class="cond" x="712" y="350">failed, does not run again</text>
+  <text class="fn" x="712" y="382">settle_dead_workers()</text>
+  <text class="cond" x="712" y="400">no attempt left, or stop request,</text>
+  <text x="712" y="418" xml:space="preserve"><tspan class="cond">or host of its key lost: </tspan><tspan class="fn">data_lost</tspan></text>
+
+  <text class="cond" x="40" y="640">Source: Store in src/sprout/runstore/store.py, WorkerManager in src/sprout/worker/manager.py, Worker in src/sprout/worker/attempts.py</text>
+</svg>

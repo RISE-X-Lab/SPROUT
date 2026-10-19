@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
-"""Assert that pinned upstreams still provide what our adapters depend on.
+"""Check that the pinned upstreams still provide what Sprout's adapters depend on.
 
-CI runs it on every push; run it before bumping a pinned version:
+CI runs the check on every push. Run it before you bump a pinned version:
 
     python ops/contracts/ci_check.py                    # every contract
     python ops/contracts/ci_check.py --slot harbor      # one contract, by file stem
 
-Contracts: mini-swe-agent (the only agent) and Harbor (the trial runner the
-TB2.1 / HARD-51 plugins subclass). The checks are static and need no
-credentials: exact package versions, module exports, class methods and model
-fields, plus the event types the mini history reader handles.
+Each ``*.yaml`` file in this directory is one contract. The contracts are mini-swe-agent, the
+only agent, and Harbor, whose own trials on the environment in ``sprout.eval.harbor`` are the
+reference for the worker's harbor grade. The checks are static and need no credentials.
+They cover exact package versions, module exports, class methods and model fields, and the
+event types that the mini history reader handles.
 
-Why this exists: the adapters are built on surfaces upstream does not promise to
-keep (flag names, event fields, SDK kwargs). Without this, a rename shows up as
-subtly wrong trajectories weeks later instead of a red build today.
+The adapters use surfaces that upstream does not promise to keep, such as flag names, event
+fields and SDK keyword arguments. This check turns a rename upstream into a failed build,
+not into wrong trajectories weeks later.
 
-Exit codes: 0 ok, 1 contract violation, 2 harness/setup error.
+Exit codes: 0 ok, 1 a contract violation, 2 no contract matched or PyYAML is missing.
 """
 
 from __future__ import annotations
@@ -34,7 +35,7 @@ def load_yaml(path: Path) -> dict:
         import yaml
     except ImportError:
         print("PyYAML required: pip install pyyaml", file=sys.stderr)
-        raise SystemExit(2)
+        raise SystemExit(2) from None
     return yaml.safe_load(path.read_text())
 
 
@@ -59,7 +60,7 @@ class Report:
 
 
 def check_normalizer_alignment(contract: dict, report: Report) -> None:
-    """The history reader must still handle every event type the contract lists."""
+    """Check that each event type in the contract occurs in the source of its ``normalizer_module``."""
     slot = contract_name(contract)
     module = contract.get("normalizer_module")
     if not module:
@@ -76,10 +77,10 @@ def check_normalizer_alignment(contract: dict, report: Report) -> None:
 
 
 def check_python_api(contract: dict, report: Report) -> None:
-    """Assert the SDK surface a protocol driver calls is still there.
+    """Check the pinned package version and the SDK surface in the contract's ``python_api``.
 
-    These are the names a version bump can remove silently: the driver would then
-    fail at run time, mid-eval, rather than here.
+    A version bump can remove these names silently. The adapter would then fail during an
+    evaluation, not here. The check records a skip when the module is not installed.
     """
     spec = contract.get("python_api") or {}
     if not spec:
@@ -95,7 +96,8 @@ def check_python_api(contract: dict, report: Report) -> None:
         expected = upstream["verified_versions"]["sdk"]
         (report.ok if installed == expected else report.fail)(
             f"{upstream['package']} == {expected}",
-            **({} if installed == expected else {"detail": f"installed: {installed}"}))
+            **({} if installed == expected else {"detail": f"installed: {installed}"}),
+        )
     module_name = spec.get("module")
     try:
         mod = importlib.import_module(module_name)
@@ -104,9 +106,7 @@ def check_python_api(contract: dict, report: Report) -> None:
         return
 
     for name in spec.get("exports") or []:
-        (report.ok if hasattr(mod, name) else report.fail)(
-            "%s exports %s" % (module_name, name)
-        )
+        (report.ok if hasattr(mod, name) else report.fail)("%s exports %s" % (module_name, name))
 
     client_spec = spec.get("client") or {}
     if client_spec:
@@ -129,7 +129,7 @@ def check_python_api(contract: dict, report: Report) -> None:
 
 
 def check_classes(contract: dict, report: Report) -> None:
-    """Each listed class still exists with the methods and model fields we use."""
+    """Check that each class in the contract exists with the methods and model fields that it lists."""
     for entry in contract.get("classes") or []:
         label = "%s.%s" % (entry["module"], entry["cls"])
         try:
@@ -172,10 +172,7 @@ def main(argv=None) -> int:
         check_classes(contract, report)
         check_normalizer_alignment(contract, report)
 
-    print(
-        "\n%d checks, %d failures, %d skipped"
-        % (report.checks, len(report.failures), len(report.skips))
-    )
+    print("\n%d checks, %d failures, %d skipped" % (report.checks, len(report.failures), len(report.skips)))
     if report.failures:
         print("\nAdapter drift detected. Update the adapter or the contract.")
         return 1

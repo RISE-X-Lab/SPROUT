@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1300" height="660" viewBox="0 0 1300 660" role="img" aria-labelledby="title desc" font-family="-apple-system, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
+  <title id="title">RL driver: the states of a search</title>
+  <desc id="desc">The five states of a group's search and the functions of Search that move it between them. roots goes to reviewing through _review_roots() when every root has settled, the shape of the roots' label is not none and the group is not cancelled. roots goes to done when the shape is none, when the group is cancelled, or for a stored search document from before outcome-keyed review. reviewing goes to branching through _plan_branches() when the review succeeded and at least one branch was planned. reviewing goes to done when the review did not succeed or no branch could be made. branching goes to chaining through _next_round() when every branch has settled, the shape is full, a repair round is left, the group is not cancelled and a point qualifies. branching goes to done when there is no next round. chaining goes back to branching through _plan_chain() when the review of the round succeeded and at least one branch was planned. chaining goes to done when that review did not succeed or no branch could be made. done is terminal. In done, search.error, search.chain_error or search.chain_end, when it is set, gives the reason.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10Z" fill="#3A5047"/>
+    </marker>
+    <style>
+      .title { font-size: 28px; font-weight: 700; fill: #2F443E; }
+      .lead { font-size: 17px; fill: #63766F; }
+      .state { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 20px; font-weight: 700; fill: #2F443E; text-anchor: middle; }
+      .note { font-size: 16px; fill: #63766F; text-anchor: middle; }
+      .notecode { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 16px; fill: #63766F; }
+      .fn { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 16px; fill: #2F443E; }
+      .cond { font-size: 16px; fill: #63766F; }
+      .mid { text-anchor: middle; }
+      .end { text-anchor: end; }
+      .edge { fill: none; stroke: #3A5047; stroke-width: 2.5; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect x="1" y="1" width="1298" height="658" rx="16" fill="#FFFDF6" stroke="#E5E2D2" stroke-width="2"/>
+  <text class="title" x="40" y="50">RL driver: the states of a search</text>
+  <text class="lead" x="40" y="80">Each arrow is one transition of search.state. Monospace names the function of Search that makes it, plain text the condition.</text>
+
+  <!-- States -->
+  <rect x="40" y="170" width="220" height="70" rx="12" fill="#E6F1F7" stroke="#587E96" stroke-width="2"/>
+  <text class="state" x="150" y="200">roots</text>
+  <text class="note" x="150" y="226">the roots run</text>
+
+  <rect x="450" y="170" width="220" height="70" rx="12" fill="#E6F1F7" stroke="#587E96" stroke-width="2"/>
+  <text class="state" x="560" y="200">reviewing</text>
+  <text x="560" y="226" text-anchor="middle"><tspan class="note">slot</tspan><tspan class="notecode" dx="8">search</tspan></text>
+
+  <rect x="860" y="170" width="220" height="70" rx="12" fill="#E6F1F7" stroke="#587E96" stroke-width="2"/>
+  <text class="state" x="970" y="200">branching</text>
+  <text class="note" x="970" y="226">the branches run</text>
+
+  <rect x="860" y="470" width="220" height="70" rx="12" fill="#E6F1F7" stroke="#587E96" stroke-width="2"/>
+  <text class="state" x="970" y="500">chaining</text>
+  <text x="970" y="526" text-anchor="middle"><tspan class="note">slot</tspan><tspan class="notecode" dx="8">search-r&lt;r&gt;</tspan></text>
+
+  <rect x="450" y="470" width="220" height="70" rx="12" fill="#E4E3D4" stroke="#63766F" stroke-width="2"/>
+  <text class="state" x="560" y="500">done</text>
+  <text class="note" x="560" y="526">terminal</text>
+
+  <!-- roots -> reviewing -->
+  <path class="edge" d="M260 222 H448"/>
+  <text class="fn mid" x="354" y="182">_review_roots()</text>
+  <text class="cond mid" x="354" y="206">shape is not none</text>
+  <text class="cond mid" x="354" y="252">not cancelled</text>
+
+  <!-- reviewing -> branching -->
+  <path class="edge" d="M670 222 H858"/>
+  <text class="cond mid" x="764" y="182">review succeeded,</text>
+  <text class="cond mid" x="764" y="206">a branch planned</text>
+  <text class="fn mid" x="764" y="252">_plan_branches()</text>
+
+  <!-- branching -> chaining -->
+  <path class="edge" d="M1000 240 V468"/>
+  <text class="fn end" x="988" y="372">_next_round()</text>
+  <text class="cond end" x="988" y="396">branches settled, full,</text>
+  <text class="cond end" x="988" y="418">a round left,</text>
+  <text class="cond end" x="988" y="440">a point qualifies</text>
+
+  <!-- chaining -> branching -->
+  <path class="edge" d="M1050 470 V242"/>
+  <text class="fn" x="1062" y="330">_plan_chain()</text>
+  <text class="cond" x="1062" y="354">review succeeded,</text>
+  <text class="cond" x="1062" y="376">a branch planned</text>
+
+  <!-- roots -> done -->
+  <path class="edge" d="M150 240 V505 H448"/>
+  <text class="cond" x="164" y="330">shape none, group</text>
+  <text class="cond" x="164" y="352">cancelled, or a stored</text>
+  <text class="cond" x="164" y="374">legacy document</text>
+
+  <!-- reviewing -> done -->
+  <path class="edge" d="M560 240 V468"/>
+  <text class="cond end" x="548" y="420">review did not succeed,</text>
+  <text class="cond end" x="548" y="442">or no branch made</text>
+
+  <!-- branching -> done -->
+  <path class="edge" d="M900 240 V310 H620 V468"/>
+  <text class="cond mid" x="760" y="300">no next round</text>
+
+  <!-- chaining -> done -->
+  <path class="edge" d="M860 512 H672"/>
+  <text class="cond mid" x="766" y="478">review did not</text>
+  <text class="cond mid" x="766" y="500">succeed, or no</text>
+  <text class="cond mid" x="766" y="536">branch made</text>
+
+  <text class="cond" x="40" y="600">In done, search.error, search.chain_error or search.chain_end, when it is set, gives the reason.</text>
+  <text class="cond" x="40" y="630">Source: src/sprout/search/rounds.py, src/sprout/search/outcome.py</text>
+</svg>

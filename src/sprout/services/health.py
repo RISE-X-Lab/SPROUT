@@ -1,98 +1,111 @@
 """Probes: is a service answering, and is the host what the services need.
 
-Every probe returns a :class:`Probe` rather than raising, because the callers
-print a table or a doctor report and one unreachable service must not hide the
-others. The probes are deliberately shallow -- a GET that must answer 200,
-``pg_isready``, a pid that is alive -- since ``up`` polls them every half
-second until a service comes up and ``status`` runs all of them on every call.
-Nothing here starts anything.
+Each probe returns a :class:`Probe` and does not raise, so one unreachable service does
+not hide the others in a table or a doctor report. Each probe is shallow, such as a GET
+that must answer 200, ``pg_isready`` or a live pid, because ``up`` polls it every half
+second and ``status`` runs every probe on each call. No probe starts anything.
 
-The host checks at the bottom are the facts that have actually cost batches
-(AGENTS.md): a store that is not btrfs with ``user_subvol_rm_allowed`` (every
-spawn works, the first destroy fails after the container is gone), a per-user
-keyring quota too small for ~180 concurrent rootless containers, a missing
-runtime binary.
+The worker owns the checks of its host: the podman, the btrfs store, the runtime binary
+and the keyring quota. :class:`WorkerDoctor` reads them from
+``python -m sprout.worker doctor --json`` in a child process, so this package imports
+nothing of the worker.
 """
 
 from __future__ import annotations
 
+import json
 import os
+import shlex
 import shutil
-import socket
 import subprocess
 import urllib.error
 import urllib.request
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from http.client import HTTPException     # by name: `http` below is the probe
+from http.client import HTTPException  # by name: `http` below is the probe
 from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Any
 
-from sprout.services.spec import Context, ExpandError, Health, expand, podman_bin_for
+from sprout.services.spec import Context, ExpandError, Health, expand
 
 HTTP_TIMEOUT_S = 3.0
 TOOL_TIMEOUT_S = 15.0
-#: kernel.keys.maxkeys below this makes rootless podman starts fail at about
-#: 180 concurrent containers: each container's user namespace takes keys from
-#: the per-user keyring, and the default quota is 200.
-KEYRING_MINIMUM = 20000
-KEYRING_FIX = "sudo sysctl kernel.keys.maxkeys=20000 kernel.keys.maxbytes=2000000"
-REQUIRED_MOUNT_OPTION = "user_subvol_rm_allowed"
+#: Arbitrary: above the doctor's own limits, 15 s for `podman --version` and 30 s for findmnt.
+_DOCTOR_TIMEOUT_S = 120.0
+#: What a `check` service asks the worker's doctor, by its `check` value: the name
+#: of the check in the doctor's report, and the doctor flag that the service's `path` sets.
+_DOCTOR_CHECKS = {"podman": ("podman", "--podman-bin"), "btrfs_store": ("store", "--store")}
+#: The doctor's status words, as (ok, warning) of a Probe.
+_STATUSES = {"ok": (True, False), "warn": (False, True), "fail": (False, False)}
 
 
 @dataclass(frozen=True)
 class Probe:
+    """The result of one probe or check: whether it passed, and a one-line detail."""
+
     ok: bool
     detail: str
-    #: Advisory: printed as `warn`, never a failure (doctor exits 0 on it).
+    #: True for an advisory result. It prints as ``warn``, and ``doctor`` still exits 0.
     warning: bool = False
 
     @property
     def word(self) -> str:
+        """The status word: ``ok``, ``warn`` or ``fail``."""
         return "ok" if self.ok else ("warn" if self.warning else "fail")
 
 
 # --- service probes -----------------------------------------------------------
 
-def http(url: str, headers: Iterable[tuple[str, str]] = (), timeout: float = HTTP_TIMEOUT_S,
-         expect: int = 200) -> Probe:
-    """GET ``url``; healthy is exactly ``expect`` (200). urllib, so no extra is needed."""
+
+def http(
+    url: str, headers: Iterable[tuple[str, str]] = (), timeout: float = HTTP_TIMEOUT_S, expect: int = 200
+) -> Probe:
+    """Probe ``url`` with a GET. The probe passes only if the reply status is ``expect``."""
     try:
+        # urllib, not an HTTP client from an optional extra: this package needs none.
         request = urllib.request.Request(url, headers=dict(headers), method="GET")
         with urllib.request.urlopen(request, timeout=timeout) as response:
             status = response.status
-    except urllib.error.HTTPError as error:        # a reply, just not 200: 401 says "wrong token"
+    except urllib.error.HTTPError as error:  # a reply that is not 200: 401 says "wrong token"
         status = error.code
     except urllib.error.URLError as error:
         reason = error.reason
         text = reason.strerror if isinstance(reason, OSError) and reason.strerror else str(reason)
         return Probe(False, text)
-    except (socket.timeout, TimeoutError):
+    except TimeoutError:
         return Probe(False, "timed out after %gs" % timeout)
     except HTTPException as error:
-        # urllib wraps only OSError into URLError; a port served by something
-        # that is not HTTP (PostgreSQL, say) raises BadStatusLine unwrapped,
-        # with the offending line, CRLF included.
+        # urllib wraps only OSError in URLError. A port that does not speak HTTP, such as
+        # PostgreSQL's, raises BadStatusLine unwrapped, with the line and its CRLF.
         return Probe(False, "not an HTTP reply: %s" % " ".join(str(error).split()))
-    except (OSError, ValueError) as error:         # ValueError: a URL urllib cannot parse
+    except (OSError, ValueError) as error:  # ValueError: a URL urllib cannot parse
         return Probe(False, str(error))
     return Probe(status == expect, "HTTP %d" % status)
 
 
-def pg_isready(host: str, port: int, user: str = "", container: str = "", podman: str = "podman") -> Probe:
-    """``pg_isready`` from the host's client tools, else inside the container (through ``podman``).
+def pg_isready(host: str, port: int, *, user: str, container: str, podman: Callable[[], str]) -> Probe:
+    """Probe PostgreSQL with the host's ``pg_isready``, else with the one in ``container``.
 
-    The host route is preferred because it proves the published port works,
-    which is what the Run Store connects through; the in-container fallback
-    only proves PostgreSQL is up.
+    The host's tool proves that the published port works, which the Run Store connects
+    through. The probe calls ``podman()`` only for the fallback in the container.
     """
     user_flag = ["-U", user] if user else []
     tool = shutil.which("pg_isready")
     if tool:
         return _run_probe([tool, "-h", host, "-p", str(port), *user_flag])
-    executable = podman if os.path.isabs(podman) else which(podman)
-    if container and executable:
-        return _run_probe([executable, "exec", container, "pg_isready", *user_flag], prefix="in %s: " % container)
-    return Probe(False, "pg_isready is not installed (postgresql-client) and there is no container to run it in")
+    if container:
+        try:
+            chosen = podman()
+        except ExpandError as error:  # the worker's doctor gave no report
+            return Probe(False, str(error))
+        executable = chosen if os.path.isabs(chosen) else which(chosen)
+        if executable:
+            return _run_probe(
+                [executable, "exec", container, "pg_isready", *user_flag], prefix="in %s: " % container
+            )
+    return Probe(
+        False, "pg_isready is not installed (postgresql-client) and there is no container to run it in"
+    )
 
 
 def _run_probe(argv: Sequence[str], prefix: str = "") -> Probe:
@@ -108,32 +121,40 @@ def _run_probe(argv: Sequence[str], prefix: str = "") -> Probe:
 
 
 def probe(health: Health, ctx: Context, *, alive: bool | None, alive_detail: str) -> Probe:
-    """The health of one service, given what is already known about its process.
+    """The health of one service, given ``alive``, what the caller knows about its process.
 
-    ``alive`` is the supervisor's or podman's answer (None for a service with
-    no process of its own: an external or a check). For ``process`` and
-    ``none`` it is the whole answer; ``http`` and ``pg_isready`` ask the
-    service itself, which also catches a port served by something else.
+    ``alive`` is None for a service without a process of its own. It decides ``process`` and
+    ``none``. ``http`` and ``pg_isready`` ask the service, so a port of another program fails.
     """
     if health.kind == "http":
         try:
             url = expand(health.url, ctx)
             headers = [(name, expand(value, ctx)) for name, value in health.headers]
-        except ExpandError as error:               # an unset {env:...} or a missing secret
+        except ExpandError as error:  # an unset {env:...} or a missing secret
             return Probe(False, str(error))
         return http(url, headers)
     if health.kind == "pg_isready":
-        return pg_isready(health.host, health.port or 0, health.user, health.container, podman_bin_for(ctx.environ))
+        return pg_isready(
+            health.host,
+            health.port or 0,
+            user=health.user,
+            container=health.container,
+            podman=lambda: expand("{podman_bin}", ctx),
+        )
     if alive is None:
         return Probe(True, "not probed") if health.kind == "none" else Probe(False, "nothing to probe")
     return Probe(alive, alive_detail)
 
 
-# --- host checks --------------------------------------------------------------
+# --- programs on this host ----------------------------------------------------
+
 
 def which(name: str) -> str | None:
-    """PATH, then ``~/.local/bin``: uv's installer puts it there, and a shell that
-    did not source its profile (a cron job, a detached session) does not look."""
+    """The path of the program ``name`` on PATH, else in ``~/.local/bin``, else None.
+
+    uv's installer puts uv in ``~/.local/bin``. A shell that did not source its profile,
+    such as a cron job, does not have that directory on PATH.
+    """
     found = shutil.which(name)
     if found:
         return found
@@ -142,64 +163,115 @@ def which(name: str) -> str | None:
 
 
 def program(name: str) -> Probe:
+    """A probe that passes if :func:`which` finds the program ``name``."""
     found = which(name)
     return Probe(bool(found), found or "%s is not on PATH or in ~/.local/bin" % name)
 
 
-def file_present(path: Path, hint: str) -> Probe:
-    return Probe(path.is_file(), str(path) if path.is_file() else "%s is missing (%s)" % (path, hint))
+# --- the worker's host checks -------------------------------------------------
 
 
-def podman_bin(executable: str) -> Probe:
-    """The podman the sandboxes run on answers ``--version``: a path, or a name on PATH."""
-    executable = os.path.expanduser(executable)
-    found = executable if os.path.isabs(executable) else which(executable)
-    if not found or not os.access(found, os.X_OK):
-        return Probe(False, "%s is not an executable podman (ops/setup_podman.sh installs one under "
-                            "~/.local/opt/podman; $SPROUT_PODMAN_BIN names another)" % executable)
+class HostError(ValueError):
+    """The worker's doctor gave no report.
+
+    For example, the interpreter is missing, or it cannot import ``sprout.worker``.
+    """
+
+
+@dataclass(frozen=True)
+class HostReport:
+    """The worker's doctor report: the podman and store it resolved, and each check by name."""
+
+    podman_bin: str
+    store: str
+    checks: Mapping[str, Probe]
+
+
+class WorkerDoctor:
+    """The worker's report on this host, from ``<python> -m sprout.worker doctor --json``.
+
+    The doctor runs at most once for each set of flags, at the first question that needs it. So a
+    command that reads several checks and placeholders starts one child process.
+    """
+
+    def __init__(self, *, python: str, environ: Mapping[str, str]) -> None:
+        self._python = python
+        self._environ = dict(environ)
+        self._reports: dict[tuple[str, ...], HostReport | str] = {}
+
+    def report(self, flags: tuple[str, ...] = ()) -> HostReport:
+        """The report for these doctor flags. Raises :class:`HostError` when the doctor gives none."""
+        if flags not in self._reports:
+            argv = [self._python, "-m", "sprout.worker", "doctor", "--json", *flags]
+            try:
+                self._reports[flags] = _run_doctor(argv, self._environ)
+            except HostError as error:
+                self._reports[flags] = str(error)
+        found = self._reports[flags]
+        if isinstance(found, str):
+            raise HostError(found)
+        return found
+
+    def check(self, *, kind: str, path: str) -> Probe:
+        """The verdict on a ``check`` service of this kind, on ``path`` or, when it is empty, the default."""
+        name, flag = _DOCTOR_CHECKS[kind]
+        try:
+            report = self.report((flag, path) if path else ())
+        except HostError as error:
+            return Probe(False, str(error))
+        return report.checks.get(name) or Probe(False, "the worker's doctor reports no %s check" % name)
+
+    def other_checks(self, kinds: Iterable[str]) -> list[tuple[str, Probe]]:
+        """Each check of the default report that no ``check`` service of these kinds shows.
+
+        When the doctor gives no report, this is one failed ``worker`` check that says why.
+        """
+        try:
+            report = self.report()
+        except HostError as error:
+            return [("worker", Probe(False, str(error)))]
+        shown = {_DOCTOR_CHECKS[kind][0] for kind in kinds}
+        return [(name, probe) for name, probe in report.checks.items() if name not in shown]
+
+    def fact(self, name: str) -> str:
+        """``podman_bin`` or ``store`` as the doctor resolved them. Raises :class:`HostError`."""
+        report = self.report()
+        return report.podman_bin if name == "podman_bin" else report.store
+
+
+def _run_doctor(argv: list[str], environ: Mapping[str, str]) -> HostReport:
+    command = shlex.join(argv)
     try:
-        done = subprocess.run([found, "--version"], capture_output=True, text=True, timeout=TOOL_TIMEOUT_S)
-    except (OSError, subprocess.TimeoutExpired) as error:
-        return Probe(False, "%s --version: %s" % (found, error))
-    if done.returncode != 0:
-        return Probe(False, "%s --version exited %d: %s" % (found, done.returncode, done.stderr.strip()[:120]))
-    return Probe(True, "%s (%s)" % (done.stdout.strip().replace("podman version ", "podman "), found))
-
-
-def btrfs_store(path: Path) -> Probe:
-    """What ``PodmanPool`` refuses, asked the same way (``findmnt --target``): the
-    filesystem holding the store must be btrfs mounted with ``user_subvol_rm_allowed``."""
-    if not path.is_dir():
-        return Probe(False, "%s does not exist; make it once as root: sudo ops/btrfs_store.sh %s "
-                            "/var/lib/sprout-btrfs-rootless.img 200G" % (path, path))
-    tool = shutil.which("findmnt")
-    if not tool:
-        return Probe(False, "findmnt (util-linux) is not installed; it is how the store's mount is checked")
+        done = subprocess.run(
+            argv, env=dict(environ), capture_output=True, text=True, timeout=_DOCTOR_TIMEOUT_S
+        )
+    except subprocess.TimeoutExpired:
+        raise HostError("%s timed out after %g s" % (command, _DOCTOR_TIMEOUT_S)) from None
+    except OSError as error:
+        raise HostError("%s: %s" % (command, error)) from None
     try:
-        done = subprocess.run([tool, "-no", "FSTYPE,OPTIONS", "--target", str(path)],
-                              capture_output=True, text=True, timeout=TOOL_TIMEOUT_S)
-    except (OSError, subprocess.TimeoutExpired) as error:
-        return Probe(False, "findmnt: %s" % error)
-    fields = done.stdout.split()
-    if done.returncode != 0 or len(fields) < 2:
-        return Probe(False, "findmnt cannot tell what %s is mounted on: %s"
-                     % (path, done.stderr.strip() or "(no output)"))
-    fstype, options = fields[0], fields[1]
-    if fstype != "btrfs":
-        return Probe(False, "%s is on %s, not btrfs (sudo ops/btrfs_store.sh <mount point> <image file> <size>)"
-                     % (path, fstype))
-    if REQUIRED_MOUNT_OPTION not in options.split(","):
-        return Probe(False, "%s is btrfs but mounted without %s (%s)" % (path, REQUIRED_MOUNT_OPTION, options))
-    return Probe(True, "%s: btrfs, %s" % (path, REQUIRED_MOUNT_OPTION))
+        return _parse_report(json.loads(done.stdout))
+    except (ValueError, KeyError, TypeError, AttributeError):
+        lines = done.stderr.strip().splitlines()
+        raise HostError(
+            "%s gave no report (exit %d): %s"
+            % (command, done.returncode, lines[-1] if lines else "no output")
+        ) from None
 
 
-def keyring_quota(minimum: int = KEYRING_MINIMUM) -> Probe:
-    path = Path("/proc/sys/kernel/keys/maxkeys")
-    try:
-        value = int(path.read_text(encoding="ascii").strip())
-    except (OSError, ValueError):
-        return Probe(False, "kernel.keys.maxkeys is not readable here (%s)" % path, warning=True)
-    if value < minimum:
-        return Probe(False, "kernel.keys.maxkeys=%d < %d: rootless podman starts fail at ~180 concurrent "
-                            "containers; fix: %s" % (value, minimum, KEYRING_FIX), warning=True)
-    return Probe(True, "kernel.keys.maxkeys=%d" % value)
+def _parse_report(data: Any) -> HostReport:
+    """The report in the doctor's parsed JSON.
+
+    Raises ``KeyError``, ``TypeError`` or ``AttributeError`` if ``data`` has another shape.
+    """
+    checks = {}
+    for name, check in data["checks"].items():
+        ok, warning = _STATUSES[check["status"]]
+        checks[_text(name)] = Probe(ok, _text(check["detail"]), warning=warning)
+    return HostReport(podman_bin=_text(data["podman_bin"]), store=_text(data["store"]), checks=checks)
+
+
+def _text(value: Any) -> str:
+    if not isinstance(value, str):
+        raise TypeError("not a string: %r" % (value,))
+    return value

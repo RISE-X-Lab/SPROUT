@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="730" viewBox="0 0 1100 730" role="img" aria-labelledby="title desc" font-family="-apple-system, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
+  <title id="title">One task in one experiment</title>
+  <desc id="desc">The runner runs the baseline rollout attempt-1, the parent, with a checkpoint after each turn. If the parent failed, the runner writes retained-checkpoints.json into attempt-1. Then the runner runs attempt-2 to attempt-N, where N is --baseline-rollouts, with only a final snapshot each. Then the runner checks whether attempt-1 resolved the task. If yes, each requested branch method gets the status skipped_initial_success and runs no branch. If no, each of sprout, bpo and shepherd runs as one stage from attempt-1, with at most --max-rollouts rollouts, and stops at the first resolved rollout. Such a stage requires retained-checkpoints.json. If a stage fails, a baseline stage included, the task gets the status infrastructure_error and stays incomplete.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10Z" fill="#3A5047"/>
+    </marker>
+    <style>
+      .title { font-size: 24px; font-weight: 700; fill: #2F443E; }
+      .lead { font-size: 15px; fill: #63766F; }
+      .stage { fill: #E6F1F7; stroke: #587E96; stroke-width: 2; }
+      .files { fill: #E4E3D4; stroke: #63766F; stroke-width: 2; }
+      .resolved { fill: #DFF0DB; stroke: #256348; stroke-width: 2; }
+      .failure { fill: #FBE3DC; stroke: #BC7168; stroke-width: 2; }
+      .decision { fill: #FFFFFF; stroke: #3A5047; stroke-width: 2; }
+      .name { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 16px; font-weight: 700; fill: #2F443E; text-anchor: middle; }
+      .name-sm { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 15px; font-weight: 700; fill: #2F443E; text-anchor: middle; }
+      .note { font-size: 15px; fill: #63766F; text-anchor: middle; }
+      .cond { font-size: 15px; fill: #2F443E; }
+      .edge { fill: none; stroke: #3A5047; stroke-width: 2; marker-end: url(#arrow); }
+      .source { font-size: 13px; fill: #63766F; }
+    </style>
+  </defs>
+
+  <rect x="1" y="1" width="1098" height="728" rx="16" fill="#FFFDF6" stroke="#E5E2D2" stroke-width="2"/>
+  <text class="title" x="40" y="46">One task in one experiment</text>
+  <text class="lead" x="40" y="78">Each arrow leads to the next step. The text on an arrow gives its condition.</text>
+
+  <!-- Baseline stages -->
+  <rect class="stage" x="40" y="130" width="230" height="100" rx="12"/>
+  <text class="name" x="155" y="164">attempt-1</text>
+  <text class="note" x="155" y="190">the parent,</text>
+  <text class="note" x="155" y="210">checkpoints every turn</text>
+
+  <rect class="stage" x="350" y="130" width="260" height="100" rx="12"/>
+  <text class="name" x="480" y="164">attempt-2 … attempt-N</text>
+  <text class="note" x="480" y="190">only a final snapshot,</text>
+  <text class="note" x="480" y="210">N = --baseline-rollouts</text>
+
+  <!-- Decision -->
+  <path class="decision" d="M690 180 L790 120 L890 180 L790 240 Z"/>
+  <text class="name" x="790" y="176">attempt-1</text>
+  <text class="note" x="790" y="198">resolved?</text>
+
+  <!-- Outcomes -->
+  <rect class="files" x="40" y="330" width="280" height="100" rx="12"/>
+  <text class="name-sm" x="180" y="364">retained-checkpoints.json</text>
+  <text class="note" x="180" y="390">written into attempt-1</text>
+  <text class="note" x="180" y="410">for future branches</text>
+
+  <rect class="stage" x="400" y="330" width="320" height="120" rx="12"/>
+  <text class="name" x="560" y="362">sprout, bpo, shepherd</text>
+  <text class="note" x="560" y="388">one stage each, from attempt-1,</text>
+  <text class="note" x="560" y="408">at most --max-rollouts rollouts,</text>
+  <text class="note" x="560" y="428">stops at the first resolved one</text>
+
+  <rect class="resolved" x="800" y="330" width="270" height="100" rx="12"/>
+  <text class="name-sm" x="935" y="364">skipped_initial_success</text>
+  <text class="note" x="935" y="390">resolved by the parent:</text>
+  <text class="note" x="935" y="410">no branch method runs</text>
+
+  <rect class="failure" x="400" y="540" width="320" height="100" rx="12"/>
+  <text class="name" x="560" y="574">infrastructure_error</text>
+  <text class="note" x="560" y="600">also after a failed baseline stage:</text>
+  <text class="note" x="560" y="620">the task stays incomplete</text>
+
+  <!-- Edges -->
+  <path class="edge" d="M270 180 H348"/>
+  <text class="cond" x="310" y="170" text-anchor="middle">then</text>
+  <path class="edge" d="M610 180 H688"/>
+  <text class="cond" x="650" y="170" text-anchor="middle">then</text>
+
+  <path class="edge" d="M155 230 V328"/>
+  <text class="cond" x="167" y="285">parent failed</text>
+
+  <path class="edge" d="M890 180 H935 V328"/>
+  <text class="cond" x="947" y="262">yes</text>
+
+  <path class="edge" d="M790 240 V285 H560 V328"/>
+  <text class="cond" x="802" y="270">no</text>
+
+  <path class="edge" d="M320 380 H398"/>
+  <text class="cond" x="359" y="370" text-anchor="middle">required</text>
+
+  <path class="edge" d="M560 450 V538"/>
+  <text class="cond" x="572" y="500">a stage fails</text>
+
+  <!-- Legend -->
+  <rect class="stage" x="40" y="672" width="34" height="20" rx="5"/>
+  <text class="cond" x="84" y="688">stage</text>
+  <rect class="files" x="160" y="672" width="34" height="20" rx="5"/>
+  <text class="cond" x="204" y="688">file</text>
+  <rect class="resolved" x="270" y="672" width="34" height="20" rx="5"/>
+  <text class="cond" x="314" y="688">resolved</text>
+  <rect class="failure" x="420" y="672" width="34" height="20" rx="5"/>
+  <text class="cond" x="464" y="688">failure</text>
+
+  <text class="source" x="40" y="716">Source: run_task, stage and retain_parent in examples/qwen/run.py</text>
+</svg>

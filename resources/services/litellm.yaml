@@ -1,0 +1,58 @@
+# LiteLLM proxy in front of the models Sprout cannot talk to directly. Sprout only ever
+# sees this proxy's OpenAI-style endpoint and one bearer key:
+#
+#   --model-endpoint http://127.0.0.1:4000/v1 --model-key-env SPROUT_LITELLM_KEY --model <alias>
+#
+# `python -m sprout.services init` copies this file to ~/.config/sprout/litellm.yaml and
+# `python -m sprout.services up proxy` runs the proxy on it (docs/SERVICES.md). Keep the
+# aliases the experiments use and point each at the route that serves it, in LiteLLM's
+# `<provider>/<model id>` notation (its provider pages list what each one takes beside the
+# route: a region, an api_base, a tier); fill in every route before `up proxy`: a route
+# left as the placeholder is logged as "Error creating deployment" when the proxy starts,
+# which it does all the same, and its alias is then unknown to it. Provider credentials
+# are read from the environment of the shell that runs `up proxy`, which the proxy
+# inherits; nothing secret belongs in this file. docs/MODEL_ENDPOINTS.md has the contract
+# and the smoke.
+model_list:
+  # Pick routes that carry tools, reasoning and prompt caching: the proxy translates each
+  # to Chat Completions, including reasoning_effort and the reasoning blocks fed back on
+  # the next turn.
+  - model_name: luna
+    litellm_params:
+      model: <provider>/<model id>
+  - model_name: sonnet5
+    litellm_params:
+      model: <provider>/<model id>
+      # A provider that caches only up to an explicit cache point caches nothing for mini,
+      # which sets none, so the proxy marks the system message and the last user message;
+      # the experiments saw 98% cache hits on the actor's requests with these two points.
+      cache_control_injection_points:
+        - location: message
+          role: system
+        - location: message
+          role: user
+  - model_name: kimi-k3
+    litellm_params:
+      model: <provider>/<model id>
+      # Kimi K3 is served in tiers; priority is the one the experiments measured on.
+      service_tier: priority
+litellm_settings:
+  # Refuse, rather than silently drop, a request field a model does not take: a
+  # reasoning_effort or response_format that vanished would change the experiment quietly.
+  drop_params: false
+  # Seconds the proxy gives one upstream request before it answers 408. Keep it above the
+  # largest timeout Sprout gives one request -- --review-timeout for the analyst and
+  # reviewer (default 3600 s; the selectors wait 1800 s, and the actor's client 600 s for
+  # each request) -- so that Sprout's own timeout fires first and its handling applies: a review
+  # that times out is retried once with half the output budget, whereas a 408 from here
+  # would be retried three times with the same budget, as a transient fault, and then
+  # fail the round. Finite all the same, so an upstream call whose client has given up
+  # is eventually abandoned. Raise it together with a larger --review-timeout.
+  request_timeout: 3900
+  # Sprout retries transient replies itself, with its own receipts and back-off; a retry
+  # inside the proxy would hide a provider error from the journal.
+  num_retries: 0
+general_settings:
+  # The bearer key every Sprout entry point passes through --model-key-env; read from the
+  # environment, where `up proxy` puts the generated secret, never written into this file.
+  master_key: os.environ/LITELLM_MASTER_KEY

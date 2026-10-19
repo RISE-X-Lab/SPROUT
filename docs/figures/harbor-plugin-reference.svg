@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="730" viewBox="0 0 1000 730" role="img" aria-labelledby="title desc" font-family="-apple-system, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
+  <title id="title">Harbor's own trials are the reference for the harbor grade</title>
+  <desc id="desc">On the left, a Harbor 0.22.0 Trial runs Harbor's oracle or nop agent and Harbor's verifier. It calls PodmanEnvironment, from sprout.eval.harbor, to start, run commands in and stop the sandbox. PodmanEnvironment creates a SandboxSession and runs commands and network changes through it. On the right, the Sprout worker runs a rollout job of the same agent, then a grade job with the benchmark harbor, from the rollout's snapshot or in the sandbox that the rollout kept. Each job of the worker has a SandboxSession of its own. Each SandboxSession reaches a podman sandbox through the podman pool: a container whose rootfs is a btrfs subvolume, with sprout-runtime inside. The reward of the Harbor trial and the reward of the worker's grade go to the test test_harbor_grade_live.py, which requires them to be equal.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10Z" fill="#3A5047"/>
+    </marker>
+    <style>
+      .title { font-size: 26px; font-weight: 700; fill: #2F443E; }
+      .lead { font-size: 16px; fill: #63766F; }
+      .name { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 16px; font-weight: 700; fill: #2F443E; text-anchor: middle; }
+      .plain { font-size: 17px; font-weight: 700; fill: #2F443E; text-anchor: middle; }
+      .note { font-size: 15px; fill: #63766F; text-anchor: middle; }
+      .code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 14px; fill: #63766F; text-anchor: middle; }
+      .frame { fill: none; stroke: #63766F; stroke-width: 1.5; }
+      .framelabel { font-size: 15px; font-weight: 700; fill: #63766F; }
+      .label { font-size: 15px; fill: #2F443E; }
+      .harbor { fill: #E4E3D4; stroke: #63766F; stroke-width: 2; }
+      .box { fill: #E6F1F7; stroke: #587E96; stroke-width: 2; }
+      .check { fill: #DFF0DB; stroke: #256348; stroke-width: 2; }
+      .edge { fill: none; stroke: #3A5047; stroke-width: 2; marker-end: url(#arrow); }
+      .reward { fill: none; stroke: #3A5047; stroke-width: 2; stroke-dasharray: 8 6; marker-end: url(#arrow); }
+      .source { font-size: 14px; fill: #63766F; }
+    </style>
+  </defs>
+
+  <rect x="1" y="1" width="998" height="728" rx="16" fill="#FFFDF6" stroke="#E5E2D2" stroke-width="2"/>
+  <text class="title" x="30" y="48">Harbor's own trials are the reference for the harbor grade</text>
+  <text class="lead" x="30" y="78">A solid arrow is a call. A dashed arrow carries a reward to the test that compares the two.</text>
+
+  <!-- Harbor's trial -->
+  <rect class="frame" x="30" y="110" width="250" height="280" rx="12"/>
+  <text class="framelabel" x="46" y="134">a Harbor 0.22.0 trial</text>
+  <rect class="harbor" x="45" y="150" width="220" height="64" rx="10"/>
+  <text class="name" x="155" y="177">Trial</text>
+  <text class="note" x="155" y="201">agent oracle or nop</text>
+  <path class="edge" d="M100 214 V298"/>
+  <text class="label" x="110" y="262">start, exec, stop</text>
+  <rect class="box" x="45" y="300" width="220" height="64" rx="10"/>
+  <text class="name" x="155" y="327">PodmanEnvironment</text>
+  <text class="code" x="155" y="351">sprout.eval.harbor</text>
+
+  <!-- The worker -->
+  <rect class="frame" x="720" y="110" width="250" height="280" rx="12"/>
+  <text class="framelabel" x="736" y="134">the Sprout worker</text>
+  <rect class="box" x="735" y="150" width="220" height="64" rx="10"/>
+  <text class="plain" x="845" y="177">rollout job</text>
+  <text class="note" x="845" y="201">agent oracle or nop</text>
+  <path class="edge" d="M800 214 V298"/>
+  <text class="label" x="810" y="250">snapshot or</text>
+  <text class="label" x="810" y="270">kept sandbox</text>
+  <rect class="box" x="735" y="300" width="220" height="64" rx="10"/>
+  <text class="plain" x="845" y="327">grade job</text>
+  <text class="note" x="845" y="351">benchmark harbor</text>
+
+  <!-- The comparison -->
+  <rect class="check" x="370" y="150" width="260" height="64" rx="10"/>
+  <text class="name" x="500" y="177" style="font-size: 14px">test_harbor_grade_live.py</text>
+  <text class="note" x="500" y="201">the rewards must be equal</text>
+  <path class="reward" d="M265 182 H368"/>
+  <text class="label" x="320" y="172" text-anchor="middle">reward</text>
+  <path class="reward" d="M735 332 H680 V182 H632"/>
+  <text class="label" x="670" y="262" text-anchor="end">reward</text>
+
+  <!-- The shared sandbox stack -->
+  <rect class="box" x="380" y="440" width="240" height="64" rx="10"/>
+  <text class="name" x="500" y="467">SandboxSession</text>
+  <text class="code" x="500" y="491">sprout.worker.sandbox</text>
+  <path class="edge" d="M155 364 V472 H378"/>
+  <text class="label" x="165" y="420">create, execute,</text>
+  <text class="label" x="165" y="440">set_network</text>
+  <path class="edge" d="M845 390 V472 H622"/>
+  <text class="label" x="835" y="430" text-anchor="end">each job's session</text>
+  <path class="edge" d="M500 504 V560"/>
+  <text class="label" x="510" y="538">podman pool</text>
+  <rect class="box" x="330" y="562" width="340" height="64" rx="10"/>
+  <text class="plain" x="500" y="589">podman sandbox</text>
+  <text class="note" x="500" y="613">container, btrfs subvolume, sprout-runtime</text>
+
+  <!-- Legend -->
+  <path class="edge" d="M30 668 H78"/>
+  <text class="lead" x="88" y="673">a call</text>
+  <path class="reward" d="M180 668 H228"/>
+  <text class="lead" x="238" y="673">a reward</text>
+  <rect class="harbor" x="350" y="658" width="22" height="20" rx="4"/>
+  <text class="lead" x="380" y="673">Harbor's code</text>
+  <rect class="box" x="510" y="658" width="22" height="20" rx="4"/>
+  <text class="lead" x="540" y="673">Sprout's code</text>
+  <text class="source" x="30" y="710">Source: src/sprout/eval/harbor/, src/sprout/worker/jobs/harbor/grade.py, tests/sprout_sandbox/test_harbor_grade_live.py</text>
+</svg>

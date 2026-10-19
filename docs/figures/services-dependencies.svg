@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="870" viewBox="0 0 1240 870" role="img" aria-labelledby="title desc" font-family="-apple-system, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
+  <title id="title">Services and their dependencies</title>
+  <desc id="desc">The eight services of the packaged services.yaml template and the worker's doctor. db is a podman container on port 15432. runstore-api is a process on port 18110 that depends on db and receives SPROUT_RUNSTORE_DSN from it. runstore-worker is a process that depends on runstore-api, podman and store, and receives SPROUT_RUNSTORE_TOKEN, SPROUT_PODMAN_BIN and SPROUT_PODMAN_STORE from them. rl-driver is a process on port 11001 that depends on runstore-api and receives SPROUT_RUNSTORE_TOKEN from it. proxy is a process on port 4000, and aenv is a disabled external service. Neither has a dependency. podman and store are checks. The worker's doctor, which the CLI runs as {python} -m sprout.worker doctor --json, gives the verdict of the podman check and of the store check, and the values of the {podman_bin} and {store} placeholders. The db container runs on {podman_bin}. Exports also pass on transitively: runstore-worker and rl-driver also receive SPROUT_RUNSTORE_DSN from db through runstore-api. The CLI starts and stops db, proxy, runstore-api, runstore-worker and rl-driver. It only checks or probes podman, store and aenv.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10Z" fill="#3A5047"/>
+    </marker>
+    <style>
+      .title { font-size: 24px; font-weight: 700; fill: #2F443E; }
+      .lead { font-size: 15px; fill: #63766F; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; }
+      .name { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 18px; font-weight: 700; fill: #2F443E; text-anchor: middle; }
+      .sub { font-size: 15px; fill: #63766F; text-anchor: middle; }
+      .label { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 15px; fill: #2F443E; }
+      .note { font-size: 15px; fill: #63766F; }
+      .managed { fill: #E6F1F7; stroke: #587E96; stroke-width: 2; }
+      .checked { fill: #E4E3D4; stroke: #63766F; stroke-width: 2; }
+      .doctor { fill: #FFFFFF; stroke: #63766F; stroke-width: 2; stroke-dasharray: 8 5; }
+      .boundary { fill: none; stroke: #B9B6A6; stroke-width: 1.5; }
+      .depends { fill: none; stroke: #3A5047; stroke-width: 2; marker-end: url(#arrow); }
+      .fact { fill: none; stroke: #3A5047; stroke-width: 2; stroke-dasharray: 8 5; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect x="1" y="1" width="1238" height="868" rx="16" fill="#FFFDF6" stroke="#E5E2D2" stroke-width="2"/>
+  <text class="title" x="40" y="50">Services and their dependencies</text>
+
+  <!-- Legend -->
+  <path class="depends" d="M40 80 H92"/>
+  <text class="lead" x="106" y="85">The service at the arrowhead names the service at the tail in <tspan class="mono">depends_on</tspan>. It receives the export on the label.</text>
+  <path class="fact" d="M40 108 H92"/>
+  <text class="lead" x="106" y="113">A fact from the worker's doctor: the verdict of a check, or the value of a placeholder.</text>
+  <rect class="managed" x="40" y="126" width="24" height="16" rx="4"/>
+  <text class="lead" x="76" y="140">The CLI starts and stops it.</text>
+  <rect class="checked" x="320" y="126" width="24" height="16" rx="4"/>
+  <text class="lead" x="356" y="140">The CLI only checks or probes it.</text>
+
+  <!-- The worker's doctor -->
+  <rect class="doctor" x="40" y="164" width="920" height="62" rx="12"/>
+  <text class="name" x="500" y="191">{python} -m sprout.worker doctor --json</text>
+  <text class="sub" x="500" y="214">the worker's host checks, which the CLI runs as a child process</text>
+
+  <!-- services.yaml boundary -->
+  <rect class="boundary" x="20" y="294" width="1200" height="516" rx="14"/>
+  <text class="note" x="1200" y="322" text-anchor="end"><tspan class="mono">services.yaml</tspan> of the template</text>
+
+  <!-- Row 0 -->
+  <rect class="managed" x="40" y="350" width="260" height="76" rx="12"/>
+  <text class="name" x="170" y="381">db</text>
+  <text class="sub" x="170" y="407">container, port 15432</text>
+
+  <rect class="checked" x="520" y="350" width="200" height="76" rx="12"/>
+  <text class="name" x="620" y="381">podman</text>
+  <text class="sub" x="620" y="407">check</text>
+
+  <rect class="checked" x="752" y="350" width="200" height="76" rx="12"/>
+  <text class="name" x="852" y="381">store</text>
+  <text class="sub" x="852" y="407">check</text>
+
+  <rect class="managed" x="984" y="350" width="200" height="76" rx="12"/>
+  <text class="name" x="1084" y="381">proxy</text>
+  <text class="sub" x="1084" y="407">process, port 4000</text>
+
+  <!-- Row 1 -->
+  <rect class="managed" x="50" y="530" width="240" height="76" rx="12"/>
+  <text class="name" x="170" y="561">runstore-api</text>
+  <text class="sub" x="170" y="587">process, port 18110</text>
+
+  <rect class="managed" x="520" y="530" width="432" height="76" rx="12"/>
+  <text class="name" x="736" y="561">runstore-worker</text>
+  <text class="sub" x="736" y="587">process</text>
+
+  <rect class="checked" x="984" y="530" width="200" height="76" rx="12"/>
+  <text class="name" x="1084" y="561">aenv</text>
+  <text class="sub" x="1084" y="587">external, disabled</text>
+
+  <!-- Row 2 -->
+  <rect class="managed" x="50" y="710" width="240" height="76" rx="12"/>
+  <text class="name" x="170" y="741">rl-driver</text>
+  <text class="sub" x="170" y="767">process, port 11001</text>
+
+  <!-- Facts from the doctor -->
+  <path class="fact" d="M170 226 V348"/>
+  <text class="label" x="182" y="256">{podman_bin}</text>
+  <text class="note" x="182" y="278">runs the container</text>
+
+  <path class="fact" d="M620 226 V348"/>
+  <text class="note" x="632" y="256">verdict of check <tspan class="mono">podman</tspan></text>
+  <text class="label" x="632" y="278">{podman_bin}</text>
+
+  <path class="fact" d="M852 226 V348"/>
+  <text class="note" x="864" y="256">verdict of check <tspan class="mono">store</tspan></text>
+  <text class="label" x="864" y="278">{store}</text>
+
+  <!-- depends_on edges -->
+  <path class="depends" d="M170 426 V528"/>
+  <text class="label" x="182" y="482">SPROUT_RUNSTORE_DSN</text>
+
+  <path class="depends" d="M290 568 H518"/>
+  <text class="label" x="404" y="556" text-anchor="middle">SPROUT_RUNSTORE_TOKEN</text>
+
+  <path class="depends" d="M620 426 V528"/>
+  <text class="label" x="632" y="482">SPROUT_PODMAN_BIN</text>
+
+  <path class="depends" d="M852 426 V528"/>
+  <text class="label" x="864" y="482">SPROUT_PODMAN_STORE</text>
+
+  <path class="depends" d="M170 606 V708"/>
+  <text class="label" x="182" y="662">SPROUT_RUNSTORE_TOKEN</text>
+
+  <text class="note" x="330" y="742">Exports also pass on transitively: <tspan class="mono">runstore-worker</tspan> and <tspan class="mono">rl-driver</tspan></text>
+  <text class="note" x="330" y="766">also receive <tspan class="mono">SPROUT_RUNSTORE_DSN</tspan> from <tspan class="mono">db</tspan>, through <tspan class="mono">runstore-api</tspan>.</text>
+
+  <text class="note" x="40" y="846">Drawn from resources/services/services.yaml and src/sprout/services/ (spec.py, health.py, __main__.py).</text>
+</svg>

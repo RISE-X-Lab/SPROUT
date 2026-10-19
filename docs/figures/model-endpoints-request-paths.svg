@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="850" viewBox="0 0 1240 850" role="img" aria-labelledby="title desc" font-family="-apple-system, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
+  <title id="title">Model requests and their endpoints</title>
+  <desc id="desc">Three callers send Chat Completions requests to one endpoint. In the attempt process of a rollout job on the worker host, mini's ChatModel, the actor, sends each request with its slot token to the run's gateway, sprout.worker.gateway. The gateway sends it on to the URL of --model-endpoint, with the key in the variable that --model-key-env names. In the attempt process of a review job, ReviewTransport sends the analyst's and the reviewer's requests to the URL of --review-endpoint, with the key in the variable that --review-key-env names. In the sprout.eval.evaluate process, policies.ModelClient sends the BPO and Shepherd selectors' requests to the URL of --model-endpoint, with the key in the variable that --model-key-env names. The endpoint is one of two: a provider's own Chat Completions endpoint, or the proxy service, LiteLLM at http://127.0.0.1:4000/v1. The proxy sends each request on to the route of its alias, a provider route in the provider's own API.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10Z" fill="#3A5047"/>
+    </marker>
+    <style>
+      .title { font-size: 24px; font-weight: 700; fill: #2F443E; }
+      .lead { font-size: 15px; fill: #63766F; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; }
+      .name { font-size: 18px; font-weight: 700; fill: #2F443E; text-anchor: middle; }
+      .sub { font-size: 15px; fill: #63766F; text-anchor: middle; }
+      .label { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 15px; fill: #2F443E; }
+      .note { font-size: 15px; fill: #63766F; }
+      .box { fill: #E6F1F7; stroke: #587E96; stroke-width: 2; }
+      .boundary { fill: none; stroke: #B9B6A6; stroke-width: 1.5; }
+      .request { fill: none; stroke: #3A5047; stroke-width: 2; marker-end: url(#arrow); }
+      .upstream { fill: none; stroke: #3A5047; stroke-width: 2; stroke-dasharray: 8 5; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect x="1" y="1" width="1238" height="848" rx="16" fill="#FFFDF6" stroke="#E5E2D2" stroke-width="2"/>
+  <text class="title" x="40" y="50">Model requests and their endpoints</text>
+
+  <!-- Legend -->
+  <path class="request" d="M40 80 H92"/>
+  <text class="lead" x="106" y="85">A Chat Completions request. Above the arrow: the flag that sets the URL. Below it: the flag that names the key variable.</text>
+  <path class="upstream" d="M40 108 H92"/>
+  <text class="lead" x="106" y="113">The proxy's request to the route of the alias, in the provider's own API.</text>
+
+  <!-- Worker host: attempt process -->
+  <rect class="boundary" x="20" y="146" width="630" height="340" rx="14"/>
+  <text class="note" x="40" y="174">worker host: one attempt process for each job</text>
+
+  <rect class="box" x="50" y="196" width="220" height="76" rx="12"/>
+  <text class="name mono" x="160" y="227">ChatModel</text>
+  <text class="sub" x="160" y="253">mini, the actor</text>
+
+  <rect class="box" x="380" y="196" width="240" height="76" rx="12"/>
+  <text class="name" x="500" y="227">gateway</text>
+  <text class="sub mono" x="500" y="253">sprout.worker.gateway</text>
+
+  <rect class="box" x="50" y="376" width="570" height="76" rx="12"/>
+  <text class="name mono" x="335" y="407">ReviewTransport</text>
+  <text class="sub" x="335" y="433">the analyst and the reviewer of a review job</text>
+
+  <!-- sprout.eval.evaluate process -->
+  <rect class="boundary" x="20" y="520" width="630" height="150" rx="14"/>
+  <text class="note" x="40" y="548"><tspan class="mono">sprout.eval.evaluate</tspan> process</text>
+
+  <rect class="box" x="50" y="568" width="570" height="76" rx="12"/>
+  <text class="name mono" x="335" y="599">policies.ModelClient</text>
+  <text class="sub" x="335" y="625">the BPO and Shepherd selectors</text>
+
+  <!-- The endpoint: one of two -->
+  <rect class="boundary" x="870" y="146" width="350" height="530" rx="14"/>
+  <text class="note" x="890" y="174">the endpoint, one of these two:</text>
+
+  <rect class="box" x="900" y="196" width="290" height="76" rx="12"/>
+  <text class="name" x="1045" y="227">provider endpoint</text>
+  <text class="sub" x="1045" y="253">its own Chat Completions URL</text>
+
+  <rect class="box" x="900" y="406" width="290" height="76" rx="12"/>
+  <text class="name" x="1045" y="437"><tspan class="mono">proxy</tspan>: LiteLLM</text>
+  <text class="sub mono" x="1045" y="463">http://127.0.0.1:4000/v1</text>
+
+  <rect class="box" x="900" y="736" width="290" height="76" rx="12"/>
+  <text class="name" x="1045" y="767">provider route</text>
+  <text class="sub mono" x="1045" y="793">&lt;provider&gt;/&lt;model id&gt;</text>
+
+  <!-- Requests -->
+  <path class="request" d="M270 234 H378"/>
+  <text class="note" x="324" y="222" text-anchor="middle">slot token</text>
+
+  <path class="request" d="M620 234 H868"/>
+  <text class="label" x="744" y="222" text-anchor="middle">--model-endpoint</text>
+  <text class="note" x="744" y="258" text-anchor="middle">key: <tspan class="mono">--model-key-env</tspan></text>
+
+  <path class="request" d="M620 414 H868"/>
+  <text class="label" x="744" y="402" text-anchor="middle">--review-endpoint</text>
+  <text class="note" x="744" y="438" text-anchor="middle">key: <tspan class="mono">--review-key-env</tspan></text>
+
+  <path class="request" d="M620 606 H868"/>
+  <text class="label" x="744" y="594" text-anchor="middle">--model-endpoint</text>
+  <text class="note" x="744" y="630" text-anchor="middle">key: <tspan class="mono">--model-key-env</tspan></text>
+
+  <!-- The proxy's request -->
+  <path class="upstream" d="M1045 482 V734"/>
+  <text class="note" x="1057" y="600">route of the alias</text>
+
+  <text class="note" x="40" y="720">Drawn from src/sprout/worker/agents/mini_swe/model.py, src/sprout/worker/gateway/,</text>
+  <text class="note" x="40" y="744">src/sprout/worker/jobs/review/transport.py, src/sprout/eval/policies.py</text>
+  <text class="note" x="40" y="768">and resources/services/litellm.yaml.</text>
+</svg>

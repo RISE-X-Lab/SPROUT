@@ -4,7 +4,7 @@ upstream:
   verified_versions:
     sdk: "2.4.6"
   exact_version: true
-normalizer_module: sprout.harness.agents.mini_swe.history
+normalizer_module: sprout.worker.agents.mini_swe.history
 event_types: [mini.message, mini.turn]
 python_api:
   module: minisweagent.agents.default

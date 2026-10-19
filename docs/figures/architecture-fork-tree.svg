@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="600" viewBox="0 0 1100 600" role="img" aria-labelledby="title desc" font-family="-apple-system, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
+  <title id="title">A SPROUT search on one task</title>
+  <desc id="desc">The rollouts of one SPROUT search, drawn as a tree. Each line is one rollout, and each dot on it is a checkpoint: a disk snapshot of the sandbox and the agent's history up to that turn. The parent rollout starts at the task, takes checkpoints C1 to C7 and fails with reward 0. In round 1, the review picks C2 and C5, and one branch starts at each. Each branch starts with the reviewer's turn, drawn as a diamond, and then the actor continues. Both round 1 branches fail with reward 0. In round 2, the review reads all three attempts and picks a checkpoint on the branch from C2. The round 2 branch from it passes with reward 1, and the search stops.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10Z" fill="#3A5047"/>
+    </marker>
+    <style>
+      .title { font-size: 26px; font-weight: 700; fill: #2F443E; }
+      .lead { font-size: 16px; fill: #63766F; }
+      .name { font-size: 17px; font-weight: 700; fill: #2F443E; }
+      .note { font-size: 15px; fill: #63766F; }
+      .point { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 15px; fill: #2F443E; text-anchor: middle; }
+      .picked { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 15px; font-weight: 700; fill: #278065; text-anchor: middle; }
+      .round { font-size: 15px; font-weight: 700; fill: #278065; text-anchor: end; }
+      .rollout { fill: none; stroke: #3A5047; stroke-width: 2.5; marker-end: url(#arrow); }
+      .dot { fill: #FFFDF6; stroke: #3A5047; stroke-width: 2.5; }
+      .chosen { fill: #278065; stroke: #3A5047; stroke-width: 2.5; }
+      .turn { fill: #FFE7A9; stroke: #B28745; stroke-width: 2; }
+      .pass { fill: #DFF0DB; stroke: #256348; stroke-width: 2; }
+      .fail { fill: #FBE3DC; stroke: #BC7168; stroke-width: 2; }
+      .task { fill: #E6F1F7; stroke: #587E96; stroke-width: 2; }
+    </style>
+  </defs>
+
+  <rect x="1" y="1" width="1098" height="598" rx="16" fill="#FFFDF6" stroke="#E5E2D2" stroke-width="2"/>
+  <text class="title" x="40" y="48">A SPROUT search on one task</text>
+  <text class="lead" x="40" y="78">Each line is one rollout, and each dot on it is a checkpoint: a disk snapshot and the agent's history.</text>
+  <text class="lead" x="40" y="100">Each review picks checkpoints, and a branch starts at each one. Filled dots are the picked checkpoints.</text>
+
+  <!-- the task -->
+  <rect class="task" x="30" y="420" width="76" height="40" rx="10"/>
+  <text class="name" x="68" y="446" text-anchor="middle">task</text>
+
+  <!-- the parent rollout -->
+  <path class="rollout" d="M106 440 H878"/>
+  <circle class="dot" cx="170" cy="440" r="8"/>
+  <circle class="chosen" cx="270" cy="440" r="8"/>
+  <circle class="dot" cx="370" cy="440" r="8"/>
+  <circle class="dot" cx="470" cy="440" r="8"/>
+  <circle class="chosen" cx="570" cy="440" r="8"/>
+  <circle class="dot" cx="670" cy="440" r="8"/>
+  <circle class="dot" cx="770" cy="440" r="8"/>
+  <text class="point" x="170" y="472">C1</text>
+  <text class="picked" x="270" y="472">C2</text>
+  <text class="point" x="370" y="472">C3</text>
+  <text class="point" x="470" y="472">C4</text>
+  <text class="picked" x="570" y="472">C5</text>
+  <text class="point" x="670" y="472">C6</text>
+  <text class="point" x="770" y="472">C7</text>
+
+  <!-- round 1: the branch from C2 -->
+  <path class="rollout" d="M270 432 V300 H878"/>
+  <text class="round" x="262" y="372">round 1</text>
+  <path class="turn" d="M320 290 L330 300 L320 310 L310 300 Z"/>
+  <circle class="dot" cx="400" cy="300" r="8"/>
+  <circle class="chosen" cx="490" cy="300" r="8"/>
+  <circle class="dot" cx="580" cy="300" r="8"/>
+  <circle class="dot" cx="670" cy="300" r="8"/>
+  <circle class="dot" cx="760" cy="300" r="8"/>
+
+  <!-- round 1: the branch from C5 -->
+  <path class="rollout" d="M570 432 V370 H878"/>
+  <text class="round" x="562" y="408">round 1</text>
+  <path class="turn" d="M620 360 L630 370 L620 380 L610 370 Z"/>
+  <circle class="dot" cx="700" cy="370" r="8"/>
+  <circle class="dot" cx="780" cy="370" r="8"/>
+
+  <!-- round 2: the branch from a checkpoint of the first branch -->
+  <path class="rollout" d="M490 292 V200 H878"/>
+  <text class="round" x="482" y="252">round 2</text>
+  <path class="turn" d="M540 190 L550 200 L540 210 L530 200 Z"/>
+  <circle class="dot" cx="620" cy="200" r="8"/>
+  <circle class="dot" cx="700" cy="200" r="8"/>
+  <circle class="dot" cx="780" cy="200" r="8"/>
+
+  <!-- outcomes -->
+  <rect class="pass" x="880" y="176" width="190" height="48" rx="10"/>
+  <text class="name" x="896" y="197">round 2 branch</text>
+  <text class="note" x="896" y="216">pass, reward 1</text>
+
+  <rect class="fail" x="880" y="276" width="190" height="48" rx="10"/>
+  <text class="name" x="896" y="297">round 1 branch</text>
+  <text class="note" x="896" y="316">fail, reward 0</text>
+
+  <rect class="fail" x="880" y="346" width="190" height="48" rx="10"/>
+  <text class="name" x="896" y="367">round 1 branch</text>
+  <text class="note" x="896" y="386">fail, reward 0</text>
+
+  <rect class="fail" x="880" y="416" width="190" height="48" rx="10"/>
+  <text class="name" x="896" y="437">parent rollout</text>
+  <text class="note" x="896" y="456">fail, reward 0</text>
+
+  <!-- legend -->
+  <circle class="dot" cx="48" cy="520" r="8"/>
+  <text class="note" x="66" y="525">checkpoint: a disk snapshot and the agent's history up to that turn</text>
+  <path class="turn" d="M560 510 L570 520 L560 530 L550 520 Z"/>
+  <text class="note" x="580" y="525">the reviewer's turn, the first turn of a branch</text>
+
+  <text class="note" x="40" y="574">Source: Evaluation in src/sprout/eval/evaluate.py, and ToolAccess in src/sprout/worker/tools/access.py</text>
+</svg>

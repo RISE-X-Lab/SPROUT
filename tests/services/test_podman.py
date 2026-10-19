@@ -1,151 +1,221 @@
-"""The container lifecycle against a fake ``podman`` (and ``pg_isready``) on PATH.
+"""The podman verbs of a container service, against a stub podman that records each call and its environment.
 
-The real podman is never run. The fake records every argv it is called with,
-keeps "the container" as one state file and answers ``inspect`` from it, so
-what is asserted is exactly what the CLI hands podman for the template's own
-``db`` service: the ``{state}`` mount expanded to a real path (podman reads a
-source without a leading ``/`` as a named volume, and that is how ``up db``
-once failed on its first real run), the password by ``-e NAME`` only, and a
-stopped container started rather than created again. ``pg_isready`` is faked
-too, so the probe never opens a socket.
+The stub answers as the test sets, so each test arranges the state that podman reports. The shared fake
+podman of ``tests/support`` has no ``stop`` and records no environment, and both are what these tests
+check. The real podman is never run.
 """
 
 from __future__ import annotations
 
-import json
-import os
-import re
-import sys
-from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
-import yaml
 
-from sprout.services import __main__ as cli
-from sprout.services import secrets
-from sprout.services.spec import template_path
+from sprout.services.podman import ContainerState, Podman
+from sprout.services.spec import Context, load_spec, parse_spec, template_path
+from sprout.services.supervisor import StartError
+from tests.services.helpers import StubProgram, make_stub
 
-from tests.services.conftest import write_spec
-
-#: `%(python)s`, `%(record)r`, `%(state)r` are filled in by the fixture.
-FAKE_PODMAN = '''#!%(python)s
-"""A podman that only remembers: every argv in a record, one state file as the container."""
-import json, os, sys
-from pathlib import Path
-record, state = Path(%(record)r), Path(%(state)r)
-argv = sys.argv[1:]
-watched = ("POSTGRES_USER", "POSTGRES_DB", "POSTGRES_PASSWORD")
-with record.open("a") as fh:
-    fh.write(json.dumps({"argv": argv, "env": {k: os.environ.get(k) for k in watched}}) + "\\n")
-verb = argv[0]
-if verb == "inspect":
-    if not state.exists():
-        sys.exit("Error: no such container")
-    sys.stdout.write(state.read_text())
-elif verb == "run":
-    if state.exists():
-        sys.exit("Error: the container name is already in use")
-    state.write_text("running 4242\\n")
-    print("deadbeef")
-elif verb == "start":
-    state.write_text("running 4242\\n")
-elif verb == "stop":
-    state.write_text("exited 0\\n")
-else:
-    sys.exit("Error: unknown verb %%s" %% verb)
-'''
-
-FAKE_PG_ISREADY = '''#!%(python)s
-"""A pg_isready that answers from the fake container's state, never from a socket."""
-import sys
-from pathlib import Path
-state = Path(%(state)r)
-where = "%%s:%%s" %% (sys.argv[sys.argv.index("-h") + 1], sys.argv[sys.argv.index("-p") + 1])
-if state.exists() and state.read_text().startswith("running"):
-    print(where + " - accepting connections")
-    sys.exit(0)
-print(where + " - no response")
-sys.exit(2)
-'''
-
-
-@dataclass(frozen=True)
-class FakePodman:
-    record: Path
-    state: Path
-
-    def calls(self) -> list[dict]:
-        if not self.record.exists():
-            return []
-        return [json.loads(line) for line in self.record.read_text().splitlines()]
-
-    def verbs(self) -> list[str]:
-        return [call["argv"][0] for call in self.calls()]
+DB_STATE = [
+    "inspect",
+    "--type",
+    "container",
+    "--format",
+    "{{.State.Status}} {{.State.Pid}}",
+    "sprout-services-db",
+]
 
 
 @pytest.fixture
-def fake_podman(paths, tmp_path, monkeypatch) -> FakePodman:
-    """Both fakes first on PATH; `paths` has already moved every root to tmp_path."""
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    fake = FakePodman(tmp_path / "podman-calls.jsonl", tmp_path / "container-state")
-    values = {"python": sys.executable, "record": str(fake.record), "state": str(fake.state)}
-    for name, text in (("podman", FAKE_PODMAN), ("pg_isready", FAKE_PG_ISREADY)):
-        script = bin_dir / name
-        script.write_text(text % values, encoding="utf-8")
-        script.chmod(0o755)
-    monkeypatch.setenv("PATH", str(bin_dir) + os.pathsep + os.environ.get("PATH", ""))
-    return fake
+def sandbox_podman(tmp_path: Path) -> StubProgram:
+    """The podman that the sandboxes run on. It is not on PATH."""
+    return make_stub(tmp_path / "sandboxes" / "podman")
 
 
-def _template_db() -> dict:
-    """The shipped db service, verbatim: the test is about what the template does."""
-    return yaml.safe_load(template_path("services.yaml").read_text(encoding="utf-8"))["services"]["db"]
+def podman_of(paths, podman_bin: str) -> Podman:
+    return Podman(paths.log_file("db"), paths.service("db"), {"PATH": "/usr/bin:/bin"}, podman_bin=podman_bin)
 
 
-def test_up_hands_podman_the_expanded_mount_and_the_password_by_name_only(paths, fake_podman, capsys):
-    write_spec(paths, {"db": _template_db()})
-    assert cli.main(["up", "db"]) == 0
-    out = capsys.readouterr().out
-    assert "db: creating container sprout-services-db from docker.io/library/postgres:16-alpine (podman run)" in out
-    assert "db: up (container sprout-services-db, 127.0.0.1:15432 - accepting connections)" in out
-
-    run = next(call for call in fake_podman.calls() if call["argv"][0] == "run")
-    argv = run["argv"]
-    data = paths.state / "db" / "data"
-    assert argv[:4] == ["run", "-d", "--name", "sprout-services-db"] and argv[-1] == "docker.io/library/postgres:16-alpine"
-    assert argv[argv.index("-p") + 1] == "127.0.0.1:15432:5432"
-    assert argv[argv.index("-v") + 1] == "%s:/var/lib/postgresql/data:Z" % data, argv
-    assert data.is_dir(), "the host side of the bind mount is made before podman sees it"
-    assert [argv[i + 1] for i, token in enumerate(argv) if token == "-e"] == ["POSTGRES_USER", "POSTGRES_DB", "POSTGRES_PASSWORD"]
-    password = secrets.require(paths, "db-password")
-    assert run["env"] == {"POSTGRES_USER": "sprout_runstore", "POSTGRES_DB": "sprout_runstore", "POSTGRES_PASSWORD": password}
-    joined = " ".join(argv)
-    assert password not in joined and "{" not in joined, "placeholders expanded, the value in the environment only"
-    log = paths.log_file("db").read_text()
-    assert str(data) in log and "{state}" not in log and password not in log and password not in out
-
-    assert cli.main(["status"]) == 0
-    table = capsys.readouterr().out
-    assert re.search(r"^db\s+\| podman\s+\| 4242\s+\| ok: 127\.0\.0\.1:15432 - accepting connections\s+\| 15432$", table, re.M), table
-    assert password not in table
+def context(paths) -> Context:
+    return Context(
+        paths=paths,
+        python="/path/to/python",
+        secret=lambda name: "secret-value-of-" + name,
+        host=lambda name: "/path/to/" + name,
+        environ={},
+    )
 
 
-def test_a_stopped_container_is_started_not_created_again(paths, fake_podman, capsys):
-    write_spec(paths, {"db": _template_db()})
-    assert cli.main(["down", "db"]) == 0
-    assert "db: container sprout-services-db does not exist" in capsys.readouterr().out
-    assert cli.main(["up", "db"]) == 0 and cli.main(["up", "db"]) == 0
-    assert capsys.readouterr().out.count("db: already healthy (127.0.0.1:15432 - accepting connections)") == 1
+def template_db():
+    return load_spec(template_path("services.yaml")).get("db")
 
-    assert cli.main(["down", "db"]) == 0
-    out = capsys.readouterr().out
-    assert "db: stopping container sprout-services-db (podman stop)" in out and "db: stopped" in out
-    assert next(call["argv"] for call in fake_podman.calls() if call["argv"][0] == "stop") == ["stop", "--time", "20", "sprout-services-db"]
-    assert cli.main(["status"]) == 0
-    assert re.search(r"^db\s+\| podman\s+\| -\s+\| down: 127\.0\.0\.1:15432 - no response\s+\| 15432$", capsys.readouterr().out, re.M)
 
-    assert cli.main(["up", "db"]) == 0
-    assert "db: starting container sprout-services-db (podman start)" in capsys.readouterr().out
-    assert [verb for verb in fake_podman.verbs() if verb != "inspect"] == ["run", "stop", "start"]
+# --- inspect ------------------------------------------------------------------
+
+
+def test_inspect_asks_podman_for_the_state_and_the_pid_of_the_container(paths, sandbox_podman):
+    sandbox_podman.answer(when="inspect", out="running 4242\n")
+
+    state = podman_of(paths, str(sandbox_podman.path)).inspect("sprout-services-db")
+
+    assert (state, sandbox_podman.calls()) == (ContainerState("running", 4242), [DB_STATE])
+
+
+@pytest.mark.parametrize(
+    "answer, expected",
+    [
+        ({"out": "exited 0\n"}, ContainerState("exited", None)),
+        (
+            {"err": "Error: no such container sprout-services-db\n", "code": 125},
+            ContainerState("absent", None),
+        ),
+    ],
+)
+def test_inspect_reads_a_stopped_or_unknown_container_from_what_podman_reports(
+    paths, sandbox_podman, answer, expected
+):
+    sandbox_podman.answer(when="inspect", **answer)
+
+    assert podman_of(paths, str(sandbox_podman.path)).inspect("sprout-services-db") == expected
+
+
+@pytest.mark.parametrize("podman_bin", ["/path/to/absent/podman", "podman"])
+def test_inspect_without_a_podman_reports_the_container_absent(paths, tmp_path, monkeypatch, podman_bin):
+    monkeypatch.setenv("PATH", str(tmp_path / "empty"))
+
+    assert podman_of(paths, podman_bin).inspect("sprout-services-db") == ContainerState("absent", None)
+
+
+def test_inspect_writes_nothing_to_the_service_log(paths, sandbox_podman):
+    """``status`` inspects the container on each call."""
+    sandbox_podman.answer(when="inspect", out="running 4242\n")
+
+    podman_of(paths, str(sandbox_podman.path)).inspect("sprout-services-db")
+
+    assert not paths.log_file("db").exists()
+
+
+# --- run ----------------------------------------------------------------------
+
+
+def test_run_creates_the_template_database_with_the_mount_expanded_and_each_variable_by_name(
+    paths, sandbox_podman
+):
+    """podman reads a source without a leading ``/``, such as an unexpanded ``{state}``, as a named volume."""
+    podman_of(paths, str(sandbox_podman.path)).run(template_db(), context(paths))
+
+    assert sandbox_podman.calls() == [
+        [
+            "run",
+            "-d",
+            "--name",
+            "sprout-services-db",
+            "-p",
+            "127.0.0.1:15432:5432",
+            "-v",
+            "%s/db/data:/var/lib/postgresql/data:Z" % paths.state,
+            "-e",
+            "POSTGRES_USER",
+            "-e",
+            "POSTGRES_DB",
+            "-e",
+            "POSTGRES_PASSWORD",
+            "docker.io/library/postgres:16-alpine",
+        ]
+    ]
+
+
+def test_run_gives_podman_the_value_of_each_variable_in_its_environment(paths, sandbox_podman):
+    """``-e NAME`` without a value makes podman copy the variable from its own environment."""
+    podman_of(paths, str(sandbox_podman.path)).run(template_db(), context(paths))
+
+    env = sandbox_podman.environments()[0]
+    assert (env["POSTGRES_USER"], env["POSTGRES_DB"], env["POSTGRES_PASSWORD"]) == (
+        "sprout_runstore",
+        "sprout_runstore",
+        "secret-value-of-db-password",
+    )
+
+
+def test_the_service_log_of_a_run_holds_no_secret_value(paths, sandbox_podman):
+    podman_of(paths, str(sandbox_podman.path)).run(template_db(), context(paths))
+
+    assert "secret-value-of-db-password" not in paths.log_file("db").read_text()
+
+
+def test_run_makes_the_host_side_of_a_bind_mount_before_podman_sees_it(paths, sandbox_podman):
+    """A source that podman makes belongs to whoever the container's first process is."""
+    podman_of(paths, str(sandbox_podman.path)).run(template_db(), context(paths))
+
+    assert (paths.state / "db" / "data").is_dir()
+
+
+def test_a_named_volume_goes_to_podman_as_written_and_no_directory_is_made_for_it(
+    paths, sandbox_podman, tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    body = {
+        "kind": "podman",
+        "image": "postgres",
+        "container": "pg",
+        "volumes": ["dbdata:/var/lib/postgresql/data"],
+    }
+    service = parse_spec({"services": {"db": body}}).get("db")
+
+    podman_of(paths, str(sandbox_podman.path)).run(service, context(paths))
+
+    assert (sandbox_podman.calls(), (tmp_path / "dbdata").exists()) == (
+        [["run", "-d", "--name", "pg", "-v", "dbdata:/var/lib/postgresql/data", "postgres"]],
+        False,
+    )
+
+
+# --- start, stop, logs --------------------------------------------------------
+
+
+def test_start_starts_the_stopped_container_by_its_name(paths, sandbox_podman):
+    podman_of(paths, str(sandbox_podman.path)).start("sprout-services-db")
+
+    assert sandbox_podman.calls() == [["start", "sprout-services-db"]]
+
+
+def test_stop_gives_the_container_20_seconds_before_podman_kills_it(paths, sandbox_podman):
+    podman_of(paths, str(sandbox_podman.path)).stop("sprout-services-db")
+
+    assert sandbox_podman.calls() == [["stop", "--time", "20", "sprout-services-db"]]
+
+
+def test_a_failed_verb_raises_start_error_with_the_last_lines_of_the_service_log(paths, sandbox_podman):
+    sandbox_podman.answer(when="stop", err="Error: simulated stop failure\n", code=125)
+
+    with pytest.raises(StartError) as caught:
+        podman_of(paths, str(sandbox_podman.path)).stop("sprout-services-db")
+
+    lines = str(caught.value).splitlines()
+    assert (lines[0], "Error: simulated stop failure" in lines) == (
+        "podman stop failed (exit 125); last lines of %s:" % paths.log_file("db"),
+        True,
+    )
+
+
+@pytest.mark.parametrize(
+    "follow, argv", [(False, ["logs", "sprout-services-db"]), (True, ["logs", "-f", "sprout-services-db"])]
+)
+def test_logs_runs_podman_logs_and_returns_its_status(paths, sandbox_podman, follow, argv):
+    sandbox_podman.answer(when="logs", code=3)
+
+    status = podman_of(paths, str(sandbox_podman.path)).logs("sprout-services-db", follow)
+
+    assert (status, sandbox_podman.calls()) == (3, [argv])
+
+
+def test_a_verb_without_a_podman_says_how_to_install_one(paths, tmp_path, monkeypatch):
+    monkeypatch.setenv("PATH", str(tmp_path / "empty"))
+
+    with pytest.raises(StartError) as caught:
+        podman_of(paths, "podman").start("sprout-services-db")
+
+    assert str(caught.value) == (
+        "no podman at podman (ops/setup_podman.sh installs one under ~/.local/opt/podman; "
+        "$SPROUT_PODMAN_BIN names another)"
+    )

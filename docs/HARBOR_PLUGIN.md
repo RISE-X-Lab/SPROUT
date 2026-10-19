@@ -1,190 +1,273 @@
-# harbor_plugin: Sprout inside a Harbor Trial
+# Harbor's own trials on a Sprout sandbox
 
-Harbor (`harbor==0.22.0`, the `harbor` extra in `pyproject.toml`; API surface pinned by
-`ops/contracts/harbor.yaml`, Python >= 3.12) owns the task: environment start,
-agent run, artifact collection, verifier, `result.json`. This package plugs Sprout
-into its `BaseEnvironment` and `BaseAgent`; the actor is always mini-swe-agent,
-and the sandbox is an AgentENV microVM or a rootless podman container on a btrfs
-store -- the same trial either way.
+`src/sprout/eval/harbor/` gives the reference rewards that the worker's `harbor` grade must
+equal. It is a Harbor environment on a rootless podman sandbox of Sprout's. Harbor runs the
+trials of its own `oracle` and `nop` agents on it. A test compares their rewards with the
+worker's grades of the same agents. Sprout keeps this adapter and the `harbor==0.22.0`
+dependency until the equivalence check of
+[ADR-0003](decisions/0003-sprout-runs-harbor-verifier.md) has passed.
 
-## Modules and import paths
+Nothing else in Sprout runs an agent or a verifier through Harbor. Evaluations and the task
+gate submit Run Store jobs ([evaluation](EVALUATION.md)), and the worker runs each task's
+verifier itself. The `harbor` extra in `pyproject.toml` installs Harbor, and
+`ops/contracts/harbor.yaml` pins the part of its API that the adapter and the tests call.
 
-Harbor loads each class from a `TrialConfig` `import_path` (`module:Class`):
+Read this document if you change the worker's `harbor` grade, the podman sandbox or the
+Harbor pin.
+
+## Harbor's trials are the reference for the harbor grade
+
+The worker's `harbor` grade is correct when it gives the reward that Harbor's own trial gives
+for the same agent on the same task. Both sides start their sandboxes through the same
+`SandboxSession` class and the same podman pool. So the test compares two ways to run an
+agent and a verifier on one sandbox stack. The figure shows the two paths and the comparison.
+
+<p align="center">
+  <img src="figures/harbor-plugin-reference.svg" width="900" alt="On the left, a Harbor 0.22.0 Trial runs Harbor's oracle or nop agent and Harbor's verifier. It calls PodmanEnvironment, from sprout.eval.harbor, to start, run commands in and stop the sandbox. PodmanEnvironment creates a SandboxSession and runs commands and network changes through it. On the right, the Sprout worker runs a rollout job of the same agent, then a grade job with the benchmark harbor, from the rollout's snapshot or in the sandbox that the rollout kept. Each job of the worker has a SandboxSession of its own. Each SandboxSession reaches a podman sandbox through the podman pool: a container whose rootfs is a btrfs subvolume, with sprout-runtime inside. The reward of the Harbor trial and the reward of the worker's grade go to the test test_harbor_grade_live.py, which requires them to be equal."/>
+</p>
+<p align="center"><sub>Harbor's trial and the worker's grade run on the same SandboxSession and podman sandbox, and a test requires their rewards to be equal.</sub></p>
+
+`tests/sprout_sandbox/test_harbor_grade_live.py` does these steps on the fixture task
+`tests/fixtures/harbor/shell-task`:
+
+1. Harbor runs the trials of its `oracle` and `nop` agents on `PodmanEnvironment`. The
+   helper `harbor_trial` in `tests/sprout_sandbox/harbor_trials.py` makes each trial.
+2. The worker runs the same two agents as rollouts, through its attempt entry point.
+3. The worker grades each rollout with the `harbor` grade, from the rollout's final snapshot.
+4. The worker runs the two agents again, keeps each sandbox, and grades each rollout in the
+   sandbox that it kept.
+5. The test requires each grade's reward to equal Harbor's reward: 1 for `oracle` and 0 for
+   `nop`.
+
+ADR-0003 decides that Sprout deletes the adapter and the `harbor` dependency only after a
+larger equivalence check:
+
+- the gate on every task of the three datasets: DeepSWE, TerminalBench 2.1 and HARD-51
+- a re-grade of recorded snapshots against the recorded Harbor rewards
+
+Keep the adapter and its tests until that check passes. The live test is the check for one
+change, on one fixture task.
+
+## Modules and how Harbor loads them
+
+The package has two modules:
 
 | Import path | What it is |
 |---|---|
-| `harbor_plugin.environment:SandboxEnvironment` | The base: Harbor's `BaseEnvironment` over one `SandboxSession` -- exec, upload/download, the `tests/Dockerfile` overlay replay, receipts, the retained stop. A backend subclass adds how the image is pinned, the backend section, the shape and how egress is toggled. |
-| `harbor_plugin.agentenv:AgentENVEnvironment` | `SandboxEnvironment` (`type()` = `agentenv`) on an AgentENV microVM. |
-| `harbor_plugin.podman:PodmanEnvironment` | `SandboxEnvironment` (`type()` = `podman`) on a rootless podman container whose rootfs is a btrfs subvolume of a store. |
-| `harbor_plugin.agentenv_mini:AgentENVMini` | Host mini-swe-agent (`name()` = `sprout-agentenv-mini-swe`) driving either sandbox. |
-| `harbor_plugin.branching:SnapshotEnvironment` | `AgentENVEnvironment` that boots from a recorded snapshot. |
-| `harbor_plugin.branching:PodmanSnapshotEnvironment` | `PodmanEnvironment` that boots from a recorded subvolume snapshot. |
-| `harbor_plugin.branching:BranchMini` | `AgentENVMini` that resumes an exact mini history prefix (`sprout-agentenv-mini-branch`). |
+| `sprout.eval.harbor.environment:SandboxEnvironment` | Harbor's `BaseEnvironment` over one `SandboxSession`. It answers each call that Harbor makes. A backend subclass adds the image pin, the backend section, the sandbox's shape and the egress switch. |
+| `sprout.eval.harbor.podman:PodmanEnvironment` | the `SandboxEnvironment` whose `type()` is `podman`: a rootless podman container whose rootfs is a btrfs subvolume of a store |
 
-`agentenv_agent.py` holds the base `AgentENVAgent` (subclasses provide `name()`,
-`version()`, `_instruction()`, `_make_spec()`) and `AgentENVOrchestrator`, which
-runs Sprout's orchestrator on the sandbox Harbor already started. The agent
-classes are written against `SandboxEnvironment` alone -- its `session`,
-`backend` dict, pinned `image`, `image_user`/`image_workdir`, `shell_context()`,
-`retain_reason`, `checkpoint_mode` and `actor_control` -- so nothing in them
-names a backend; `context.metadata["backend"]` records the environment's `type()`.
+Harbor loads the environment from the `import_path` of a `TrialConfig`, with these keyword
+arguments in `kwargs`:
 
-**Common to both environments** (kwargs `runtime_bin`, required, and
-`checkpoint_mode`, `disk_only`|`none`, default `disk_only`). The image's OCI
-`User`, `WorkingDir`, `Env` apply to every command: on both backends the
-runtime itself runs as root and each command is wrapped (`shell_command`) to
-`cd` into the working directory, set the env and, for a non-root `User`, drop
-to it with `runuser`; Harbor's own steps (`/logs`, an overlay's `RUN`) run as
-root. A `Dockerfile` in the
-environment directory whose `FROM` is the task's own `docker_image` is an
-**overlay** (Harbor's separate verifier built from `tests/Dockerfile`): the
-image is booted and its `COPY` files uploaded and `RUN` steps executed as root
-— no registry, no build. `ENV`/`WORKDIR`/`USER` or a second stage are refused
-before any sandbox exists. A Dockerfile `FROM` another image is the recipe of
-the prebuilt task image and is ignored. A task without a `docker_image` is
-accepted only when its Dockerfile is such an overlay (booted from its `FROM`
-image); Sprout never builds an image. CPU/memory come from the task. Network is
-public or no-network, switchable per phase. Each sandbox writes a
-`<session_id>.<type>.json` receipt into the trial directory (`backend`,
-`sandbox_id`, the pinned `image` and its `image_config`, `resources`,
-`network`, `checkpoint_mode`, `overlay`), which `methods.evaluate` reads back to
-tie the graded trial to its sandbox and to give a branch its parent's image
-config.
+| Keyword | Required | What it gives |
+|---|---|---|
+| `runtime_bin` | yes | the `sprout-runtime` binary. Each container gets it at `/usr/local/bin/sprout-runtime`. |
+| `store` | yes | the btrfs directory that `ops/btrfs_store.sh` made |
+| `podman_bin` | no | the podman binary. The default is the first of these: `$SPROUT_PODMAN_BIN` when it is not empty, the podman that `ops/setup_podman.sh` installed when it is executable, `podman` on `PATH`. |
 
-**AgentENVEnvironment.** Kwargs: `server_url` (default `$AENV_SERVER_URL`,
-else `http://127.0.0.1:18000`), `api_key_file` (default `$AENV_API_KEY`),
-`sandbox_ttl` (default 36000, min 30000). The image is digest-pinned via
-`regctl`; disk is at least 64 GiB (`MIN_OCI_DISK_MB`); egress is switched with
-`PUT /sandboxes/{id}/network`.
+`tests/sprout_sandbox/harbor_trials.py` makes each trial with a config like this one:
 
-**PodmanEnvironment.** Kwargs: `store` (required: the btrfs directory
-`ops/btrfs_store.sh` made), `podman_bin` (default: `$SPROUT_PODMAN_BIN`, else the podman
-`ops/setup_podman.sh` installed, else `podman` on PATH). The image is
-pinned to the digest podman pulled (`podman image inspect`, pulling first when
-absent; no regctl) and its OCI config read from the same record; the session's
-`podman` backend extracts the rootfs once and gives the container a writable
-snapshot of it, shaped by the task's `cpus`/`memory_mb` (no disk: a subvolume
-has none to size). The container runs the runtime as its root -- this user,
-under rootless podman -- whatever the image's `User`; the user reaches the
-agent's commands through `shell_context`, exactly as on the microVM. A
-no-network baseline starts the container disconnected; Harbor's phases toggle a
-running one through `SandboxSession.set_network` (`podman network
-connect|disconnect` of the sandbox's own network, ~0.15 s) while the runtime's
-Unix socket keeps answering. Every sandbox, a verifier's included, has a bridge
-network of its own without podman's DNS server: on one bridge shared by all,
-each container that came or went stalled the others' packets for seconds.
-Snapshots are disk-only, so `final_memory_snapshot` is refused with this
-backend; a snapshot is refused (and the turn recorded as not captured) when
-the container has made a btrfs subvolume of its own inside its rootfs, which a
-snapshot would show empty. The receipt also carries the `store`, and a branch
-must run on the store that holds its parent's snapshots. Everything is
-rootless.
+```python
+TrialConfig.model_validate(
+    {
+        "task": {"path": "<task directory>"},
+        "trial_name": "<task>-oracle",
+        "trials_dir": "<output directory>",
+        "agent_timeout_multiplier": 1.0,
+        "agent": {"name": "oracle"},
+        "environment": {
+            "import_path": "sprout.eval.harbor.podman:PodmanEnvironment",
+            "delete": True,
+            "kwargs": {"runtime_bin": "<sprout-runtime>", "store": "<btrfs store>"},
+        },
+    }
+)
+```
 
-**AgentENVMini.** Kwargs: `inference_endpoint`, `api_key_env` (name of a set env
-var), `actor_timeout_s`, `max_output_tokens`, `max_turns`, `reasoning_effort`.
-Prompt = instruction + `mini_tool_primer(workdir)`; a
-`ShellContext` interceptor applies the task's cwd, env and user to each call.
+## What the environment does
 
-## Checkpoints on the live tool path
+When Harbor starts the environment, the environment does these steps:
 
-The agent's calls go through the orchestrator's `ToolAccess` on the trial's
-sandbox. Each closed model turn is snapshotted when the next turn starts and
-paired with its turn id and the native session in `agent/trajectory.jsonl`.
-Per-turn snapshots are disk-only (a restore cold-boots: background processes,
-tmpfs and RAM are lost); `none` turns them off (`checkpoint_enabled=False`).
+1. If Harbor asks for a build (`force_build`), it raises `ValueError`. Sprout starts the
+   task's prebuilt image and never builds one.
+2. It selects the image: the task's `docker_image`, or the `FROM` image of the overlay when
+   the task has no `docker_image`.
+3. It runs `podman image inspect` on the image. If the image is not local, the environment
+   pulls it first.
+4. It pins the image to the digest of the repository that the task names. If the record has
+   no such digest, for example for a local build, it raises `PodmanError`.
+5. It reads the image's OCI `User`, `WorkingDir` and `Env` from the same record. If the
+   record has no `User` or no `WorkingDir`, the environment uses `root` or `/`.
+6. It starts a container from the pinned image, with the task's CPUs and memory, on the
+   baseline network policy that Harbor gives. If the container does not start, it raises
+   `RuntimeError` with the reason.
+7. As root, it makes `/logs/agent`, `/logs/user-agent`, `/logs/verifier` and
+   `/logs/artifacts`, with mode 777.
+8. It writes the receipt `<session_id>.podman.json` into the trial directory.
+9. It puts the task's files into the sandbox, as the table below says.
 
-With checkpoints on, a closed turn without a snapshot fails the trial. The
-rollout always ends with one more **disk** snapshot, recorded as
-`final_snapshot_id` in `agent/snapshot.json` beside `execution.json` and ATIF
-`trajectory.json`. If that snapshot fails the VM is **retained**, not
-destroyed (`<session_id>.retained-sandbox.json`): it is the only copy of the
-rollout's result. `stop()` then releases the sandbox from the session's pool
-(`forget`) before closing the pool, because closing a pool destroys every
-sandbox it still holds; the same for Harbor's own `stop(delete=False)`. An
-actor timeout is a gradable rollout; Harbor's verifier still runs.
+The default shape of the container is 2 CPUs and 1024 MB. A `public` baseline policy gives
+the container egress, and a `no-network` policy gives it none. If a step from 6 on fails, or
+Harbor cancels the start, the environment destroys the sandbox and closes the pool. Then it
+raises the error again.
 
-`AgentENVMini(final_memory_snapshot=True)` adds a **memory** snapshot after the
-disk one (`final_memory_snapshot_id`, journal event `snapshot.memory`). It is
-for graders that run inside the agent's VM and need the task's processes alive
-on a re-grade; it is never a branch point. `methods.evaluate
---final-memory-snapshot on-failure` takes it for every attempt and releases it
-once the attempt grades resolved, appending `snapshot.released` to the journal.
+The receipt holds these fields:
 
-## Branching
+- `backend`
+- `sandbox_id`
+- `image`, the pinned image, and `image_config`, its OCI config
+- `requested_disk_size_mb`
+- `resources`, the CPUs and memory of the sandbox
+- `network`, the baseline network policy
+- `overlay`, the `COPY` and `RUN` steps of the overlay, or null
+- `store`
 
-`branching.read_branch_context(path)` validates a branch-context JSON up front:
-`branch_guidance` (`assistant-turn`|`none`|`user-hint`, the last with a
-non-empty `hint`), a snapshot id (AgentENV's UUID or a podman subvolume name;
-never a path), `checkpoint_mode` (`disk_only`), a digest-pinned `base_image`
-with its `image_config`, `step` >= 1, `native_session_id`, `conversation_cut`,
-and a `parent_journal` whose sha256 still matches. `SnapshotRestore` is the
-mixin that boots from the snapshot, refuses `force_build`, skips the task-dir
-upload and writes `restored-state.json`; `SnapshotEnvironment` and
-`PodmanSnapshotEnvironment` are that mixin on each backend's environment class,
-so the session creates the branch's sandbox from the snapshot id the way it
-would from an image (a podman branch is shaped again: a subvolume carries none).
-`BranchMini` re-checks step/snapshot/session against
-`available_branch_points(parent)`, loads the exact native prefix and injects a
-validated assistant turn, a neutral `resume_without_hint`, or the hint as a
-user message (`render_branch_note`, which also asks for a commit when the task
-collects its answer from the repository).
+In step 9, the environment looks at the `Dockerfile` of the environment directory that
+Harbor gives. That directory is `environment/` for the agent's sandbox and `tests/` for the
+sandbox of a separate verifier.
 
-## Verifier separation
+| Condition | What the environment does |
+|---|---|
+| The `Dockerfile` is `FROM` the task's own image. This is an **overlay**, such as the `tests/Dockerfile` that Harbor's separate verifier builds from. The same applies to a task without a `docker_image` whose `Dockerfile` a sandbox can replay. | It uploads the overlay's `COPY` sources and runs its `RUN` steps as root. They run in the image's `WorkingDir`, with the image's `Env` and Harbor's variables, within the task's `build_timeout_sec`. |
+| The `Dockerfile` is `FROM` another image. | Nothing. That `Dockerfile` is the recipe of the prebuilt image. |
+| There is no `Dockerfile`, and the directory holds files. | It uploads the directory, as Harbor's base class does. The files go into the task's `workdir`, or into the directory that `pwd` prints in the sandbox. |
 
-With `[verifier] environment_mode = "separate"`, Harbor creates the verifier
-environment itself from the task's `tests/` context, using the trial's same
-environment `import_path` and kwargs, and hands it only the
-`[[verifier.collect]]` artifacts. The actor sandbox stays alive for collection;
-Harbor tears both down (`delete: true` in `src/sprout/methods/evaluate.py`). In a branch
-trial that import path is `SnapshotEnvironment` (or `PodmanSnapshotEnvironment`);
-it tells the verifier apart by the directory Harbor hands over (the task's
-`tests/`, not its `environment/`) and boots the pristine task image plus the
-replayed `tests/Dockerfile`, never the branch snapshot.
+After the start, the environment answers Harbor's calls as follows:
+
+| Harbor's call | What the environment does |
+|---|---|
+| `exec` | It runs the command through the session's `shell` tool. The command runs in Harbor's `cwd`, else the task's `workdir`, else the image's `WorkingDir`. It gets the image's `Env` with Harbor's variables on top. It runs as Harbor's user, else as the image's `User`. |
+| `exec`, the limits | The timeout is Harbor's, else 36000 s: the 8-hour actor budget and time for setup and collection. The output limit is 16 MiB for each stream. |
+| `exec`, the result | It returns the command's exit status and output, stdout first to Harbor's output callback. A timeout raises `TimeoutError`. A command without an exit status, or a transport failure, raises `RuntimeError`. |
+| `upload_file`, `upload_dir` | As root, it makes the parent directory, then copies the file. A directory goes as one `tar.gz` archive through `/tmp` in the sandbox, and the environment removes the archive. |
+| `download_file`, `download_dir` | It copies the file out. A directory comes as one `tar.gz` archive, and the environment removes the archive in the sandbox. |
+| a phase network policy | It switches the egress of the running container through `SandboxSession.set_network`. That runs `podman network connect` or `podman network disconnect` on the sandbox's own network. It accepts only `public` and `no-network`. Before the start, it raises `RuntimeError`. |
+| `stop(delete=True)` | It destroys the container, then closes the pool. |
+| `stop(delete=False)` | It releases the container from the pool first, so that the pool's close leaves the container running. `python -m sprout.worker reap` or a person removes it later. |
+
+A second `stop` does nothing. If the destroy fails, the environment still closes the pool,
+then raises an error that names what is left.
+
+## Each sandbox has its own network
+
+Each podman sandbox has a bridge network of its own, because a shared bridge lost traffic
+whenever a container joined or left it. The figure shows two sandboxes, their networks and
+the route that does not exist between them.
+
+<p align="center">
+  <img src="figures/harbor-plugin-networks.svg" width="900" alt="Two sandboxes on one host. The container of sandbox A connects to the network named after sandbox A, and the container of sandbox B connects to the network named after sandbox B. Each network is a bridge that podman creates with --disable-dns and isolate=true. A container is connected to its network only while its sandbox is online: podman network connect and podman network disconnect switch it. Each network carries its container's traffic, DNS included, to the host, whose upstream resolvers the container's resolv.conf names. No aardvark-dns runs. The two networks have no route to each other, because of isolate=true."/>
+</p>
+<p align="center"><sub>Each container has a bridge network of its own, with no DNS server of podman's and no route to the network of another sandbox.</sub></p>
+
+A Linux bridge whose address nobody set takes the lowest MAC among its ports. On one bridge
+for every sandbox, a container that joined or left changed the lowest MAC when its own MAC
+was the lowest. Then the gateway's MAC moved under all the other containers. Their packets
+went nowhere until their neighbour entries refreshed.
+
+On netavark 1.4, the version in Ubuntu 24.04, we measured 47 MAC changes in 20 s of churn.
+Every resolver timed out while it lasted. 42 of 176 TerminalBench gate trials at 32 workers
+logged failed lookups.
+
+The sandbox networks also run without aardvark-dns (`--disable-dns`). aardvark-dns is one
+process for every network, and it reloads on each change of membership. Without it,
+`resolv.conf` names the host's upstream resolvers. With `isolate=true`, no sandbox reaches
+the network of another.
+
+The pool names each network after its sandbox. Each network and each container carries the
+labels `sprout.managed=1` and `sprout.store=<store>`. The pool creates an offline sandbox,
+disconnects it and only then starts it, so that its first command already runs offline.
 
 ## Admission limits
 
-Checked at environment construction, before any sandbox; no Docker fallback.
-Rejected: GPU/TPU/Windows (Harbor's own capability checks); compose files; task
-MCP servers; network allowlists; host mounts outside
-`/logs/{agent,verifier,artifacts,user-agent}`; tasks without a `docker_image`
-whose Dockerfile a sandbox cannot replay; on AgentENV, disk not a multiple of
-1024 MiB (smaller than 64 GiB is raised); on podman, a store directory that
-does not exist (one that is not on btrfs mounted with `user_subvol_rm_allowed`
-is refused when the session builds its pool).
+The environment refuses a task when Harbor constructs it, before any container exists. It
+never falls back to Docker. Sprout's own checks come first, in this order:
 
-## Driver
+1. a `runtime_bin` that is not a file
+2. a compose file in the environment directory
+3. task-side MCP servers
+4. a task with neither a `docker_image` nor a `Dockerfile`
+5. a `Dockerfile` `FROM` the task's own image that a sandbox cannot replay
+6. a task without a `docker_image` whose `Dockerfile` a sandbox cannot replay, because Sprout
+   never builds an image
+7. a host mount outside `/logs/agent`, `/logs/verifier`, `/logs/artifacts` and
+   `/logs/user-agent`
+8. a `store` that is not a directory
 
-`python -m sprout.methods.evaluate` runs one Harbor task as a parent trial and then a
-method: `sprout` (analyst/reviewer rounds of branch trials; `--rounds`,
-`--branches`, `--branch-guidance`), `bpo` or `shepherd` (point-only branches
-from a recorded `--parent-output`), or `baseline`. Required: `--task-dir
---dataset-digest --preparation-manifest --output --model --model-endpoint
---model-key-env --runtime-bin`. `--backend {podman,microvm}` (default
-`podman`) selects the environment class for every trial of the evaluation --
-`podman` takes `--store <btrfs dir>` (default `$SPROUT_PODMAN_STORE`, else
-`~/sprout-btrfs`) and leaves `--final-memory-snapshot` at `never` -- and a branch
-method's `--parent-output` must have run on the same
-backend (and store): its snapshots are the branch points. The same runner
-serves DeepSWE, TerminalBench 2.1 and SWE-bench Pro v2 HARD-51;
-`examples/qwen/run.py` shows the invocation. `python -m sprout.methods.gate`
-runs Harbor's `oracle` and `nop` agents on this environment to prove the
-transport grades 1 and 0, on either backend. Run Store jobs take their backend
-from the worker profile, podman unless it names microvm (`docs/RUNSTORE.md`).
+Each of these checks raises `ValueError`. Harbor's base class then makes its own checks:
 
-## Validate without model calls
-```bash
-python3 -m pytest tests/harbor_plugin -q
-```
+| Refused | Error |
+|---|---|
+| a CPU or memory enforcement policy that asks for a resource request (`request` or `guarantee`) | `ValueError` |
+| a task that needs a GPU or a TPU | `RuntimeError` |
+| a network allowlist, as the baseline policy or as a phase policy | `ValueError` |
+| a task whose `[environment].os` is `windows` | `RuntimeError` |
 
-Every file there `pytest.importorskip("harbor")`: without Harbor they skip, not
-fail. They use fakes and start no sandboxes (`test_podman_env.py` drives
-`PodmanEnvironment` with a fake session). `tests/methods/test_evaluate.py`
-checks the `TrialConfig` wiring against
-`tests/harbor_plugin/agentenv_fixtures/shell-task` on both backends.
-`tests/harbor_plugin/test_podman_live.py` (marked `slow`; needs podman --
-`$SPROUT_PODMAN_BIN`, else the installed one, else PATH -- and a btrfs store at
-`SPROUT_PODMAN_STORE`, default `~/sprout-btrfs`) runs the gate
-on that fixture through real podman and a btrfs store and asserts the trials
-leave no container or subvolume behind, that a retained stop leaves the
-container running, and that a `USER nobody` image gets Harbor's root steps as
-root and the agent's commands as `nobody`.
+A sandbox can replay a `Dockerfile` that has only these instructions:
+
+- one `FROM`
+- `COPY <src> <dst>`, without options, from a source that exists
+- `RUN`
+
+Each other instruction, such as `ENV`, `WORKDIR` or `USER`, and a second `FROM`, makes the
+`Dockerfile` one that a sandbox cannot replay.
+
+## Validate
+
+Do these steps:
+
+1. Run the tests that need no podman:
+
+   ```bash
+   python3 -m pytest tests/eval/test_harbor_environment.py tests/contract/test_harbor_task.py -q -m "not slow"
+   ```
+
+   `tests/eval/test_harbor_environment.py` drives `PodmanEnvironment` with a fake session
+   and the fake podman of `tests/support/tools.py`.
+2. Check the pinned API surface of Harbor:
+
+   ```bash
+   python ops/contracts/ci_check.py --slot harbor
+   ```
+
+   The command prints `0 failures` when Harbor still has each pinned class, method and
+   field.
+3. Run each large test file alone, while no experiment uses the store:
+
+   ```bash
+   python3 -m pytest tests/sprout_sandbox/test_harbor_live.py -m slow
+   python3 -m pytest tests/sprout_sandbox/test_harbor_grade_live.py -m slow
+   ```
+
+4. Run the dataset test:
+
+   ```bash
+   python3 -m pytest tests/contract/test_harbor_task_datasets.py -m slow
+   ```
+
+The large tests of step 3 are marked `slow`. They need these things:
+
+- Harbor, from the `harbor` extra
+- podman
+- `btrfs-progs`
+- the runtime binary `runtime/sprout-runtime`
+- a btrfs store at `SPROUT_PODMAN_STORE` (default `~/sprout-btrfs`)
+
+Each of them skips with a reason when one is missing. They also skip when the store is in
+use: when it has a live sandbox, or when a container with the label `sprout.managed=1`
+exists. A large test removes each container, network and subvolume that appears while it
+runs.
+
+The tests check these behaviors:
+
+- `tests/sprout_sandbox/test_harbor_live.py` runs Harbor's own `oracle` and `nop` trials on
+  the fixture task (`harbor_trial`). They must score 1 and 0, and leave no container,
+  network, sandbox, snapshot or socket behind. The file also checks the receipt, the phase
+  policy and an image whose `USER` is not root.
+- `tests/sprout_sandbox/test_harbor_grade_live.py` grades the worker's own `oracle` and
+  `nop` rollouts of the same task with the `harbor` grade. It grades from the snapshot and
+  in the kept sandbox, and compares the rewards with Harbor's.
+- `tests/contract/test_harbor_task_datasets.py` checks that
+  `sprout.contract.harbor_task.load_task` reads every task of the three datasets as Harbor's
+  own task model reads it. It needs `harbor==0.22.0` and the datasets under
+  `$SPROUT_HARBOR_DATASETS` (default `~/ash-data/datasets`), and it starts no sandbox.

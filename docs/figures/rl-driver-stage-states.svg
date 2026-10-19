@@ -1,0 +1,141 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="940" viewBox="0 0 1200 940" role="img" aria-labelledby="title desc" font-family="-apple-system, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
+  <title id="title">RL driver: the states of a stage</title>
+  <desc id="desc">Nine states of one stage of a group (an actor, a grade or a review) and what moves a stage between them. Solid arrows are states that the driver sets. Dashed arrows are states that a poll copies from the Run Store job. The dotted arrow is the next run of the group, which the coordinator plans. planned goes to submitting when _dispatch() saves the intent before the POST. submitting goes to queued when the Run Store accepts the POST, or when reconcile-submission attaches the job. planned goes to skipped for the grade of an actor that did not succeed. planned goes to cancelled when the group is cancelled before the POST. planned goes to failed when _prepare_grade() cannot prove the source of a grade. submitting goes to failed when the Run Store refuses the POST with 400, 404, 409 or 422. queued goes to running when a worker claims the job. queued goes to failed with the reason data_lost when the host of the job's affinity key is lost. running goes back to queued when the attempt is lost or failed on the infrastructure and max_infra_retries leaves an attempt, or through release() when the worker shuts down. queued goes to cancelled after a stop request. running goes to succeeded when finish() records a completed or truncated result. running goes to failed when the attempt failed with no attempt left, or with the reason data_lost when the host of the job's key is lost. A grade in running goes to expired when it ran past grade_wall_seconds, and the driver stops its job. After a stage of the current run fails with the reason data_lost, run_again() plans the roots of the group again in a new run, and their stages start in planned. It does so at most 2 times, and not for a cancelled group. succeeded, failed, cancelled, skipped and expired are done.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10Z" fill="#3A5047"/>
+    </marker>
+    <style>
+      .title { font-size: 28px; font-weight: 700; fill: #2F443E; }
+      .lead { font-size: 17px; fill: #63766F; }
+      .state { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 19px; font-weight: 700; fill: #2F443E; text-anchor: middle; }
+      .note { font-size: 16px; fill: #63766F; text-anchor: middle; }
+      .fn { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 16px; fill: #2F443E; }
+      .cond { font-size: 16px; fill: #63766F; }
+      .mid { text-anchor: middle; }
+      .end { text-anchor: end; }
+      .driver { fill: none; stroke: #3A5047; stroke-width: 2.5; marker-end: url(#arrow); }
+      .copied { fill: none; stroke: #3A5047; stroke-width: 2; stroke-dasharray: 8 5; marker-end: url(#arrow); }
+      .join { fill: none; stroke: #3A5047; stroke-width: 2.5; }
+      .again { fill: none; stroke: #3A5047; stroke-width: 2.5; stroke-dasharray: 1 6; stroke-linecap: round; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect x="1" y="1" width="1198" height="938" rx="16" fill="#FFFDF6" stroke="#E5E2D2" stroke-width="2"/>
+  <text class="title" x="40" y="50">RL driver: the states of a stage</text>
+  <text class="lead" x="40" y="76">A stage is the actor, the grade or the review of a sample. Monospace names the function, plain text the condition.</text>
+  <path class="driver" d="M40 98 H90"/>
+  <text class="cond" x="100" y="104">the driver sets the state</text>
+  <path class="copied" d="M330 98 H380"/>
+  <text class="cond" x="390" y="104">a poll copies the state of the Run Store job</text>
+  <path class="again" d="M770 98 H820"/>
+  <text class="cond" x="830" y="104">the next run of the group</text>
+
+  <!-- The state graph, 80 units below the legend. -->
+  <g transform="translate(0 80)">
+
+  <!-- States -->
+  <rect x="480" y="120" width="220" height="64" rx="12" fill="#E6F1F7" stroke="#587E96" stroke-width="2"/>
+  <text class="state" x="590" y="149">planned</text>
+  <text class="note" x="590" y="172">not submitted yet</text>
+
+  <rect x="480" y="260" width="220" height="64" rx="12" fill="#E6F1F7" stroke="#587E96" stroke-width="2"/>
+  <text class="state" x="590" y="289">submitting</text>
+  <text class="note" x="590" y="312">retried under its key</text>
+
+  <rect x="480" y="400" width="220" height="64" rx="12" fill="#E6F1F7" stroke="#587E96" stroke-width="2"/>
+  <text class="state" x="590" y="429">queued</text>
+  <text class="note" x="590" y="452">has a job id</text>
+
+  <rect x="480" y="560" width="220" height="64" rx="12" fill="#E6F1F7" stroke="#587E96" stroke-width="2"/>
+  <text class="state" x="590" y="589">running</text>
+  <text class="note" x="590" y="612">a worker runs it</text>
+
+  <rect x="40" y="120" width="220" height="64" rx="12" fill="#E4E3D4" stroke="#63766F" stroke-width="2"/>
+  <text class="state" x="150" y="149">skipped</text>
+  <text class="note" x="150" y="172">done, grade only</text>
+
+  <rect x="40" y="400" width="220" height="64" rx="12" fill="#E4E3D4" stroke="#63766F" stroke-width="2"/>
+  <text class="state" x="150" y="429">cancelled</text>
+  <text class="note" x="150" y="452">done</text>
+
+  <rect x="40" y="560" width="220" height="64" rx="12" fill="#DFF0DB" stroke="#256348" stroke-width="2"/>
+  <text class="state" x="150" y="589">succeeded</text>
+  <text class="note" x="150" y="612">done</text>
+
+  <rect x="940" y="400" width="220" height="64" rx="12" fill="#FBE3DC" stroke="#BC7168" stroke-width="2"/>
+  <text class="state" x="1050" y="429">failed</text>
+  <text class="note" x="1050" y="452">done</text>
+
+  <rect x="940" y="740" width="220" height="64" rx="12" fill="#E4E3D4" stroke="#63766F" stroke-width="2"/>
+  <text class="state" x="1050" y="769">expired</text>
+  <text class="note" x="1050" y="792">done, grade only</text>
+
+  <!-- planned -> submitting -->
+  <path class="driver" d="M590 184 V258"/>
+  <text class="fn" x="604" y="214">_dispatch()</text>
+  <text class="cond" x="604" y="238">saves the intent first</text>
+
+  <!-- submitting -> queued -->
+  <path class="driver" d="M590 324 V398"/>
+  <text class="cond" x="604" y="354">POST accepted, or</text>
+  <text class="fn" x="604" y="378">reconcile-submission</text>
+
+  <!-- planned -> skipped -->
+  <path class="driver" d="M480 152 H262"/>
+  <text class="cond mid" x="371" y="140">grade of a failed actor</text>
+
+  <!-- planned -> cancelled -->
+  <path class="driver" d="M520 184 V220 H150 V398"/>
+  <text class="cond" x="164" y="300">group cancelled</text>
+  <text class="cond" x="164" y="322">before the POST</text>
+
+  <!-- planned -> failed -->
+  <path class="driver" d="M700 152 H1110 V398"/>
+  <text x="712" y="140"><tspan class="fn">_prepare_grade()</tspan><tspan class="cond" dx="10">grade source not proved</tspan></text>
+
+  <!-- submitting -> failed -->
+  <path class="driver" d="M700 292 H1050 V398"/>
+  <text class="cond" x="712" y="280">POST refused with 400, 404, 409 or 422</text>
+
+  <!-- queued <-> running -->
+  <path class="copied" d="M560 464 V558"/>
+  <text class="cond end" x="548" y="516">a worker claims it</text>
+  <path class="copied" d="M620 560 V466"/>
+  <text class="cond" x="632" y="494">lost, or an infrastructure failure</text>
+  <text class="fn" x="632" y="516">max_infra_retries</text>
+  <text x="632" y="540" xml:space="preserve"><tspan class="cond">or </tspan><tspan class="fn">release()</tspan><tspan class="cond"> at a shutdown</tspan></text>
+
+  <!-- queued -> cancelled -->
+  <path class="copied" d="M480 432 H262"/>
+  <text class="cond mid" x="371" y="420">stop request</text>
+
+  <!-- running -> succeeded -->
+  <path class="copied" d="M480 600 H262"/>
+  <text class="fn mid" x="371" y="568">finish()</text>
+  <text class="cond mid" x="371" y="590">completed or truncated</text>
+
+  <!-- running -> failed -->
+  <path class="copied" d="M700 584 H1050 V466"/>
+  <text class="cond" x="712" y="574">attempt failed, no attempt left</text>
+  <text class="cond" x="1062" y="516">or host lost:</text>
+  <text class="fn" x="1062" y="538">data_lost</text>
+
+  <!-- running -> expired -->
+  <path class="driver" d="M700 610 H880 V772 H938"/>
+  <text class="cond end" x="868" y="680">grade ran past</text>
+  <text class="fn end" x="868" y="702">grade_wall_seconds</text>
+  <text class="cond end" x="868" y="724">and the driver stops it</text>
+
+  <!-- queued -> failed, host lost -->
+  <path class="copied" d="M700 432 H938"/>
+  <text x="712" y="420" xml:space="preserve"><tspan class="cond">host lost: </tspan><tspan class="fn">data_lost</tspan></text>
+
+  <!-- failed (data_lost) -> planned, in the next run -->
+  <path class="again" d="M1162 432 H1182 V100 H640 V118"/>
+  <text x="712" y="62" xml:space="preserve"><tspan class="fn">run_again()</tspan><tspan class="cond"> after a stage failed with </tspan><tspan class="fn">data_lost</tspan></text>
+  <text class="cond" x="712" y="84">plans the roots again in a new run, at most 2 times</text>
+  </g>
+
+  <text class="cond" x="40" y="922">Source: src/sprout/search/stages.py, src/sprout/search/coordinator.py, src/sprout/search/rerun.py, src/sprout/runstore/store.py</text>
+</svg>

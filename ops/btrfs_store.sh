@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
-# The one root step behind the podman backend: create and mount the btrfs store
-# its rootfs subvolumes live in. Everything the backend does afterwards --
-# extracting a base rootfs, snapshotting it, starting containers on it,
-# deleting snapshots -- runs as the unprivileged owner of this mount.
+# Create and mount the btrfs store for the podman backend's rootfs subvolumes. This is the
+# only step of the backend that needs root. The unprivileged owner of the mount does the rest:
+# it extracts each base rootfs, snapshots it, starts containers on it and deletes snapshots.
 #
 #   sudo ops/btrfs_store.sh MOUNT_POINT IMAGE_FILE SIZE [OWNER]
-#   sudo ops/btrfs_store.sh /home/ubuntu/sprout-btrfs /var/lib/sprout-btrfs-rootless.img 200G
+#   sudo ops/btrfs_store.sh /path/to/sprout-btrfs /var/lib/sprout-btrfs-rootless.img 200G
 #
-# IMAGE_FILE is a sparse file of SIZE (truncate(1) syntax) holding a btrfs
-# filesystem, mounted at MOUNT_POINT with noatime and user_subvol_rm_allowed --
-# the option that lets the owner delete the subvolumes it created -- and chowned
-# to OWNER (default: the user who invoked sudo). A nofail fstab line remounts it
-# at boot. Run twice, it only mounts: an image that already holds a filesystem
-# is never reformatted, and a present fstab line is left alone.
+# IMAGE_FILE is a sparse file of SIZE (truncate(1) syntax) that holds a btrfs filesystem. The
+# script mounts it at MOUNT_POINT with noatime and user_subvol_rm_allowed, the option that lets
+# the owner delete the subvolumes that it created. It gives the mount point to OWNER (default:
+# the user who ran sudo) and adds a nofail fstab line that mounts the store at boot.
+# A second run only mounts the store if it is not mounted. The script reuses an image that
+# already holds btrfs and keeps an fstab line that is already there. It refuses an image that
+# holds anything else, and a mount without user_subvol_rm_allowed.
 set -euo pipefail
 
 usage() {

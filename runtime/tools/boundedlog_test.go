@@ -1,99 +1,88 @@
-package tools
+// Tests of BoundedLog, the memory bound on what a tool returns. A budget of 1024 bytes, the
+// floor, has a head of 409 bytes and a tail of 615. Each case writes its text in one piece and
+// in 100-byte pieces, as a pipe delivers output, because the result must not depend on that.
 
-// Tests for the output bounding in boundedlog.go (run by `go test ./tools`;
-// shell_test.go covers command execution). The budget is per stream and the
-// split is fixed: over-long output keeps its first 40% and last 60%.
+package tools_test
 
 import (
 	"strings"
 	"testing"
+
+	"github.com/dreamyang-liu/sprout/runtime/tools"
 )
 
-// renderWith writes n bytes through a BoundedLog bounded to max and returns the
-// rendered output plus the truncated flag. The first half is "A", the second
-// "Z", so a test can tell which side survived.
-func renderWith(max, n int) (string, bool) {
-	log := NewBoundedLog(max)
-	body := strings.Repeat("A", n/2) + strings.Repeat("Z", n-n/2)
-	log.Write([]byte(body))
+// renderBounded writes text to a log with a budget of max bytes, in pieces of chunk bytes, and returns
+// what the log renders.
+func renderBounded(max int, text string, chunk int) (string, bool) {
+	log := tools.NewBoundedLog(max)
+	for start := 0; start < len(text); start += chunk {
+		log.Write([]byte(text[start:min(start+chunk, len(text))]))
+	}
 	return log.Render()
 }
 
-func TestTruncationKeepsBothEnds(t *testing.T) {
-	out, truncated := renderWith(1000, 4000)
-	if !truncated {
-		t.Fatal("expected truncation")
+// sections is head bytes of "h", then middle bytes of "m", then tail bytes of "t".
+func sections(head, middle, tail int) string {
+	return strings.Repeat("h", head) + strings.Repeat("m", middle) + strings.Repeat("t", tail)
+}
+
+func TestOutputWithinTheBudgetIsReturnedWhole(t *testing.T) {
+	// The sizes are the values on each side of the head limit (409) and the tail limit (615),
+	// and the budget itself.
+	cases := []struct {
+		name  string
+		text  string
+		chunk int
+	}{
+		{"409 bytes in one write", sections(409, 0, 0), 409},
+		{"409 bytes in 100-byte writes", sections(409, 0, 0), 100},
+		{"410 bytes in one write", sections(409, 0, 1), 410},
+		{"410 bytes in 100-byte writes", sections(409, 0, 1), 100},
+		{"615 bytes in one write", sections(409, 0, 206), 615},
+		{"615 bytes in 100-byte writes", sections(409, 0, 206), 100},
+		{"616 bytes in one write", sections(409, 0, 207), 616},
+		{"616 bytes in 100-byte writes", sections(409, 0, 207), 100},
+		{"1024 bytes in one write", sections(409, 0, 615), 1024},
+		{"1024 bytes in 100-byte writes", sections(409, 0, 615), 100},
 	}
-	if !strings.Contains(out, "A") || !strings.Contains(out, "Z") {
-		t.Errorf("both the head and the tail should survive, got %d bytes", len(out))
-	}
-	if !strings.HasPrefix(out, "A") || !strings.HasSuffix(out, "Z") {
-		t.Errorf("the head comes first and the tail last, got %.20q ... %.20q", out, out[len(out)-20:])
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			out, truncated := renderBounded(1024, tc.text, tc.chunk)
+
+			if out != tc.text || truncated {
+				t.Errorf("render = %q, truncated %v; want the input whole, not truncated", out, truncated)
+			}
+		})
 	}
 }
 
-func TestTheSplitIsFortySixty(t *testing.T) {
-	// 4000 is above minMaxOutputBytes, so the budget is used verbatim.
-	log := NewBoundedLog(4000)
-	if got := log.headLimit(); got != 1600 {
-		t.Errorf("head limit = %d, want 1600", got)
+func TestOutputOverTheBudgetKeepsItsFirst40AndLast60PercentAroundAMarker(t *testing.T) {
+	cases := []struct {
+		name  string
+		text  string
+		chunk int
+		want  string
+	}{
+		{"1025 bytes in one write", sections(409, 1, 615), 1025, sections(409, 0, 0) +
+			"\n... [output truncated: 1025 bytes total, showing first 409 bytes and last 615 bytes] ...\n" +
+			sections(0, 0, 615)},
+		{"1025 bytes in 100-byte writes", sections(409, 1, 615), 100, sections(409, 0, 0) +
+			"\n... [output truncated: 1025 bytes total, showing first 409 bytes and last 615 bytes] ...\n" +
+			sections(0, 0, 615)},
+		{"3000 bytes in one write", sections(409, 1976, 615), 3000, sections(409, 0, 0) +
+			"\n... [output truncated: 3000 bytes total, showing first 409 bytes and last 615 bytes] ...\n" +
+			sections(0, 0, 615)},
+		{"3000 bytes in 100-byte writes", sections(409, 1976, 615), 100, sections(409, 0, 0) +
+			"\n... [output truncated: 3000 bytes total, showing first 409 bytes and last 615 bytes] ...\n" +
+			sections(0, 0, 615)},
 	}
-	if got := log.tailLimit(); got != 2400 {
-		t.Errorf("tail limit = %d, want 2400", got)
-	}
-}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			out, truncated := renderBounded(1024, tc.text, tc.chunk)
 
-func TestTruncationRespectsTheTotalBudget(t *testing.T) {
-	// Rendered output = kept bytes + a truncation marker line.
-	out, _ := renderWith(2000, 10000)
-	if len(out) > 2000+300 {
-		t.Errorf("exceeded the total budget: %d bytes", len(out))
-	}
-}
-
-func TestTruncationIsSelfDescribing(t *testing.T) {
-	out, truncated := renderWith(1000, 5000)
-	if !truncated {
-		t.Fatal("expected truncation")
-	}
-	if !strings.Contains(out, "truncated") {
-		t.Errorf("truncated output must say so; got: %.120s", out)
-	}
-}
-
-func TestShortOutputIsNotTruncated(t *testing.T) {
-	out, truncated := renderWith(1000, 100)
-	if truncated {
-		t.Error("output within budget should not be marked truncated")
-	}
-	if strings.Contains(out, "truncated") {
-		t.Error("output within budget should carry no truncation marker")
-	}
-	if len(out) != 100 {
-		t.Errorf("output within budget must be returned whole, got %d bytes", len(out))
-	}
-}
-
-func TestTheBudgetIsClampedToTheFloorAndCeiling(t *testing.T) {
-	// The constants replaced per-deployment environment knobs, so what the
-	// schema advertises as the default is what a call without the argument
-	// gets -- nothing can change it underneath the declaration.
-	cases := []struct{ in, want int }{
-		{0, defaultMaxOutputBytes},
-		{-1, defaultMaxOutputBytes},
-		{10, minMaxOutputBytes},
-		{4096, 4096},
-		{1 << 30, maxMaxOutputBytes},
-	}
-	for _, c := range cases {
-		if got := normalizeMaxOutputBytes(c.in); got != c.want {
-			t.Errorf("normalizeMaxOutputBytes(%d) = %d, want %d", c.in, got, c.want)
-		}
-	}
-	if got := outputBytesArg(map[string]any{}); got != defaultMaxOutputBytes {
-		t.Errorf("absent argument = %d, want the default %d", got, defaultMaxOutputBytes)
-	}
-	if got := outputBytesArg(map[string]any{"max_output_bytes": float64(8192)}); got != 8192 {
-		t.Errorf("explicit argument = %d, want 8192", got)
+			if out != tc.want || !truncated {
+				t.Errorf("render = %q, truncated %v;\nwant %q, truncated", out, truncated, tc.want)
+			}
+		})
 	}
 }

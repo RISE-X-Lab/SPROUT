@@ -1,46 +1,23 @@
 #!/usr/bin/env bash
-# Set up this host for Sprout's podman backend: podman 6 (a static build installed
-# for this user), a btrfs store, the Python package and the runtime binary, then
-# prove it works.
+# Set up this host for Sprout's podman backend, then prove that it works: podman 6 for this
+# user, a btrfs store, the Python package and the runtime binary.
 #
 #   ops/setup_podman.sh [--store DIR] [--image FILE] [--size SIZE]
 #                       [--podman-prefix DIR] [--podman-version TAG] [--share-images DIR|none]
 #                       [--skip-python] [--skip-verify] [--check]
 #
-# Defaults: --store ~/sprout-btrfs --image /var/lib/sprout-btrfs-rootless.img
-# --size 200G (the image is sparse; size it for every base rootfs you will
-# extract, about the sum of the uncompressed images) --podman-prefix
-# ~/.local/opt/podman --podman-version v6.1.3. Every step is idempotent and
-# skipped when already done, so re-running is cheap. Root is used for four
-# things only, through sudo: installing packages, the subordinate id range, the
-# cgroup delegation drop-in and making the store (ops/btrfs_store.sh).
-# Everything the backend does afterwards is rootless. --check verifies without
-# changing anything and exits non-zero on a gap.
+# Defaults: --store ~/sprout-btrfs --image /var/lib/sprout-btrfs-rootless.img --size 200G
+# --podman-prefix ~/.local/opt/podman --podman-version v6.1.3. The image file is sparse. Size
+# it for every base rootfs that you will extract, about the sum of the uncompressed images.
+# --share-images DIR adds the image storage of another podman as a read-only store, so its
+# images need no second pull. --share-images none drops it. A re-run keeps the last choice.
+# --check changes nothing and exits non-zero on a gap.
 #
-# Podman is the static build published by mgoltzsche/podman-static (podman,
-# crun, runc, conmon, netavark, aardvark-dns, pasta, fuse-overlayfs), verified
-# against a pinned sha256 (v6.1.3 amd64) or, for another version, the
-# maintainer's GPG signature when gpg is installed, and unpacked under the
-# prefix with a configuration, image storage, run root and file locks of its
-# own. A distribution podman on the same host is left alone: two podmans of one
-# user must not share state (the distribution's keeps its container locks in a
-# shared-memory segment named after the uid); the one piece podman insists on
-# sharing is the per-user rootless pause process. Nothing goes on PATH: every
-# Sprout entry point runs the podman $SPROUT_PODMAN_BIN names, else this one
-# when it is installed, else `podman` on PATH (sprout_sandbox.podman.
-# default_podman_bin); `python -m sprout.services env` exports the resolved
-# path. --share-images DIR adds another podman's image storage as a read-only
-# additional store, so images it pulled need no second pull; the choice is
-# remembered in <prefix>/etc/share-images (--share-images none forgets it).
-# Container cgroups go through the user's systemd (cgroup_manager systemd, the
-# bundled runc as the OCI runtime), so --cpus/--memory apply from any login
-# shell, as they did with the distribution's podman.
-#
-# What the backend needs from the host: (1) a subordinate uid/gid range for
-# this user, (2) cgroup v2 with the cpu, memory and pids controllers delegated
-# to the user session (or --cpus/--memory on a rootless container fail), (3) a
-# btrfs filesystem mounted with user_subvol_rm_allowed, (4) Go for the runtime
-# and Python 3.12 for the rest, (5) nftables for netavark's firewall rules.
+# The script skips each step that is already done. It uses sudo only to install packages, add
+# the subordinate id range, write the cgroup delegation drop-in and make the store
+# (ops/btrfs_store.sh). Everything after that is rootless. The podman goes under the prefix,
+# not on PATH, and a distribution podman stays as it is. Sprout runs $SPROUT_PODMAN_BIN, else
+# the podman under the default prefix, else `podman` on PATH.
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
@@ -49,7 +26,7 @@ IMAGE=/var/lib/sprout-btrfs-rootless.img
 SIZE=200G
 PREFIX=$HOME/.local/opt/podman
 VERSION=v6.1.3
-SHARE=unset
+SHARE='unset'
 CHECK=0
 SKIP_PYTHON=0
 SKIP_VERIFY=0
@@ -86,8 +63,8 @@ MISSING=()
 for pkg in "${PACKAGES[@]}"; do
     dpkg -s "$pkg" >/dev/null 2>&1 || MISSING+=("$pkg")
 done
-# The venv module ships under a versioned package name (python3.12-venv); test
-# the capability rather than a name.
+# The venv module ships in a package with a versioned name (python3.12-venv). So test the
+# capability, not a package name.
 [[ $SKIP_PYTHON -eq 1 ]] || python3 -c 'import venv, ensurepip' >/dev/null 2>&1 || MISSING+=(python3-venv)
 if [[ ${#MISSING[@]} -eq 0 ]]; then
     ok "all installed: ${PACKAGES[*]}"
@@ -102,6 +79,8 @@ fi
 
 # --- 2. podman --------------------------------------------------------------
 echo "[2/7] podman $VERSION under $PREFIX"
+# This podman has its own configuration, storage, run root and locks. Two podmans of one user
+# must not share state. They share only the per-user rootless pause process.
 case "$(uname -m)" in
     x86_64) ARCH=amd64;;
     aarch64) ARCH=arm64;;
@@ -109,24 +88,25 @@ case "$(uname -m)" in
 esac
 BUNDLE=$PREFIX/root/podman-linux-$ARCH
 PODMAN=$PREFIX/bin/podman
-# The run root (tmp dir, run root, locks) is remembered per prefix: libpod refuses
-# to start when they move under an existing database.
+# The prefix keeps its run directory, which holds tmp_dir, runroot and the locks. libpod
+# refuses to start when they move under an existing database.
 if [[ -f $PREFIX/etc/rundir ]]; then
     RUNDIR=$(<"$PREFIX/etc/rundir")
 else
     RUNDIR=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/sprout-podman
     [[ $PREFIX == "$DEFAULT_PREFIX" ]] || RUNDIR=$RUNDIR-$(printf %s "$PREFIX" | sha256sum | cut -c1-8)
 fi
-# --share-images is remembered too: a plain re-run must not silently drop it.
+# The prefix keeps --share-images too, so that a plain re-run does not silently drop it.
 if [[ $SHARE == unset ]]; then
-    SHARE=$( [[ -f $PREFIX/etc/share-images ]] && cat "$PREFIX/etc/share-images" || true )
+    SHARE=
+    if [[ -f $PREFIX/etc/share-images ]]; then SHARE=$(cat "$PREFIX/etc/share-images" || true); fi
 elif [[ $SHARE == none ]]; then
     SHARE=
 else
     SHARE=$(realpath -m -- "$SHARE")
 fi
-# sha256 of the release tarballs this script has installed; another version or
-# architecture is verified with the maintainer's GPG signature instead.
+# The sha256 of each release tarball that this script has installed. The script verifies
+# another version or architecture with the GPG signature of the maintainer instead.
 declare -A SHA256=(
     [v6.1.3-amd64]=dcfff14eae60569653c21eed75c96e5fd4140f23448637bc6e0ee75a12e1267a
 )
@@ -142,16 +122,14 @@ running_containers() {
 }
 
 render_configs() {
-    # The three generated files, rendered into directory $1 (never edited by hand:
-    # a change of prefix, version or --share-images lands here on the next run).
+    # Render the three generated files into directory $1. Nobody edits them by hand: the next
+    # run writes a change of prefix, version or --share-images.
     local into=$1 shared=""
     [[ -n $SHARE ]] && shared=$(printf 'additionalimagestores = ["%s"]\n' "$SHARE")
     mkdir -p "$into/etc" "$into/bin"
     cat > "$into/etc/containers.conf" <<EOF
-# podman $VERSION for Sprout's sandboxes, written by ops/setup_podman.sh: its own
-# configuration, storage ($PREFIX/storage), run root and locks, apart from any
-# other podman of this user. Selected through $PODMAN, which sets
-# CONTAINERS_CONF to this file.
+# podman $VERSION for Sprout's sandboxes, written by ops/setup_podman.sh. $PODMAN selects this
+# file through CONTAINERS_CONF. Its storage, run root and locks are apart from any other podman.
 
 [containers]
 
@@ -162,12 +140,12 @@ network_config_dir = "$PREFIX/storage/networks"
 default_rootless_network_cmd = "pasta"
 
 [engine]
-# container cgroups through the user's systemd, so --cpus/--memory apply from any login
-# shell; the bundled runc speaks to systemd without libsystemd, the bundled crun cannot
+# The user's systemd makes container cgroups, so --cpus and --memory apply from any login shell.
+# The bundled runc talks to systemd without libsystemd. The bundled crun cannot.
 cgroup_manager = "systemd"
 runtime = "runc"
 events_logger = "file"
-# file locks under tmp_dir: the shared-memory segment belongs to the distribution's podman
+# File locks under tmp_dir. The shared-memory lock segment belongs to the distribution's podman.
 lock_type = "file"
 conmon_path = ["$BUNDLE/usr/local/lib/podman/conmon"]
 helper_binaries_dir = ["$BUNDLE/usr/local/lib/podman", "$BUNDLE/usr/local/bin"]
@@ -181,8 +159,8 @@ runc = ["$BUNDLE/usr/local/bin/runc"]
 crun = ["$BUNDLE/usr/local/bin/crun"]
 EOF
     cat > "$into/etc/storage.conf" <<EOF
-# Image storage for podman $VERSION, written by ops/setup_podman.sh. Native rootless
-# overlay; fuse-overlayfs from the bundle is the fallback if the kernel refuses.
+# Image storage for podman $VERSION, written by ops/setup_podman.sh. Native rootless overlay.
+# fuse-overlayfs from the bundle is the fallback when the kernel refuses native overlay.
 [storage]
 driver = "overlay"
 graphroot = "$PREFIX/storage/graph"
@@ -195,8 +173,7 @@ mountopt = "nodev"
 EOF
     cat > "$into/bin/podman" <<EOF
 #!/bin/sh
-# podman $VERSION (static) with its own configuration and storage; written by ops/setup_podman.sh.
-# Sprout finds it through SPROUT_PODMAN_BIN=$PODMAN (python -m sprout.services env).
+# podman $VERSION (static) with its own configuration and storage. Written by ops/setup_podman.sh.
 export CONTAINERS_CONF="$PREFIX/etc/containers.conf"
 export CONTAINERS_STORAGE_CONF="$PREFIX/etc/storage.conf"
 export CONTAINERS_REGISTRIES_CONF="$BUNDLE/etc/containers/registries.conf"
@@ -206,7 +183,7 @@ EOF
 }
 
 configs_differ() {
-    # 0 when the rendered configs differ from the installed ones (or are missing).
+    # Return 0 when a file rendered in $1 differs from the installed file, or none is installed.
     local staged=$1 f
     for f in etc/containers.conf etc/storage.conf bin/podman; do
         cmp -s "$staged/$f" "$PREFIX/$f" || return 0
@@ -215,8 +192,8 @@ configs_differ() {
 }
 
 install_configs() {
-    # Rendered beside the live files and moved into place one by one, so a podman
-    # starting meanwhile reads a whole file, never a truncated one.
+    # Render beside the live files and move each into place, so that a podman that starts
+    # meanwhile reads a whole file, never a truncated one.
     local staged f
     mkdir -p "$PREFIX"
     staged=$(mktemp -d "$PREFIX/.render.XXXXXX")
@@ -235,8 +212,8 @@ install_configs() {
     rm -rf "$staged"
     printf '%s\n' "$RUNDIR" > "$PREFIX/etc/rundir"
     printf '%s\n' "$SHARE" > "$PREFIX/etc/share-images"
-    # c/image reads $HOME/.config/containers/policy.json, then /etc/containers/policy.json;
-    # a host without any podman package has neither.
+    # c/image reads $HOME/.config/containers/policy.json, then /etc/containers/policy.json.
+    # A host without any podman package has neither.
     if [[ ! -f /etc/containers/policy.json && ! -f $HOME/.config/containers/policy.json ]]; then
         mkdir -p "$HOME/.config/containers"
         cp "$BUNDLE/etc/containers/policy.json" "$HOME/.config/containers/policy.json"
@@ -297,11 +274,8 @@ fi
 
 # --- 3. rootless prerequisites ---------------------------------------------
 echo "[3/7] rootless podman prerequisites"
-# A rootless container can hold only the ids the user's subordinate ranges map,
-# and an image with a file owned by any other id fails to pull ("insufficient
-# UIDs or GIDs"). npm keeps a package publisher's uid, which reaches the
-# billions (two SWE-bench Pro images: 120012366, 1516583083), so the user gets
-# nearly the whole 32-bit range, not the usual 65536.
+# A file owned by an id outside the subordinate ranges fails the pull ("insufficient UIDs or
+# GIDs"). npm keeps publishers' uids (1516583083 in a SWE-bench Pro image). So take nearly 2^32 ids.
 SUB_FIRST=100000 SUB_LAST=4294000000 SUB_ENOUGH=4000000000
 read -r SUB_COUNT SUB_END < <(awk -F: -v u="$(id -un)" '$1 == u { n += $3; if ($2 + $3 - 1 > e) e = $2 + $3 - 1 }
     END { printf "%d %d\n", n, e }' /etc/subuid)
@@ -318,8 +292,8 @@ elif [[ $CHECK -eq 1 ]]; then
     gap "$(id -un) has $SUB_COUNT subordinate ids: sudo usermod --add-subuids $SUB_START-$SUB_LAST --add-subgids $SUB_START-$SUB_LAST $(id -un) && $PODMAN system migrate"
 else
     sudo usermod --add-subuids "$SUB_START-$SUB_LAST" --add-subgids "$SUB_START-$SUB_LAST" "$(id -un)"
-    # the per-user pause process must pick the new mapping up; it is shared with any other podman
-    [[ -x $PODMAN ]] && "$PODMAN" system migrate >/dev/null 2>&1 || true
+    # The per-user pause process must pick up the new mapping. Any other podman of the user shares it.
+    if [[ -x $PODMAN ]]; then "$PODMAN" system migrate >/dev/null 2>&1 || true; fi
     ok "added subuid/subgid $SUB_START-$SUB_LAST for $(id -un)"
 fi
 CONTROLLERS_FILE=/sys/fs/cgroup/user.slice/user-$(id -u).slice/user@$(id -u).service/cgroup.controllers
@@ -342,7 +316,7 @@ else
         gap "wrote $DROPIN; log out and back in (or reboot) so the user session gets ${LACK[*]}, then re-run"
     fi
 fi
-# The user's systemd is what places container cgroups (cgroup_manager systemd).
+# The user's systemd makes the container cgroups (cgroup_manager systemd).
 if systemctl --user show-environment >/dev/null 2>&1; then
     ok "the user's systemd answers (container cgroups are created through it)"
 else
@@ -395,17 +369,17 @@ if [[ -x $RUNTIME && $RUNTIME -nt $ROOT/runtime/main.go ]] && \
    ! find "$ROOT/runtime" -name '*.go' -newer "$RUNTIME" | grep -q .; then
     ok "$RUNTIME is newer than every Go source"
 elif [[ $CHECK -eq 1 ]]; then
-    gap "runtime: (cd runtime && go build -o sprout-runtime .)"
+    gap "runtime: (cd runtime && go generate ./... && go build -o sprout-runtime .)"
 else
-    # go.mod's toolchain line is newer than the distribution's Go; Go 1.21+
-    # downloads the toolchain it names (GOTOOLCHAIN=auto, the default).
-    (cd "$ROOT/runtime" && go build -o sprout-runtime .)
+    # Go 1.21+ downloads the newer toolchain that go.mod names (GOTOOLCHAIN=auto). go generate
+    # downloads the ripgrep release that the binary embeds.
+    (cd "$ROOT/runtime" && go generate ./... && go build -o sprout-runtime .)
     ok "built $RUNTIME"
 fi
 
 # --- 7. prove it ------------------------------------------------------------
 echo "[7/7] verification"
-HOW="SPROUT_PODMAN_BIN=$PODMAN SPROUT_PODMAN_STORE=$STORE $ROOT/.venv/bin/python -m pytest -m slow tests/sdk/test_podman_live.py -s"
+HOW="SPROUT_PODMAN_BIN=$PODMAN SPROUT_PODMAN_STORE=$STORE $ROOT/.venv/bin/python -m pytest -m slow tests/sprout_sandbox/test_podman_live.py -s"
 if [[ $GAPS -gt 0 ]]; then
     echo "  skipped: $GAPS gap(s) above"
     exit 1
@@ -415,8 +389,8 @@ if [[ $SKIP_VERIFY -eq 1 || $CHECK -eq 1 ]]; then
     echo "    $PODMAN run --rm --memory 64m docker.io/library/alpine:3.20 cat /sys/fs/cgroup/memory.max   # 67108864"
     echo "    $HOW"
 else
-    # A limit that podman accepts but the kernel never saw is the failure mode of a
-    # cgroup manager without a place to make cgroups: ask the container.
+    # A cgroup manager with no place to make cgroups accepts a limit that never reaches the
+    # kernel. So read the limit inside the container.
     LIMIT=$("$PODMAN" run --rm --memory 64m docker.io/library/alpine:3.20 cat /sys/fs/cgroup/memory.max 2>/dev/null || true)
     if [[ $LIMIT == 67108864 ]]; then
         ok "--memory reaches the container's cgroup (memory.max 67108864 for --memory 64m)"
@@ -428,18 +402,17 @@ else
     if [[ $SKIP_PYTHON -eq 1 ]]; then
         echo "  the live test is skipped (--skip-python):"
         echo "    $HOW"
-    # The live tests remove every container and snapshot that appears while they
-    # run, so they must have the store to themselves.
+    # The live tests remove each container and snapshot that appears while they run. So they
+    # must have the store to themselves.
     elif [[ -n "$(find "$STORE/sandboxes" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | head -1)" ]] || \
          [[ -n "$("$PODMAN" ps -a -q --filter label=sprout.managed=1 2>/dev/null | head -1)" ]]; then
         echo "  skipped: the store is in use by running sandboxes; run the live test when it is idle:"
         echo "    $HOW"
     else
-        # The SDK's live test: base extraction of python:3.11-slim, spawn, a command,
-        # snapshot, branch from it, network toggle, teardown; it prints the timings.
+        # The live test prints its spawn, snapshot and network timings. The grep keeps them.
         mkdir -p "$ROOT/runs"
         LOG=$ROOT/runs/setup-podman-live-test.log
-        if (cd "$ROOT" && SPROUT_PODMAN_BIN=$PODMAN SPROUT_PODMAN_STORE=$STORE "$PY" -m pytest -q -p no:cacheprovider -m slow tests/sdk/test_podman_live.py -s > "$LOG" 2>&1); then
+        if (cd "$ROOT" && SPROUT_PODMAN_BIN=$PODMAN SPROUT_PODMAN_STORE=$STORE "$PY" -m pytest -q -p no:cacheprovider -m slow tests/sprout_sandbox/test_podman_live.py -s > "$LOG" 2>&1); then
             grep -E "spawn|snapshot|network|passed" "$LOG" | sed 's/^/  /'
             ok "the podman backend works on this host"
         else

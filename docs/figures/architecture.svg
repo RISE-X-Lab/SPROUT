@@ -1,0 +1,151 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="880" viewBox="0 0 1320 880" role="img" aria-labelledby="title desc" font-family="-apple-system, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
+  <title id="title">Sprout architecture</title>
+  <desc id="desc">The processes of Sprout and the calls between them. Each arrow points from the caller to the callee. Miles, the external RL trainer, sends POST /rollout-groups to the RL driver (sprout.rl_driver). Three Run Store clients, the RL driver, manual evaluation (sprout.eval.evaluate) and the task gate (sprout.eval.gate), each run the search coordinator (sprout.search), which submits jobs to the HTTP API of the Run Store (/v1/jobs) and polls them. The API reads and writes PostgreSQL, which holds the jobs, attempts, leases and recovery points. A worker on each machine (python -m sprout.worker start) runs a claim loop (WorkerManager), which calls claim(), worker_heartbeat() and finish() on PostgreSQL directly. No process assigns jobs to workers. The claim loop starts an attempt child process for each job: a rollout, a grade or a review. In a rollout, the agent (mini-swe-agent, oracle or nop) makes tool calls to the tools (ToolAccess), which check each call and take the checkpoints. The tools call tools/call over JSON-RPC in the sandbox, a rootless podman container on btrfs or an AgentENV microVM, where sprout-runtime serves the tools. The agent sends its model requests through the model gateway to the external model endpoint, an OpenAI-compatible Chat Completions API.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10Z" fill="#3A5047"/>
+    </marker>
+    <style>
+      .title { font-size: 28px; font-weight: 700; fill: #2F443E; }
+      .lead { font-size: 17px; fill: #63766F; }
+      .name { font-size: 20px; font-weight: 700; fill: #2F443E; }
+      .frame { font-size: 18px; font-weight: 700; fill: #2F443E; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 16px; fill: #2F443E; }
+      .note { font-size: 16px; fill: #63766F; }
+      .label { font-size: 16px; fill: #2F443E; }
+      .source { font-size: 16px; fill: #63766F; }
+      .box { fill: #E6F1F7; stroke: #587E96; stroke-width: 2; }
+      .external { fill: #FFFFFF; stroke: #63766F; stroke-width: 2; stroke-dasharray: 7 5; }
+      .boundary { fill: #F6F3E7; stroke: #8E9A90; stroke-width: 1.5; }
+      .inner { fill: #FFFDF6; stroke: #8E9A90; stroke-width: 1.5; }
+      .edge { fill: none; stroke: #3A5047; stroke-width: 2; marker-end: url(#arrow); }
+      .bus { fill: none; stroke: #3A5047; stroke-width: 2; }
+    </style>
+  </defs>
+
+  <rect x="1" y="1" width="1318" height="878" rx="16" fill="#FFFDF6" stroke="#E5E2D2" stroke-width="2"/>
+  <text class="title" x="40" y="52">Sprout architecture</text>
+  <text class="lead" x="40" y="84">Each arrow points from the caller to the callee. No process assigns jobs: each worker claims its next job itself.</text>
+  <text class="lead" x="40" y="108">Dashed boxes are external to Sprout.</text>
+
+  <g transform="translate(0 24)">
+    <!-- Miles -->
+    <rect class="external" x="58" y="112" width="272" height="64" rx="12"/>
+    <text class="name" x="76" y="140">Miles</text>
+    <text class="note" x="76" y="164">RL trainer, external</text>
+
+    <!-- Run Store clients -->
+    <rect class="boundary" x="40" y="222" width="304" height="450" rx="14"/>
+    <text class="frame" x="56" y="250">Run Store clients</text>
+
+    <rect class="box" x="58" y="270" width="272" height="76" rx="12"/>
+    <text class="name" x="76" y="300">RL driver</text>
+    <text class="mono" x="76" y="326">sprout.rl_driver</text>
+
+    <rect class="box" x="58" y="370" width="272" height="76" rx="12"/>
+    <text class="name" x="76" y="400">Manual evaluation</text>
+    <text class="mono" x="76" y="426">sprout.eval.evaluate</text>
+
+    <rect class="box" x="58" y="470" width="272" height="76" rx="12"/>
+    <text class="name" x="76" y="500">Task gate</text>
+    <text class="mono" x="76" y="526">sprout.eval.gate</text>
+
+    <text class="note" x="58" y="594">Each one runs the search coordinator,</text>
+    <text class="mono" x="58" y="618">sprout.search</text>
+    <text class="note" x="58" y="642">which submits the jobs and polls them.</text>
+
+    <!-- Miles -> RL driver -->
+    <path class="edge" d="M300 176 V268"/>
+    <text class="mono" x="290" y="208" text-anchor="end">POST /rollout-groups</text>
+
+    <!-- clients -> HTTP API -->
+    <path class="bus" d="M330 308 H380 V408"/>
+    <path class="bus" d="M330 508 H380 V408"/>
+    <path class="edge" d="M330 408 H502"/>
+    <circle cx="380" cy="408" r="4" fill="#3A5047"/>
+    <text class="label" x="441" y="398" text-anchor="middle">submit, poll</text>
+
+    <!-- Run Store -->
+    <rect class="boundary" x="484" y="112" width="280" height="368" rx="14"/>
+    <text class="name" x="504" y="142">Run Store</text>
+    <text class="mono" x="504" y="166">sprout.runstore</text>
+
+    <rect class="box" x="504" y="190" width="240" height="90" rx="12"/>
+    <text class="name" x="520" y="216">PostgreSQL</text>
+    <text class="note" x="520" y="240">jobs, attempts, leases,</text>
+    <text class="note" x="520" y="262">recovery points</text>
+
+    <rect class="box" x="504" y="370" width="240" height="76" rx="12"/>
+    <text class="name" x="520" y="400">HTTP API</text>
+    <text class="mono" x="520" y="426">/v1/jobs</text>
+
+    <!-- HTTP API -> PostgreSQL -->
+    <path class="edge" d="M624 370 V282"/>
+    <text class="label" x="636" y="332">SQL</text>
+
+    <!-- Model endpoint -->
+    <rect class="external" x="484" y="650" width="280" height="100" rx="12"/>
+    <text class="name" x="504" y="680">Model endpoint</text>
+    <text class="note" x="504" y="704">Chat Completions API,</text>
+    <text class="note" x="504" y="726">external</text>
+
+    <!-- Worker: a worker on each machine -->
+    <rect x="900" y="128" width="378" height="678" rx="14" fill="#FFFDF6" stroke="#8E9A90" stroke-width="1.5"/>
+    <rect x="892" y="120" width="378" height="678" rx="14" fill="#FFFDF6" stroke="#8E9A90" stroke-width="1.5"/>
+    <rect class="boundary" x="884" y="112" width="378" height="678" rx="14"/>
+    <text class="name" x="902" y="142">Worker</text>
+    <text class="note" x="984" y="142">a worker on each machine</text>
+    <text class="mono" x="902" y="166">python -m sprout.worker start</text>
+
+    <rect class="box" x="920" y="190" width="306" height="90" rx="12"/>
+    <text class="name" x="938" y="226">Claim loop</text>
+    <text class="mono" x="938" y="254">WorkerManager</text>
+
+    <!-- Claim loop -> PostgreSQL -->
+    <path class="edge" d="M920 235 H746"/>
+    <text class="mono" x="824" y="222" text-anchor="middle">claim()</text>
+    <text class="mono" x="833" y="258" text-anchor="middle" style="font-size: 13px">worker_heartbeat()</text>
+    <text class="mono" x="824" y="278" text-anchor="middle">finish()</text>
+
+    <!-- Claim loop -> attempt -->
+    <path class="edge" d="M1073 280 V318"/>
+    <text class="label" x="1085" y="304">starts</text>
+
+    <!-- Attempt child process -->
+    <rect class="inner" x="902" y="320" width="342" height="450" rx="14"/>
+    <text class="frame" x="920" y="348">Attempt child process</text>
+    <text class="note" x="920" y="372">one job: a rollout, a grade or a review</text>
+
+    <rect class="box" x="920" y="390" width="306" height="76" rx="12"/>
+    <text class="name" x="938" y="420">Agent</text>
+    <text class="note" x="938" y="446">mini-swe-agent, oracle or nop</text>
+
+    <!-- Agent -> Tools -->
+    <path class="edge" d="M1073 466 V514"/>
+    <text class="label" x="1085" y="496">tool calls</text>
+
+    <rect class="box" x="920" y="516" width="306" height="76" rx="12"/>
+    <text class="name" x="938" y="546">Tools</text>
+    <text class="mono" x="1006" y="546">ToolAccess</text>
+    <text class="note" x="938" y="572">checks calls, takes checkpoints</text>
+
+    <!-- Tools -> Sandbox -->
+    <path class="edge" d="M1073 592 V640"/>
+    <text class="mono" x="1085" y="612">tools/call</text>
+    <text class="note" x="1085" y="632">JSON-RPC</text>
+
+    <rect class="box" x="920" y="642" width="306" height="112" rx="12"/>
+    <text class="name" x="938" y="670">Sandbox</text>
+    <text class="note" x="938" y="694">rootless podman on btrfs,</text>
+    <text class="note" x="938" y="716">or an AgentENV microVM</text>
+    <text class="mono" x="938" y="740">sprout-runtime</text>
+    <text class="note" x="1082" y="740">inside</text>
+
+    <!-- Agent -> Model endpoint -->
+    <path class="edge" d="M920 428 H822 V700 H766"/>
+    <text class="label" x="810" y="560" text-anchor="end">model requests,</text>
+    <text class="label" x="810" y="582" text-anchor="end">through the gateway</text>
+  </g>
+
+  <text class="source" x="40" y="858">Source: the packages rl_driver, eval, search, runstore and worker under src/sprout/, and ADR-0001, ADR-0002 and ADR-0004</text>
+</svg>

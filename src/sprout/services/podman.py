@@ -1,32 +1,24 @@
-"""The database container through the podman CLI.
+"""The container of a ``podman`` service, such as the Run Store's PostgreSQL, through the podman CLI.
 
-One container -- the Run Store's PostgreSQL -- and only the verbs its lifecycle
-needs: inspect, run, start, stop, logs. It runs on the podman the sandboxes run
-on -- ``$SPROUT_PODMAN_BIN``, else the podman 6 ``ops/setup_podman.sh``
-installed, else ``podman`` on PATH (``spec.podman_bin_for``) -- and the image is
-the official ``postgres:16-alpine``, so there is nothing to build and nothing to
-install beyond what the sandbox backend already needs. The host's own PostgreSQL owns
-5432; the container publishes its port on 127.0.0.1 only, at the port
-``services.yaml`` names.
+:class:`Podman` has only the verbs of a container's lifecycle: inspect, run, start, stop
+and logs. It runs on the podman that the caller names, which is the sandboxes' podman.
 
-The password never appears on a command line: ``-e NAME`` without a value makes
-podman copy the variable from its own environment, which is where the CLI puts
-it, so the argv written to the log carries names only. ``podman stop`` is the
-only way down (the data directory is a bind mount and survives; ``podman rm``
-is left to a person), and ``up`` of an existing stopped container is ``podman
-start``, so a reboot costs nothing but the start.
+A value from the service's ``env``, such as the database password, never appears on a
+command line, so the argv in the log holds names only. Nothing here removes a container.
+Its data directory is a bind mount and survives a stop, and ``up`` of a stopped container
+is :meth:`Podman.start`. The services and their images: ``docs/SERVICES.md``.
 """
 
 from __future__ import annotations
 
 import os
 import subprocess
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping
 
 from sprout.services.health import which
-from sprout.services.spec import Context, Service, expand, expand_all, podman_bin_for
+from sprout.services.spec import Context, Service, expand, expand_all
 from sprout.services.supervisor import StartError, run_logged, tail
 
 STOP_TIMEOUT_S = 20
@@ -34,43 +26,64 @@ STOP_TIMEOUT_S = 20
 
 @dataclass(frozen=True)
 class ContainerState:
+    """What podman reports about one container."""
+
     #: podman's State.Status (running, exited, created, paused, ...), or `absent`.
     status: str
+    #: The pid of the container's main process. None if podman reports none.
     pid: int | None
 
     @property
     def running(self) -> bool:
+        """True if the container is running."""
         return self.status == "running"
 
     @property
     def exists(self) -> bool:
+        """True if podman knows the container, in any state."""
         return self.status != "absent"
 
 
 class Podman:
     """The podman verbs for one service, logged into that service's log."""
 
-    def __init__(self, log_path: Path, cwd: Path, environ: Mapping[str, str]) -> None:
+    def __init__(self, log_path: Path, cwd: Path, environ: Mapping[str, str], *, podman_bin: str) -> None:
         self.log_path = log_path
         self.cwd = cwd
         self.environ = dict(environ)
-        chosen = podman_bin_for(self.environ)
-        self.executable = chosen if os.path.isabs(chosen) else which(chosen)
+        self.podman_bin = podman_bin
+        self.executable = podman_bin if os.path.isabs(podman_bin) else which(podman_bin)
 
     def _require(self) -> str:
         if not self.executable:
-            raise StartError("no podman at %s (ops/setup_podman.sh installs one under ~/.local/opt/podman; "
-                             "$SPROUT_PODMAN_BIN names another)" % podman_bin_for(self.environ))
+            raise StartError(
+                "no podman at %s (ops/setup_podman.sh installs one under ~/.local/opt/podman; "
+                "$SPROUT_PODMAN_BIN names another)" % self.podman_bin
+            )
         return self.executable
 
     def inspect(self, container: str) -> ContainerState:
-        """Quiet (status polls it): absent when podman does not know the name."""
+        """The state of ``container``, ``absent`` if podman does not know it or does not answer.
+
+        Writes nothing to the log, because ``status`` calls it on each run.
+        """
         if not self.executable:
             return ContainerState("absent", None)
         try:
-            done = subprocess.run([self.executable, "inspect", "--type", "container",
-                                   "--format", "{{.State.Status}} {{.State.Pid}}", container],
-                                  capture_output=True, text=True, timeout=30)
+            done = subprocess.run(
+                [
+                    self.executable,
+                    "inspect",
+                    "--type",
+                    "container",
+                    "--format",
+                    "{{.State.Status}} {{.State.Pid}}",
+                    container,
+                ],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
         except (OSError, subprocess.TimeoutExpired):
             return ContainerState("absent", None)
         fields = done.stdout.split()
@@ -80,16 +93,10 @@ class Podman:
         return ContainerState(fields[0], pid)
 
     def run(self, service: Service, ctx: Context) -> None:
-        """``podman run -d`` for a container that does not exist yet.
+        """Create and start the service's container, which does not exist yet, with ``podman run -d``.
 
-        Every placeholder the service carries is resolved here, against one
-        context: ``publish``, the ``volumes`` (the template mounts
-        ``{state}/db/data``, and podman reads a source without a leading ``/``
-        as a *named* volume, which ``{state}`` is not a legal name for) and
-        the ``env`` values. The host side of every bind mount is then created
-        first: podman would make it too, but as whatever the first process in
-        the container decides, and the data directory should belong to this
-        user from the start.
+        Expands the placeholders in ``publish``, ``volumes`` and ``env`` against ``ctx``, and
+        makes the host side of each bind mount first. Raises :class:`StartError` on a failure.
         """
         podman = self._require()
         argv = [podman, "run", "-d", "--name", service.container]
@@ -98,24 +105,33 @@ class Podman:
         for volume in service.volumes:
             mount = expand(volume, ctx)
             host_side = mount.split(":", 1)[0]
-            if host_side.startswith("/"):              # a bind mount, not a named volume
+            # podman reads a source without a leading ``/`` as a named volume. podman would also make
+            # a missing bind source, but then the container's first process decides its owner.
+            if host_side.startswith("/"):
                 Path(host_side).mkdir(parents=True, exist_ok=True)
             argv += ["-v", mount]
         env = expand_all(service.env, ctx)
         for name in env:
-            argv += ["-e", name]          # the value comes from the environment below
+            argv += ["-e", name]  # without a value, podman copies it from the environment below
         argv.append(service.image)
         self._run(argv, {**self.environ, **env}, "run")
 
     def start(self, container: str) -> None:
+        """Start the stopped ``container``. Raises :class:`StartError` on a failure."""
         self._run([self._require(), "start", container], self.environ, "start")
 
     def stop(self, container: str, timeout_s: int = STOP_TIMEOUT_S) -> None:
+        """Stop ``container``, which podman kills after ``timeout_s``.
+
+        Raises :class:`StartError` on a failure.
+        """
         self._run([self._require(), "stop", "--time", str(timeout_s), container], self.environ, "stop")
 
     def logs(self, container: str, follow: bool) -> int:
-        """``podman logs`` on the caller's terminal: the container's own output
-        lives in podman, not in the service log (which holds what the CLI did)."""
+        """Print the container's output with ``podman logs`` on the caller's terminal, and return its status.
+
+        The container's own output is in podman. The service log holds only what the CLI did.
+        """
         argv = [self._require(), "logs"] + (["-f"] if follow else []) + [container]
         try:
             return subprocess.run(argv).returncode
@@ -125,5 +141,7 @@ class Podman:
     def _run(self, argv: list[str], env: Mapping[str, str], verb: str) -> None:
         status = run_logged(argv, env, self.log_path, self.cwd)
         if status != 0:
-            raise StartError("podman %s failed (exit %d); last lines of %s:\n%s"
-                             % (verb, status, self.log_path, tail(self.log_path)))
+            raise StartError(
+                "podman %s failed (exit %d); last lines of %s:\n%s"
+                % (verb, status, self.log_path, tail(self.log_path))
+            )

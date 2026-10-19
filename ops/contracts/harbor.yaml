@@ -1,6 +1,6 @@
-# Harbor runs TB2.1 / HARD-51 trials; harbor_plugin/ plugs Sprout in through
-# BaseEnvironment and BaseAgent. These are the surfaces those plugins and
-# methods.evaluate call, pinned to the version they were validated against.
+# Harbor's own trials on eval/harbor/'s BaseEnvironment are the rewards the worker's harbor grade
+# must equal (ADR-0003). These are the surfaces that environment and the slow tests call, pinned to
+# the version they were validated against.
 name: harbor
 upstream:
   package: harbor
@@ -18,16 +18,11 @@ classes:
     cls: BaseEnvironment
     methods: [start, stop, exec, upload_file, upload_dir, download_file, download_dir,
               _apply_network_policy, type, capabilities, resource_capabilities]
-  - module: harbor.agents.base
-    cls: BaseAgent
-    methods: [name, version, setup, run]
   - module: harbor.models.trial.config
     cls: TrialConfig
     methods: [model_validate]
   - module: harbor.models.task.task
     cls: Task
-  - module: harbor.models.agent.context
-    cls: AgentContext
   - module: harbor.environments.capabilities
     cls: EnvironmentCapabilities
     fields: [disable_internet, dynamic_network_policy]

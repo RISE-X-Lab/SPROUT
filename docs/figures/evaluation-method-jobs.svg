@@ -1,0 +1,157 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1140" viewBox="0 0 1000 1140" role="img" aria-labelledby="title desc" font-family="-apple-system, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
+  <title id="title">The jobs that one task becomes, by method</title>
+  <desc id="desc">Three lanes, one for each kind of method. In the baseline lane, the group parent holds a rollout job of the agent mini and, after the rollout succeeded, a grade job with the benchmark harbor. Then the evaluation ends. With --parent-output, the evaluation reuses the parent of that evaluation and runs no job. In the sprout lane, the group parent holds the same rollout and grade, or the evaluation reuses them with --parent-output. After the parent's grade succeeded, the group review-N holds one review job, which reads each attempt so far and picks k points. Each point becomes a branch job in the group round-N, and each branch job that succeeded gets a grade job. A back edge goes from the grades of round N to the review of the next round, while no attempt resolved the task and N is less than --rounds. In the bpo and shepherd lane, the parent is the parent of a baseline evaluation, not a new job. A selector in the client process, not a job, reads the parent's journal and picks the points. Each point becomes its own group b-NN-step-S with one branch job and, after the branch succeeded, its grade job. A back edge goes from the grade to the next branch, while no attempt resolved the task and branches are left. Blue boxes are rollout jobs, a branch included. Green boxes are grade jobs. The yellow box is a review job. Gray boxes are not jobs.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10Z" fill="#3A5047"/>
+    </marker>
+    <style>
+      .title { font-size: 26px; font-weight: 700; fill: #2F443E; }
+      .lead { font-size: 16px; fill: #63766F; }
+      .lane { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 19px; font-weight: 700; fill: #2F443E; }
+      .lanenote { font-size: 15px; fill: #63766F; }
+      .job { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 17px; font-weight: 700; fill: #2F443E; text-anchor: middle; }
+      .jobnote { font-size: 15px; fill: #63766F; text-anchor: middle; }
+      .group { fill: none; stroke: #63766F; stroke-width: 1.5; stroke-dasharray: 7 5; }
+      .grouplabel { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 15px; fill: #63766F; }
+      .label { font-size: 15px; fill: #2F443E; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; }
+      .note { font-size: 15px; fill: #63766F; }
+      .edge { fill: none; stroke: #3A5047; stroke-width: 2; marker-end: url(#arrow); }
+      .read { fill: none; stroke: #3A5047; stroke-width: 2; stroke-dasharray: 8 6; marker-end: url(#arrow); }
+      .rollout { fill: #E6F1F7; stroke: #587E96; stroke-width: 2; }
+      .grade { fill: #DFF0DB; stroke: #256348; stroke-width: 2; }
+      .review { fill: #FFE7A9; stroke: #B28745; stroke-width: 2; }
+      .nojob { fill: #E4E3D4; stroke: #63766F; stroke-width: 2; stroke-dasharray: 6 4; }
+      .rule { stroke: #E5E2D2; stroke-width: 2; }
+      .source { font-size: 14px; fill: #63766F; }
+    </style>
+  </defs>
+
+  <rect x="1" y="1" width="998" height="1138" rx="16" fill="#FFFDF6" stroke="#E5E2D2" stroke-width="2"/>
+  <text class="title" x="30" y="48">The jobs that one task becomes, by method</text>
+  <text class="lead" x="30" y="78">Each box is one Run Store job, unless it says that it is not. A dashed frame is one group.</text>
+  <text class="lead" x="30" y="100">A solid arrow leads to the next job. The coordinator submits it after the job before it succeeds.</text>
+
+  <!-- Lane: baseline -->
+  <text class="lane" x="30" y="200">baseline</text>
+  <text class="lanenote" x="30" y="226">one rollout</text>
+  <text class="lanenote" x="30" y="246">and its grade</text>
+
+  <rect class="group" x="185" y="122" width="190" height="225" rx="10"/>
+  <text class="grouplabel" x="199" y="142">parent</text>
+  <rect class="rollout" x="200" y="152" width="160" height="60" rx="10"/>
+  <text class="job" x="280" y="178">rollout</text>
+  <text class="jobnote" x="280" y="200">agent mini</text>
+  <path class="edge" d="M280 212 V270"/>
+  <text class="label" x="290" y="246">succeeded</text>
+  <rect class="grade" x="200" y="272" width="160" height="60" rx="10"/>
+  <text class="job" x="280" y="298">grade</text>
+  <text class="jobnote" x="280" y="320">benchmark harbor</text>
+
+  <text class="note" x="465" y="262">After the parent's grade, the evaluation ends.</text>
+  <text class="note" x="465" y="290">With <tspan class="mono">--parent-output</tspan>, the evaluation reuses</text>
+  <text class="note" x="465" y="312">that evaluation's parent and runs no job.</text>
+
+  <line class="rule" x1="30" y1="372" x2="970" y2="372"/>
+
+  <!-- Lane: sprout -->
+  <text class="lane" x="30" y="474">sprout</text>
+  <text class="lanenote" x="30" y="500">a review, then</text>
+  <text class="lanenote" x="30" y="520">branches, in each</text>
+  <text class="lanenote" x="30" y="540">of the rounds</text>
+
+  <rect class="group" x="185" y="397" width="190" height="225" rx="10"/>
+  <text class="grouplabel" x="199" y="417">parent</text>
+  <rect class="rollout" x="200" y="427" width="160" height="60" rx="10"/>
+  <text class="job" x="280" y="453">rollout</text>
+  <text class="jobnote" x="280" y="475">agent mini</text>
+  <path class="edge" d="M280 487 V545"/>
+  <text class="label" x="290" y="521">succeeded</text>
+  <rect class="grade" x="200" y="547" width="160" height="60" rx="10"/>
+  <text class="job" x="280" y="573">grade</text>
+  <text class="jobnote" x="280" y="595">benchmark harbor</text>
+  <text class="note" x="280" y="648" text-anchor="middle">or reused with</text>
+  <text class="note mono" x="280" y="668" text-anchor="middle">--parent-output</text>
+
+  <rect class="group" x="465" y="397" width="190" height="225" rx="10"/>
+  <text class="grouplabel" x="479" y="417">review-&lt;N&gt;</text>
+  <rect class="review" x="480" y="427" width="160" height="180" rx="10"/>
+  <text class="job" x="560" y="490">review</text>
+  <text class="jobnote" x="560" y="516">reads each</text>
+  <text class="jobnote" x="560" y="536">attempt so far,</text>
+  <text class="jobnote" x="560" y="556">picks k points</text>
+  <path class="edge" d="M360 577 H478"/>
+  <text class="label" x="420" y="567" text-anchor="middle">succeeded</text>
+
+  <rect class="group" x="745" y="397" width="190" height="225" rx="10"/>
+  <text class="grouplabel" x="759" y="417">round-&lt;N&gt;</text>
+  <rect class="rollout" x="760" y="427" width="160" height="60" rx="10"/>
+  <text class="job" x="840" y="453">branch × k</text>
+  <text class="jobnote" x="840" y="475">from a point</text>
+  <path class="edge" d="M640 457 H758"/>
+  <text class="label" x="700" y="447" text-anchor="middle">k points</text>
+  <path class="edge" d="M840 487 V545"/>
+  <text class="label" x="850" y="521">succeeded</text>
+  <rect class="grade" x="760" y="547" width="160" height="60" rx="10"/>
+  <text class="job" x="840" y="573">grade × k</text>
+  <text class="jobnote" x="840" y="595">benchmark harbor</text>
+
+  <path class="edge" d="M840 607 V650 H560 V609"/>
+  <text class="label" x="700" y="674" text-anchor="middle">next round: nothing resolved,</text>
+  <text class="label" x="700" y="694" text-anchor="middle"><tspan class="mono">N</tspan> &lt; <tspan class="mono">--rounds</tspan></text>
+
+  <line class="rule" x1="30" y1="717" x2="970" y2="717"/>
+
+  <!-- Lane: bpo and shepherd -->
+  <text class="lane" x="30" y="808">bpo</text>
+  <text class="lane" x="30" y="834">shepherd</text>
+  <text class="lanenote" x="30" y="860">branches from a</text>
+  <text class="lanenote" x="30" y="880">baseline's parent,</text>
+  <text class="lanenote" x="30" y="900">one at a time</text>
+
+  <rect class="nojob" x="200" y="772" width="160" height="80" rx="10"/>
+  <text class="job" x="280" y="800">parent</text>
+  <text class="jobnote" x="280" y="822">of a baseline,</text>
+  <text class="jobnote" x="280" y="842">not a new job</text>
+
+  <rect class="nojob" x="480" y="772" width="160" height="80" rx="10"/>
+  <text class="job" x="560" y="800">selector</text>
+  <text class="jobnote" x="560" y="822">in the client,</text>
+  <text class="jobnote" x="560" y="842">not a job</text>
+  <path class="read" d="M360 812 H478"/>
+  <text class="label" x="420" y="802" text-anchor="middle">journal</text>
+
+  <rect class="group" x="745" y="742" width="190" height="225" rx="10"/>
+  <text class="grouplabel" x="759" y="762">b&lt;NN&gt;-step&lt;S&gt;</text>
+  <rect class="rollout" x="760" y="772" width="160" height="60" rx="10"/>
+  <text class="job" x="840" y="798">branch</text>
+  <text class="jobnote" x="840" y="820">from a point</text>
+  <path class="edge" d="M640 802 H758"/>
+  <text class="label" x="700" y="792" text-anchor="middle">points</text>
+  <path class="edge" d="M840 832 V890"/>
+  <text class="label" x="850" y="866">succeeded</text>
+  <rect class="grade" x="760" y="892" width="160" height="60" rx="10"/>
+  <text class="job" x="840" y="918">grade</text>
+  <text class="jobnote" x="840" y="940">benchmark harbor</text>
+
+  <path class="edge" d="M840 952 V992 H962 V802 H922"/>
+  <text class="label" x="830" y="1016" text-anchor="middle">next branch: nothing resolved,</text>
+  <text class="label" x="830" y="1036" text-anchor="middle">branches are left</text>
+
+  <!-- Legend -->
+  <line class="rule" x1="30" y1="1056" x2="970" y2="1056"/>
+  <path class="edge" d="M30 1080 H78"/>
+  <text class="note" x="88" y="1085">the next job</text>
+  <path class="read" d="M200 1080 H248"/>
+  <text class="note" x="258" y="1085">reads, in the client</text>
+  <rect class="group" x="420" y="1070" width="40" height="22" rx="5"/>
+  <text class="note" x="470" y="1085">one group, in <tspan class="mono">groups/</tspan></text>
+  <rect class="rollout" x="650" y="1072" width="20" height="18" rx="4"/>
+  <text class="note" x="676" y="1085">rollout</text>
+  <rect class="grade" x="746" y="1072" width="20" height="18" rx="4"/>
+  <text class="note" x="772" y="1085">grade</text>
+  <rect class="review" x="830" y="1072" width="20" height="18" rx="4"/>
+  <text class="note" x="856" y="1085">review</text>
+  <text class="source" x="30" y="1120">Source: Evaluation in src/sprout/eval/evaluate.py, and src/sprout/eval/jobs.py</text>
+</svg>
