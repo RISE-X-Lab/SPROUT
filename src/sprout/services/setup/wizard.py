@@ -429,7 +429,7 @@ def _next_commands(*, model: _Model | None, runstore_url: str) -> list[str]:
         )
     example = [
         "python -m examples.qwen.run --dataset deepswe --method baseline",
-        "--tasks-dir <tasks directory> --output <output directory>",
+        "--tasks-dir <tasks directory> --task <task> --output <output directory>",
         chosen,
         "--runstore-url %s --plan" % runstore_url,
     ]

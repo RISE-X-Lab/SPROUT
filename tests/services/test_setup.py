@@ -370,7 +370,7 @@ def test_the_last_step_prints_the_env_line_and_a_plan_run_on_the_model_and_the_r
         "Next, in the shell of the experiment:",
         '  eval "$(python -m sprout.services env)"',
         "  python -m examples.qwen.run --dataset deepswe --method baseline --tasks-dir <tasks directory> "
-        "--output <output directory> --model luna --model-endpoint http://127.0.0.1:4000 "
+        "--task <task> --output <output directory> --model luna --model-endpoint http://127.0.0.1:4000 "
         "--model-key-env LUNA_KEY --runstore-url http://127.0.0.1:18111 --plan",
     ]
 
