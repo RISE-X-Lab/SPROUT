@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="790" viewBox="0 0 1000 790" role="img" aria-labelledby="title desc" font-family="-apple-system, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
+  <title id="title">What the runner does when it reaches a stage</title>
+  <desc id="desc">The tests that examples.qwen.run makes for each stage of a task, from the top, on the first run and on each later run in the same root. First: does the receipt &lt;stage&gt;.stage.json exist? If yes, the runner reads complete in the receipt. If complete is true, the runner reuses the stage: it reads the attempts from summary.json and runs no job. If complete is false, the task fails with Incomplete stage retained at &lt;stage&gt;. If no receipt exists, the runner asks whether the stage directory is empty or absent. If not, the task fails with FileExistsError. If yes, the runner writes the receipt with complete false, then runs sprout.eval.evaluate for the stage. Then it asks whether the evaluator exited 0 and the stage checks passed. If yes, the runner writes complete true into the receipt, and the attempts go to the task. If no, the receipt keeps complete false with the error, and the task fails. A task that fails gets the status infrastructure_error and runs no more stages. The other tasks go on.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10Z" fill="#3A5047"/>
+    </marker>
+    <style>
+      .title { font-size: 24px; font-weight: 700; fill: #2F443E; }
+      .lead { font-size: 15px; fill: #63766F; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; }
+      .q { font-size: 16px; font-weight: 700; fill: #2F443E; text-anchor: middle; }
+      .sub { font-size: 15px; fill: #63766F; text-anchor: middle; }
+      .word { font-size: 15px; fill: #2F443E; }
+      .step { fill: #E6F1F7; stroke: #587E96; stroke-width: 2; }
+      .good { fill: #DFF0DB; stroke: #256348; stroke-width: 2; }
+      .bad { fill: #FBE3DC; stroke: #BC7168; stroke-width: 2; }
+      .flow { fill: none; stroke: #3A5047; stroke-width: 2; marker-end: url(#arrow); }
+      .bus { fill: none; stroke: #3A5047; stroke-width: 2; }
+      .source { font-size: 13px; fill: #63766F; }
+    </style>
+  </defs>
+
+  <rect x="1" y="1" width="998" height="788" rx="16" fill="#FFFDF6" stroke="#E5E2D2" stroke-width="2"/>
+  <text class="title" x="40" y="46">What the runner does when it reaches a stage</text>
+
+  <!-- Lead and legend -->
+  <text class="lead" x="40" y="78">The runner makes these tests from the top, on the first run and on each rerun in the root. A label answers the test.</text>
+  <rect class="step" x="40" y="100" width="24" height="16" rx="4"/>
+  <text class="lead" x="76" y="114">a test or an action</text>
+  <rect class="good" x="240" y="100" width="24" height="16" rx="4"/>
+  <text class="lead" x="276" y="114">the attempts go to the task</text>
+  <rect class="bad" x="500" y="100" width="24" height="16" rx="4"/>
+  <text class="lead" x="536" y="114">the task fails: <tspan class="mono">infrastructure_error</tspan>, no more stages</text>
+
+  <!-- A: the receipt -->
+  <rect class="step" x="40" y="150" width="400" height="56" rx="12"/>
+  <text class="q" x="240" y="184">Does <tspan class="mono">&lt;stage&gt;.stage.json</tspan> exist?</text>
+
+  <!-- B: complete -->
+  <path class="flow" d="M440 178 H518"/>
+  <text class="word" x="479" y="170" text-anchor="middle">yes</text>
+  <rect class="step" x="520" y="150" width="440" height="56" rx="12"/>
+  <text class="q" x="740" y="184">Is <tspan class="mono">complete</tspan> true in the receipt?</text>
+
+  <path class="bus" d="M740 206 V222 H625 M740 222 H855"/>
+  <path class="flow" d="M625 222 V250"/>
+  <path class="flow" d="M855 222 V250"/>
+  <text class="word" x="637" y="243">yes</text>
+  <text class="word" x="867" y="243">no</text>
+
+  <rect class="good" x="520" y="252" width="210" height="76" rx="12"/>
+  <text class="q" x="625" y="278">reused</text>
+  <text class="sub" x="625" y="300">reads <tspan class="mono">summary.json</tspan>,</text>
+  <text class="sub" x="625" y="319">runs no job</text>
+
+  <rect class="bad" x="750" y="252" width="210" height="76" rx="12"/>
+  <text class="q" x="855" y="278">task fails</text>
+  <text class="sub" x="855" y="300">Incomplete stage</text>
+  <text class="sub" x="855" y="319">retained at <tspan class="mono">&lt;stage&gt;</tspan></text>
+
+  <!-- C: the stage directory -->
+  <path class="flow" d="M240 206 V358"/>
+  <text class="word" x="252" y="290">no</text>
+  <rect class="step" x="40" y="360" width="400" height="56" rx="12"/>
+  <text class="q" x="240" y="394">Is the stage directory empty or absent?</text>
+
+  <path class="flow" d="M440 388 H518"/>
+  <text class="word" x="479" y="380" text-anchor="middle">no</text>
+  <rect class="bad" x="520" y="360" width="440" height="56" rx="12"/>
+  <text class="q" x="740" y="383">task fails</text>
+  <text class="sub mono" x="740" y="405">FileExistsError</text>
+
+  <!-- D: run the stage -->
+  <path class="flow" d="M240 416 V448"/>
+  <text class="word" x="252" y="438">yes</text>
+  <rect class="step" x="40" y="450" width="400" height="64" rx="12"/>
+  <text class="sub" x="240" y="476" style="fill:#2F443E">writes the receipt with <tspan class="mono">complete: false</tspan>,</text>
+  <text class="sub" x="240" y="499" style="fill:#2F443E">then runs <tspan class="mono">sprout.eval.evaluate</tspan></text>
+
+  <!-- E: the result -->
+  <path class="flow" d="M240 514 V546"/>
+  <rect class="step" x="40" y="548" width="400" height="64" rx="12"/>
+  <text class="q" x="240" y="575">Does the evaluator exit 0, and</text>
+  <text class="q" x="240" y="598">do the stage checks pass?</text>
+
+  <path class="flow" d="M440 580 H518"/>
+  <text class="word" x="479" y="572" text-anchor="middle">yes</text>
+  <rect class="good" x="520" y="542" width="440" height="76" rx="12"/>
+  <text class="q" x="740" y="568">complete</text>
+  <text class="sub" x="740" y="590">writes <tspan class="mono">complete: true</tspan> into the receipt,</text>
+  <text class="sub" x="740" y="609">and the attempts go to the task</text>
+
+  <path class="flow" d="M240 612 V644"/>
+  <text class="word" x="252" y="634">no</text>
+  <rect class="bad" x="40" y="646" width="400" height="76" rx="12"/>
+  <text class="q" x="240" y="672">task fails</text>
+  <text class="sub" x="240" y="694">the receipt keeps <tspan class="mono">complete: false</tspan>,</text>
+  <text class="sub" x="240" y="713">with <tspan class="mono">error_type</tspan> and <tspan class="mono">error</tspan></text>
+
+  <text class="source" x="40" y="764">Drawn from examples/qwen/run.py: stage, attempts and run_task.</text>
+</svg>

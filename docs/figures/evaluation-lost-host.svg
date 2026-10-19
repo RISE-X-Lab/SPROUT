@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="720" viewBox="0 0 1000 720" role="img" aria-labelledby="title desc" font-family="-apple-system, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif">
+  <title id="title">After a lost host, the client runs the search again</title>
+  <desc id="desc">Two lanes. In the evaluation lane, the evaluation runs the search: the parent, then the method. When a job ends data_lost, the evaluation asks whether it uses --parent-output. If yes, it raises DataLost. If no, it asks whether it ran again 2 times. If yes, it raises DataLost. If no, it keeps the run in earlier-runs/&lt;key&gt;/, and a back edge leads to the search again under the key &lt;first key&gt;-r&lt;n&gt;. In the gate lane, the gate runs a check under the task's latest key. When a job ends data_lost, the gate asks whether the task's checks ran again 2 times. If yes, it records the check as failed with the reason data_lost, then goes on to the task's next mode. If no, it runs the check again first, in the group &lt;task&gt;-&lt;mode&gt;-r&lt;n&gt;, and a back edge leads to the check again under the key &lt;first key&gt;-r&lt;n&gt;. Blue boxes submit jobs, yellow boxes are questions, red boxes end failed, and the gray box keeps files.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10Z" fill="#3A5047"/>
+    </marker>
+    <style>
+      .title { font-size: 26px; font-weight: 700; fill: #2F443E; }
+      .lead { font-size: 16px; fill: #63766F; }
+      .lane { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 19px; font-weight: 700; fill: #2F443E; }
+      .lanenote { font-size: 15px; fill: #63766F; }
+      .plain { font-size: 16px; font-weight: 700; fill: #2F443E; text-anchor: middle; }
+      .job { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 16px; font-weight: 700; fill: #2F443E; text-anchor: middle; }
+      .note { font-size: 15px; fill: #63766F; text-anchor: middle; }
+      .code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 14px; fill: #63766F; text-anchor: middle; }
+      .label { font-size: 15px; fill: #2F443E; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; }
+      .edge { fill: none; stroke: #3A5047; stroke-width: 2; marker-end: url(#arrow); }
+      .run { fill: #E6F1F7; stroke: #587E96; stroke-width: 2; }
+      .ask { fill: #FFE7A9; stroke: #B28745; stroke-width: 2; }
+      .fail { fill: #FBE3DC; stroke: #BC7168; stroke-width: 2; }
+      .keep { fill: #E4E3D4; stroke: #63766F; stroke-width: 2; }
+      .rule { stroke: #E5E2D2; stroke-width: 2; }
+      .source { font-size: 14px; fill: #63766F; }
+    </style>
+  </defs>
+
+  <rect x="1" y="1" width="998" height="718" rx="16" fill="#FFFDF6" stroke="#E5E2D2" stroke-width="2"/>
+  <text class="title" x="30" y="48">After a lost host, the client runs the search again</text>
+  <text class="lead" x="30" y="78">A solid arrow is the next step. The label of an arrow out of a question is its answer.</text>
+  <line class="rule" x1="500" y1="104" x2="500" y2="640"/>
+
+  <!-- Lane: evaluation -->
+  <text class="lane" x="40" y="128">evaluation</text>
+  <text class="lanenote" x="40" y="150">Evaluation in evaluate.py</text>
+
+  <rect class="run" x="60" y="172" width="250" height="64" rx="10"/>
+  <text class="plain" x="185" y="199">run the search</text>
+  <text class="note" x="185" y="222">the parent, then the method</text>
+  <path class="edge" d="M185 236 V286"/>
+  <text class="label" x="195" y="266">a job ends <tspan class="mono">data_lost</tspan></text>
+
+  <rect class="ask" x="60" y="288" width="250" height="56" rx="10"/>
+  <text class="job" x="185" y="322">--parent-output?</text>
+  <path class="edge" d="M310 316 H353"/>
+  <text class="label" x="332" y="306" text-anchor="middle">yes</text>
+  <path class="edge" d="M185 344 V382"/>
+  <text class="label" x="195" y="368">no</text>
+
+  <rect class="ask" x="60" y="384" width="250" height="56" rx="10"/>
+  <text class="plain" x="185" y="418">ran again 2 times?</text>
+  <path class="edge" d="M310 412 H353"/>
+  <text class="label" x="332" y="402" text-anchor="middle">yes</text>
+  <path class="edge" d="M185 440 V478"/>
+  <text class="label" x="195" y="464">no</text>
+
+  <rect class="fail" x="355" y="288" width="115" height="152" rx="10"/>
+  <text class="plain" x="412" y="356">raise</text>
+  <text class="job" x="412" y="380">DataLost</text>
+
+  <rect class="keep" x="60" y="480" width="250" height="86" rx="10"/>
+  <text class="plain" x="185" y="507">keep the run in</text>
+  <text class="code" x="185" y="531">earlier-runs/&lt;key&gt;/</text>
+  <text class="note" x="185" y="553">and in <tspan class="mono">earlier_runs</tspan></text>
+
+  <path class="edge" d="M185 566 V596 H40 V204 H58"/>
+  <text class="label" x="185" y="622" text-anchor="middle">run again under <tspan class="mono">&lt;first key&gt;-r&lt;n&gt;</tspan></text>
+
+  <!-- Lane: gate -->
+  <text class="lane" x="530" y="128">gate</text>
+  <text class="lanenote" x="530" y="150">Gate in gate.py</text>
+
+  <rect class="run" x="565" y="172" width="250" height="64" rx="10"/>
+  <text class="plain" x="690" y="199">run the check</text>
+  <text class="note" x="690" y="222">under the task's latest key</text>
+  <path class="edge" d="M690 236 V286"/>
+  <text class="label" x="700" y="266">a job ends <tspan class="mono">data_lost</tspan></text>
+
+  <rect class="ask" x="565" y="288" width="250" height="56" rx="10"/>
+  <text class="plain" x="690" y="311">the task's checks ran</text>
+  <text class="plain" x="690" y="333">again 2 times?</text>
+  <path class="edge" d="M815 316 H853"/>
+  <text class="label" x="834" y="306" text-anchor="middle">yes</text>
+  <path class="edge" d="M690 344 V382"/>
+  <text class="label" x="700" y="368">no</text>
+
+  <rect class="fail" x="855" y="288" width="120" height="84" rx="10"/>
+  <text class="plain" x="915" y="313">record the</text>
+  <text class="plain" x="915" y="335">check failed</text>
+  <text class="code" x="915" y="358">data_lost</text>
+  <text class="note" x="915" y="396">then the next mode</text>
+
+  <rect class="run" x="565" y="384" width="250" height="86" rx="10"/>
+  <text class="plain" x="690" y="411">run the check again first</text>
+  <text class="note" x="690" y="434">in the group</text>
+  <text class="code" x="690" y="456">&lt;task&gt;-&lt;mode&gt;-r&lt;n&gt;</text>
+
+  <path class="edge" d="M690 470 V500 H535 V204 H563"/>
+  <text class="label" x="690" y="526" text-anchor="middle">under <tspan class="mono">&lt;first key&gt;-r&lt;n&gt;</tspan></text>
+
+  <!-- Legend -->
+  <line class="rule" x1="30" y1="652" x2="970" y2="652"/>
+  <rect class="run" x="30" y="664" width="20" height="18" rx="4"/>
+  <text class="lanenote" x="58" y="678">submits jobs</text>
+  <rect class="ask" x="190" y="664" width="20" height="18" rx="4"/>
+  <text class="lanenote" x="218" y="678">a question</text>
+  <rect class="fail" x="330" y="664" width="20" height="18" rx="4"/>
+  <text class="lanenote" x="358" y="678">ends failed</text>
+  <rect class="keep" x="470" y="664" width="20" height="18" rx="4"/>
+  <text class="lanenote" x="498" y="678">keeps files</text>
+  <text class="source" x="30" y="706">Source: src/sprout/eval/evaluate.py (_run_again), src/sprout/eval/gate.py (_settled), src/sprout/search/rerun.py</text>
+</svg>
