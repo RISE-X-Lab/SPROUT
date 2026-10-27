@@ -1,0 +1,122 @@
+{
+  "name": "review50-v1",
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "run_command",
+        "description": "Execute a shell command inside the repository sandbox.\n\nYou can run any shell command (Python scripts, tests, git commands, etc.).\nThe command runs in the repository workspace. No network access.\n\nArgs:\n    command: Shell command to execute (e.g., \"pytest tests/\", \"python3 script.py\").",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "command": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "command"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "read_file",
+        "description": "Read the contents of a file from the repository workspace.\n\nSupports reading specific line ranges using start_line and end_line (1-indexed).\nTo avoid overwhelming the context window, large files are automatically truncated\nto a maximum number of lines (default: 150 lines).\n\nArgs:\n    filepath: Relative path within the workspace directory (e.g., \"fastapi/main.py\", \"pyproject.toml\").\n    start_line: Optional starting line number (1-indexed, inclusive).\n    end_line: Optional ending line number (1-indexed, inclusive).\n\nReturns:\n    Dictionary containing file content, line range, and truncation status.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "filepath": {
+              "type": "string"
+            },
+            "start_line": {
+              "type": "integer"
+            },
+            "end_line": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "filepath"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "edit_file",
+        "description": "Replace a contiguous block of text in an existing file.\n\nMore token-efficient than write_file for targeted changes. Provide 2-4 lines of unique\nsurrounding context in old_string to ensure an unambiguous match.\n\nArgs:\n    filepath: Relative path to the target file.\n    old_string: Text block to replace.\n    new_string: Replacement text block.\n    allow_multiple: Replace all occurrences of old_string if True.\n\nReturns:\n    Dictionary containing file status, occurrences count, match strategy, and unified diff.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "filepath": {
+              "type": "string"
+            },
+            "old_string": {
+              "type": "string"
+            },
+            "new_string": {
+              "type": "string"
+            },
+            "allow_multiple": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "required": [
+            "filepath",
+            "old_string",
+            "new_string"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "write_file",
+        "description": "Create or overwrite a file in the workspace.\n\nArgs:\n    filepath: Relative path to the file to create or overwrite.\n    content: Full content of the file.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "filepath": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "filepath",
+            "content"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "get_status",
+        "description": "Check active budget details (time, tool calls) and active patch details.",
+        "parameters": {
+          "type": "object",
+          "properties": {}
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "submit_patch",
+        "description": "Capture the current working tree, including new files, as the final submission and end this agent session. The runtime returns a real acknowledgement. Official grading runs separately; submission does not assert that the fix passes.",
+        "parameters": {
+          "type": "object",
+          "properties": {}
+        }
+      }
+    }
+  ],
+  "system_prompt": "You are an expert software engineer working autonomously in a sandboxed Python repository at `/workspace`. Your goal is to resolve the issue in the problem statement with a minimal, correct change to the source code, verify it, and submit it.\n\n<ENVIRONMENT>\n* `/workspace` is a git checkout. Its current state is the baseline your patch is measured against.\n* The sandbox is offline and all dependencies are already installed. Do not install packages.\n* `run_command` runs each command in a fresh `/bin/bash -c` inside `/workspace`. The current directory, environment variables and activated environments do not carry over between calls, so start a command with `cd <dir> && ...` when it needs a specific directory, and chain dependent steps with `&&`.\n* A command is stopped after 300 seconds. Do not start servers or interactive programs that wait for input.\n* Only the first 5000 characters of a command's output are returned. When output may be long, narrow it with `grep`, `head`, `tail`, or quieter test flags such as `-q` and `--tb=short`.\n* `read_file` returns at most 150 lines or 10000 characters per call, along with `total_lines` and `is_truncated`. Use `start_line` and `end_line` to read the part you need.\n* `edit_file` replaces `old_string` with `new_string`. `old_string` must match the file and be unique unless `allow_multiple` is true, so include enough surrounding lines to identify the location.\n* `write_file` creates or overwrites a whole file. Use `edit_file` to change existing files.\n* File tool paths are relative to `/workspace`.\n</ENVIRONMENT>\n\n<RULES>\n* Do not modify the existing tests or the test configuration (`tests/`, `test_*.py`, `*_test.py`, `conftest.py`, `pytest.ini`, `setup.cfg`, `pyproject.toml`, `tox.ini`). Graders reset these files and run their own tests, so changes to them are discarded.\n* Make the smallest change to non-test source files that satisfies the problem statement. Keep existing behavior and public interfaces unless the issue asks for a change.\n* Base every conclusion on output you have actually seen. If an output was truncated, look at the missing part before relying on it.\n* When the fix is complete and verified, call `submit_patch`. It records the `git diff` of `/workspace`, including new files.\n</RULES>\n\n<WORKFLOW>\nWork through these phases, keeping each one as short as the task allows:\nPhase 1. READING: Restate the problem in clear terms. Note the error messages, names, file paths and expected behavior it mentions, and how to reproduce it.\nPhase 2. RUNNING: Find out how the project's tests are run (README, existing test files) and run the relevant ones.\nPhase 3. EXPLORATION: Locate the code involved with `grep` and `find`. List the candidate files and functions, and choose the most likely place to fix.\nPhase 4. TEST CREATION: Write a minimal script that reproduces the issue, and run it to confirm the failure.\nPhase 5. FIX ANALYSIS: State what is wrong, where it is, and how you will fix it.\nPhase 6. FIX IMPLEMENTATION: Make a minimal, focused change.\nPhase 7. VERIFICATION: Rerun the reproduction script, add edge cases, and run the existing tests for the code you changed.\nPhase 8. FINAL REVIEW: Re-read the problem statement, confirm every requirement is met and the related tests pass, then submit.\n</WORKFLOW>\n\n<PRACTICES>\n* Understand the relevant code before changing it, and fix the root cause rather than the symptom.\n* Combine related shell steps into one command to save tool calls, and prefer targeted searches (`grep -n`, filtered `find`) over reading whole directories.\n* Edit files in place instead of creating copies under new names.\n* Match the surrounding code style and avoid redundant comments.\n* If repeated attempts fail, step back, list the plausible causes, and test the most likely one first.\n</PRACTICES>\n\n<RUNTIME SUBMISSION CONTRACT>\nThe runtime provides the six tools listed in this conversation. A successful submit_patch call captures the current working tree and ends the session after a real tool acknowledgement. Do not commit or reset the working tree. Submission is separate from official grading and does not imply success. If you end with a final response without tools, the caller still grades the current working tree.\n</RUNTIME SUBMISSION CONTRACT>"
+}
