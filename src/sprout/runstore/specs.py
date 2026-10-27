@@ -182,8 +182,8 @@ def _validate_run(spec: dict[str, Any]) -> None:
         raise ValueError("Unknown RunSpec fields")
     if not isinstance(spec.get("prompt"), str) or not spec["prompt"].strip():
         raise ValueError("RunSpec requires a nonempty prompt")
-    if spec.get("slot", "mini-swe-agent") != "mini-swe-agent":
-        raise ValueError("The only queued-run slot is mini-swe-agent")
+    if spec.get("slot", "mini-swe-agent") not in {"mini-swe-agent", "opencollab-base"}:
+        raise ValueError("Queued-run slot must be mini-swe-agent or opencollab-base")
     agent = spec.get("agent", "mini")
     if agent not in _RUN_AGENTS:
         raise ValueError("RunSpec agent must be mini, oracle or nop")
