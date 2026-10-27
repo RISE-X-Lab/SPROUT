@@ -24,8 +24,8 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from sprout.contract.agents.history import load_prefix, materialize
 from sprout.contract.continuation import Continuation, prepare
-from sprout.contract.mini_history import load_prefix, materialize
 from sprout.contract.run_spec import KEEP_SANDBOX_S, RunSpec
 from sprout.runstore.config import referenced_env, resolve
 from sprout.runstore.payload import receive_payload

@@ -62,7 +62,7 @@ return 503. These fields need care:
 | --- | --- |
 | `driver_token_env` | The variable of the callers' bearer token. `null` turns authentication off. The example config sets `null`, so use it only for local access. |
 | `ledger` | Required. A relative path starts from the directory of the config file. |
-| `miles.run_defaults` | RunSpec fields for each root rollout. `slot` must be `mini-swe-agent`. `model` applies when the request names none. |
+| `miles.run_defaults` | RunSpec fields for each root rollout. `slot` is `mini-swe-agent` or `opencollab-base` ([OpenCollab](OPENCOLLAB.md)). `model` applies when the request names none. |
 | `miles.image_resources` | Required: the `cpu` and the `memory_mb` of each sandbox. |
 | `miles.tasks` | For each `task_id`, a `grade` job template without `snapshot_id`. The adapter refuses a request for a task without one. |
 | `miles.api_key_env` | The variable in the worker's environment that holds the key of the model endpoint. The worker profile's `worker_env` must set it. |

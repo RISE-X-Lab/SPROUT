@@ -308,9 +308,9 @@ def _add_run_options(run: argparse.ArgumentParser) -> None:
     run.add_argument("prompt")
     run.add_argument(
         "--slot",
-        choices=("mini-swe-agent",),
+        choices=("mini-swe-agent", "opencollab-base"),
         default="mini-swe-agent",
-        help="the agent; mini-swe-agent is the only one",
+        help="the agent implementation",
     )
     run.add_argument("--cwd", default=".")
     run.add_argument("--model")

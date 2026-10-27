@@ -26,7 +26,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any
 
-from sprout.contract.mini_history import validate_assistant_turn
+from sprout.contract.agents.history import validate_assistant_turn
 
 #: The values of ``Continuation.guidance``.
 GUIDANCE = ("assistant-turn", "user-hint", "none")
@@ -154,8 +154,17 @@ def prepare(
     """
     # Continuation ties each field to its guidance: assistant_turn to assistant-turn, hint to user-hint.
     if continuation.assistant_turn is not None:
-        history = [entry["message"] for entry in prefix if entry.get("type") == "mini.message"]
-        turn = validate_assistant_turn(continuation.assistant_turn, history=history, tools=tools)
+        from sprout.contract.agents.history import training_messages
+
+        history = training_messages([dict(entry) for entry in prefix])
+        if prefix and prefix[0].get("type") == "oc.session":
+            tools = tools or prefix[0]["tools"]
+        turn = validate_assistant_turn(
+            continuation.assistant_turn,
+            history=history,
+            tools=tools,
+            slot="opencollab-base" if prefix and prefix[0].get("type") == "oc.session" else "mini-swe-agent",
+        )
         if continuation.assistant_turn_rendering == "reasoning":
             turn = render_reasoning(turn)
         return "", {"assistant_turn": turn}

@@ -44,6 +44,8 @@ class Actor:
     max_turns: int
     command_timeout_s: int
     reasoning_effort: str | None = None
+    slot: str = "mini-swe-agent"
+    tool_protocol: str = "single2"
 
 
 @dataclass(frozen=True)
@@ -155,9 +157,20 @@ def mini_job(
     job = rollout_job(task, agent="mini", profile=profile, checkpoint=checkpoint, image=image)
     spec = job["spec"]
     spec["model"] = actor.model
+    spec["slot"] = actor.slot
     spec["extra"] = {
         "rollout_contract": _contract(actor, deadline_at=now + spec["timeout_s"] + QUEUE_ALLOWANCE_S),
-        "mini": {"environment": {"timeout": actor.command_timeout_s, **_workdir(task)}},
+        "mini": {
+            "environment": {
+                "timeout": actor.command_timeout_s,
+                **(
+                    {"cwd": task.workdir or "/workspace"}
+                    if actor.slot == "opencollab-base" and actor.tool_protocol == "review50-v1"
+                    else _workdir(task)
+                ),
+            }
+        },
+        **({"opencollab_tool_protocol": actor.tool_protocol} if actor.slot == "opencollab-base" else {}),
     }
     return job
 

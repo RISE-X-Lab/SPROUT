@@ -28,7 +28,7 @@ from sprout.runstore.index import Index
 from sprout.runstore.payload import PayloadUnavailable, encode_payload, send_payload
 from sprout.runstore.specs import defaults_key, digest, validate_continuation
 from sprout.runstore.store import Store
-from sprout.worker.agents.mini_swe.history import index_native
+from sprout.worker.agents.history import index_native
 from sprout.worker.cleanup import LEFTOVERS_NAME, Leftovers, forget, log_section, with_log
 from sprout.worker.files import read_json, write_json
 from sprout.worker.kept import LEDGER_NAME, KeptSandboxes

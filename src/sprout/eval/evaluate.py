@@ -327,6 +327,8 @@ def _leak_judge(args: argparse.Namespace) -> dict[str, Any]:
 
 def _actor(args: argparse.Namespace) -> Actor:
     return Actor(
+        slot=getattr(args, "slot", "mini-swe-agent"),
+        tool_protocol=getattr(args, "opencollab_tool_protocol", "single2"),
         model=args.model,
         model_endpoint=args.model_endpoint,
         api_key_env=args.model_key_env,
@@ -709,6 +711,8 @@ def _add_runstore_options(parser: argparse.ArgumentParser) -> None:
 
 
 def _add_actor_options(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--slot", choices=("mini-swe-agent", "opencollab-base"), default="mini-swe-agent")
+    parser.add_argument("--opencollab-tool-protocol", choices=("single2", "review50-v1"), default="single2")
     parser.add_argument("--model", required=True)
     parser.add_argument("--model-endpoint", required=True)
     parser.add_argument(
