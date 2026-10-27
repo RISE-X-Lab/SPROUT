@@ -69,12 +69,12 @@ GRADE_PREPARATION_SECONDS = 120
 def _check_run_defaults(defaults: object) -> None:
     """Raise ValueError unless ``defaults``, the ``run_defaults`` of a Miles section, can go into a rollout.
 
-    It must be an object whose ``slot`` is ``mini-swe-agent``, and whose ``extra`` is an object without
+    Its ``slot`` is ``mini-swe-agent`` or ``opencollab-base``, and its ``extra`` is an object without
     ``rollout_contract``. Either key can be absent."""
     if not isinstance(defaults, dict):
         raise ValueError("run_defaults must be a JSON object")
-    if defaults.get("slot", "mini-swe-agent") != "mini-swe-agent":
-        raise ValueError("The Miles adapter supports mini-swe-agent only")
+    if defaults.get("slot", "mini-swe-agent") not in {"mini-swe-agent", "opencollab-base"}:
+        raise ValueError("The Miles adapter requires mini-swe-agent or opencollab-base")
     extra = defaults.get("extra", {})
     if not isinstance(extra, dict):
         raise ValueError("run_defaults.extra must be a JSON object")
