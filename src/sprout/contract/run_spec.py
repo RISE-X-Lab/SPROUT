@@ -9,16 +9,24 @@ from typing import Any
 #: The longest time, in seconds, that a queued run keeps its sandbox after it ends (ADR-0004).
 KEEP_SANDBOX_S = 1200
 
+#: The slot of each agent that a run can name.
+AGENT_SLOTS = {
+    "mini": "mini-swe-agent",
+    "oracle": "mini-swe-agent",
+    "nop": "mini-swe-agent",
+    "harness": "sprout-harness",
+}
+
 
 @dataclass
 class RunSpec:
     """Everything one run needs. ``python -m sprout.worker run`` sets the fields that a person types."""
 
     prompt: str
-    #: The harness that a ``mini`` agent runs in. ``mini-swe-agent`` is the only one. The runner
-    #: refuses any other name before it makes a sandbox.
+    #: The harness that the agent runs in: ``mini-swe-agent`` for ``mini``, ``oracle`` and ``nop``,
+    #: ``sprout-harness`` for ``harness`` (``AGENT_SLOTS``). The runner refuses another pair.
     slot: str = "mini-swe-agent"
-    #: What the run does in its sandbox: ``mini`` runs the model in ``slot``,
+    #: What the run does in its sandbox: ``mini`` and ``harness`` run the model in ``slot``,
     #: ``oracle`` runs the ``solution/solve.sh`` of ``harbor_task``, ``nop`` does nothing.
     agent: str = "mini"
     #: The Harbor task directory that the run comes from. The sandbox starts on the task's agent

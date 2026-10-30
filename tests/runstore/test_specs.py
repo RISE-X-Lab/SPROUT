@@ -329,8 +329,9 @@ def test_a_continuation_that_changes_anything_else_is_refused(child):
         rollout_spec(agent="nop"),
         rollout_spec(agent="mini", harbor_task=TASK_DIR, keep_sandbox=True),
         rollout_spec(slot="mini-swe-agent", cwd=".", run_id=None),
+        rollout_spec(agent="harness", slot="sprout-harness"),
     ],
-    ids=["kept-sandbox", "oracle", "nop", "mini-on-a-harbor-task", "the-defaults-spelled-out"],
+    ids=["kept-sandbox", "oracle", "nop", "mini-on-a-harbor-task", "the-defaults-spelled-out", "harness"],
 )
 def test_a_queued_rollout_may_keep_its_sandbox_and_run_each_agent(spec):
     assert JobSpec("rollout", spec).validate()["spec"] == spec
@@ -342,8 +343,10 @@ def test_a_queued_rollout_may_keep_its_sandbox_and_run_each_agent(spec):
         ({"prompt": "  "}, "RunSpec requires a nonempty prompt"),
         ({"model": "policy"}, "RunSpec requires a nonempty prompt"),
         (rollout_spec(sandbox="podman"), "Unknown RunSpec fields"),
-        (rollout_spec(slot="codex-cli"), "The only queued-run slot is mini-swe-agent"),
-        (rollout_spec(agent="codex"), "RunSpec agent must be mini, oracle or nop"),
+        (rollout_spec(slot="codex-cli"), "A queued mini run's slot is mini-swe-agent"),
+        (rollout_spec(agent="codex"), "RunSpec agent must be mini, harness, oracle or nop"),
+        (rollout_spec(agent="harness"), "A queued harness run's slot is sprout-harness"),
+        (rollout_spec(slot="sprout-harness"), "A queued mini run's slot is mini-swe-agent"),
         (rollout_spec(agent="nop", harbor_task=" "), "RunSpec harbor_task must name a Harbor task directory"),
         (rollout_spec(agent="oracle"), "An oracle run needs the harbor_task whose solution it runs"),
         (rollout_spec(journal_path="/path/to/journal.jsonl"), "Queued runs cannot supply journal_path"),
@@ -361,6 +364,8 @@ def test_a_queued_rollout_may_keep_its_sandbox_and_run_each_agent(spec):
         "unknown-field",
         "other-slot",
         "unknown-agent",
+        "harness-in-mini-slot",
+        "mini-in-harness-slot",
         "blank-harbor-task",
         "oracle-without-a-task",
         "journal-path",

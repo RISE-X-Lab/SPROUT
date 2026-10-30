@@ -57,14 +57,14 @@ def read_entries(data: bytes) -> list[dict[str, Any]]:
     ]
 
 
-def training_messages(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """The chat messages in ``entries``, with only the keys that training reads.
+def training_messages(entries: list[dict[str, Any]], *, record: str = "mini.message") -> list[dict[str, Any]]:
+    """The chat messages of the ``record`` entries in ``entries``, with only the keys that training reads.
 
     mini's ``exit`` message is left out. Raises ``ValueError`` if a message has content that is not text.
     """
     messages = []
     for entry in entries:
-        if entry.get("type") != "mini.message":
+        if entry.get("type") != record:
             continue
         native = entry["message"]
         if native.get("role") == "exit":

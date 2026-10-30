@@ -457,6 +457,31 @@ def test_a_rollout_cut_at_a_limit_is_graded_and_returned_as_truncated(
     assert trajectory["metadata"]["graded_snapshot_id"] == "snap-cut"
 
 
+@pytest.mark.parametrize("stop_reason", ["format_invalid", "response_truncated", "repetition"])
+def test_an_invalid_attempt_is_not_graded_and_returns_with_reward_minus_one(
+    fake_run_store, tmp_path, stop_reason
+):
+    adapter = miles_adapter(fake_run_store, tmp_path / "ledger.sqlite3")
+    adapter.submit(miles_request())
+    adapter.driver.tick()
+    finish_open(
+        fake_run_store,
+        "rollout",
+        [succeeded(exported(final_snapshot_id="snap-cut", status="truncated", stop_reason=stop_reason))],
+    )
+    adapter.driver.tick()
+
+    (trajectory,) = adapter.get("rollout-1")["trajectories"]
+
+    assert fake_run_store.ids("grade") == []
+    assert (trajectory["status"], trajectory["stop_reason"], trajectory["reward"]) == (
+        "truncated",
+        stop_reason,
+        -1.0,
+    )
+    assert trajectory["metadata"]["zero_reason"] is None
+
+
 def test_a_group_past_its_execution_deadline_is_still_graded(fake_run_store, tmp_path, clock):
     """The ``finalization_timeout_seconds`` after the execution deadline are for the snapshot and grade."""
     adapter = miles_adapter(fake_run_store, tmp_path / "ledger.sqlite3")

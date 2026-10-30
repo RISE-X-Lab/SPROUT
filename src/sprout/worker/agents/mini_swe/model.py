@@ -7,7 +7,6 @@ that breaks the tool-call envelope or the bash schema becomes feedback for anoth
 
 import json
 import os
-import re
 import time
 from copy import deepcopy
 from typing import Any
@@ -21,15 +20,11 @@ from minisweagent.models.utils.actions_toolcall import BASH_TOOL
 from sprout.worker.agents.mini_swe.tools import malformed_feedback, malformed_tool_calls, mini_tool_schema
 from sprout.worker.agents.slot import TaskSpec
 from sprout.worker.gateway.auth import bearer_headers
-from sprout.worker.gateway.completions import choice_error_status
+from sprout.worker.gateway.completions import CONTEXT_EXCEEDED, choice_error_status
 from sprout.worker.gateway.server import _absorb_usage
 from sprout.worker.run.control import RunControl, post
 from sprout.worker.run.events import USAGE_UPDATED, Usage
 from sprout.worker.run.journal import JournalWriter
-
-#: How OpenAI-compatible servers (sglang, vLLM, OpenAI) word a request whose
-#: prompt plus completion budget exceeds the model's context window.
-CONTEXT_EXCEEDED = re.compile(r"maximum context length|context_length_exceeded|context length", re.I)
 
 
 class ChatModel(LitellmModel):

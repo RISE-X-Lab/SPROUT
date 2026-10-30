@@ -67,6 +67,19 @@ def resolve_workspace(
     requested = inherited["cwd"] if inherited else configured
     if requested is not None and (not isinstance(requested, str) or not requested.startswith("/")):
         raise ValueError("mini working directory must be an absolute path or omitted for discovery")
+    workspace = probe_workspace(session, requested)
+    if inherited is not None and workspace != inherited:
+        raise ValueError("mini restored workspace differs from the parent's recorded workspace")
+    resolved = deepcopy(extra)
+    resolved.setdefault("mini", {}).setdefault("environment", {})["cwd"] = workspace["cwd"]
+    resolved["mini_workspace"] = workspace
+    journal.emit("mini.workspace", **workspace, inherited=inherited is not None)
+    return resolved
+
+
+def probe_workspace(session: SandboxSession, requested: str | None) -> Workspace:
+    """The working directory ``requested``, else the repository root of the shell's default directory,
+    else that directory, with the repository that holds it. Raises ``ValueError`` if a probe fails."""
     arguments: dict[str, Any] = {"command": "pwd -P", "timeout": 10}
     if requested is not None:
         arguments["working_dir"] = requested
@@ -94,14 +107,7 @@ def resolve_workspace(
             ),
             "repository working-directory probe",
         )
-    workspace: Workspace = {"cwd": cwd, "repository_dir": repository_dir}
-    if inherited is not None and workspace != inherited:
-        raise ValueError("mini restored workspace differs from the parent's recorded workspace")
-    resolved = deepcopy(extra)
-    resolved.setdefault("mini", {}).setdefault("environment", {})["cwd"] = cwd
-    resolved["mini_workspace"] = workspace
-    journal.emit("mini.workspace", **workspace, inherited=inherited is not None)
-    return resolved
+    return {"cwd": cwd, "repository_dir": repository_dir}
 
 
 class ToolEnvironment:

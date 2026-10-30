@@ -26,7 +26,8 @@ from typing import TYPE_CHECKING, Any
 
 from sprout.contract.backend import backend_name, snapshot_store
 from sprout.contract.harbor_task import load_task
-from sprout.contract.run_spec import RunSpec
+from sprout.contract.run_spec import AGENT_SLOTS, RunSpec
+from sprout.worker.agents.harness.slot import HarnessSlot
 from sprout.worker.agents.mini_swe.slot import MiniSweSlot
 from sprout.worker.agents.nop import NopSlot
 from sprout.worker.agents.oracle import OracleSlot
@@ -150,6 +151,10 @@ class Runner:
                     from sprout.worker.agents.mini_swe.sandbox import resolve_workspace
 
                     extra = resolve_workspace(provisioned.session, extra, journal)
+                elif spec.agent == "harness":
+                    from sprout.worker.agents.harness.slot import resolve_workspace as resolve_harness
+
+                    extra = resolve_harness(provisioned.session, extra, journal)
                 tools = self._tool_access(spec, journal, provisioned, control, rollout_controls)
                 task = _task_spec(spec=spec, extra=extra, control=control, session=provisioned.session)
                 gateway = self._wire_gateway(spec, journal, task, run_id, controls=rollout_controls)
@@ -417,11 +422,12 @@ def _task_spec(*, spec: RunSpec, extra: dict[str, Any], control: RunControl, ses
 def _stop_error(*, control: RunControl, result: SlotResult | None) -> str | None:
     """The run's error from a stop request, or None.
 
-    A slot that ended in ``timeout`` after a stop for a gradable reason ends without an error."""
-    from sprout.worker.run.control import GRADABLE_STOP_REASONS
+    A slot that ended in ``timeout`` after a stop condition, a spent budget or an invalid attempt, ends
+    without an error."""
+    from sprout.worker.run.control import ended_by_stop_condition
 
     if control.reason is not None and not (
-        result is not None and result.status == "timeout" and control.stop_reason in GRADABLE_STOP_REASONS
+        result is not None and result.status == "timeout" and ended_by_stop_condition(control.stop_reason)
     ):
         return control.reason
     return None
@@ -475,14 +481,20 @@ def _image_reference(spec: RunSpec) -> str | None:
 
 def _agent_slot(spec: RunSpec) -> AgentSlot:
     """The slot that runs ``spec.agent``. Raises ValueError for a slot or an agent that no slot runs."""
-    if spec.slot != "mini-swe-agent":
-        raise ValueError("unknown slot %r; the only slot is mini-swe-agent" % spec.slot)
+    if spec.slot not in set(AGENT_SLOTS.values()):
+        raise ValueError("unknown slot %r; the slots are mini-swe-agent and sprout-harness" % spec.slot)
+    if spec.agent in AGENT_SLOTS and AGENT_SLOTS[spec.agent] != spec.slot:
+        raise ValueError(
+            "the %s agent runs in the %s slot, not %s" % (spec.agent, AGENT_SLOTS[spec.agent], spec.slot)
+        )
+    if spec.agent == "harness":
+        return HarnessSlot()
     if spec.agent == "mini":
         return MiniSweSlot()
     if spec.agent == "nop":
         return NopSlot()
     if spec.agent != "oracle":
-        raise ValueError("unknown agent %r; the agents are mini, oracle and nop" % spec.agent)
+        raise ValueError("unknown agent %r; the agents are mini, harness, oracle and nop" % spec.agent)
     if spec.harbor_task is None:
         raise ValueError("an oracle run needs the harbor_task whose solution it runs")
     return OracleSlot(load_task(Path(spec.harbor_task)))

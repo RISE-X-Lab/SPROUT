@@ -148,7 +148,7 @@ The figure has these components:
 | Task gate | `python -m sprout.eval.gate` | Checks that the oracle of each task scores 1 and that doing nothing scores 0. |
 | Run Store | `python -m sprout.runstore serve` | Keeps the jobs, attempts, leases, journals and recovery points in PostgreSQL. Serves the HTTP API on `127.0.0.1:18110`. |
 | Worker | `python -m sprout.worker start` | Claims jobs and runs each attempt in a child process. |
-| Agent | `src/sprout/worker/agents/` | Runs in a rollout: mini-swe-agent with a model, `oracle`, which runs the task's `solution/solve.sh`, or `nop`, which does nothing. |
+| Agent | `src/sprout/worker/agents/` | Runs in a rollout: mini-swe-agent with a model, Sprout's harness with a model ([ADR-0008](decisions/0008-sprout-harness.md)), `oracle`, which runs the task's `solution/solve.sh`, or `nop`, which does nothing. |
 | Tools | `ToolAccess` | Checks each tool call against `runtime/schema/tools.json`, runs it in the sandbox and takes the checkpoints. |
 | Sandbox | `src/sprout/worker/sandbox/` and `src/sprout_sandbox/` | A rootless podman container or an AgentENV microVM. `sprout-runtime` serves the tools inside it. |
 | Model endpoint | external | Serves OpenAI-compatible Chat Completions. A rollout reaches it through the model gateway of its attempt. A review job calls it directly. |

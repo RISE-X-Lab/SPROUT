@@ -15,7 +15,7 @@ from dataclasses import asdict, dataclass, field, fields
 from typing import Any
 
 from sprout.contract.continuation import Continuation
-from sprout.contract.run_spec import RunSpec
+from sprout.contract.run_spec import AGENT_SLOTS, RunSpec
 
 #: What a branch may change about the run it continues. What the actor is given
 #: next is the branch's continuation, never a different prompt.
@@ -171,10 +171,6 @@ class GradeSpec:
             raise ValueError("A harbor grade's snapshot_id or in_place_job must be nonempty text")
 
 
-#: What ``RunSpec.agent`` of a queued rollout may name.
-_RUN_AGENTS = ("mini", "oracle", "nop")
-
-
 def _validate_run(spec: dict[str, Any]) -> None:
     """Raise ValueError unless a worker can run ``spec`` as a queued rollout."""
     allowed = {item.name for item in fields(RunSpec)}
@@ -182,11 +178,11 @@ def _validate_run(spec: dict[str, Any]) -> None:
         raise ValueError("Unknown RunSpec fields")
     if not isinstance(spec.get("prompt"), str) or not spec["prompt"].strip():
         raise ValueError("RunSpec requires a nonempty prompt")
-    if spec.get("slot", "mini-swe-agent") != "mini-swe-agent":
-        raise ValueError("The only queued-run slot is mini-swe-agent")
     agent = spec.get("agent", "mini")
-    if agent not in _RUN_AGENTS:
-        raise ValueError("RunSpec agent must be mini, oracle or nop")
+    if agent not in AGENT_SLOTS:
+        raise ValueError("RunSpec agent must be mini, harness, oracle or nop")
+    if spec.get("slot", "mini-swe-agent") != AGENT_SLOTS[agent]:
+        raise ValueError("A queued %s run's slot is %s" % (agent, AGENT_SLOTS[agent]))
     if spec.get("harbor_task") is not None and not _is_text(spec["harbor_task"]):
         raise ValueError("RunSpec harbor_task must name a Harbor task directory")
     if agent == "oracle" and spec.get("harbor_task") is None:

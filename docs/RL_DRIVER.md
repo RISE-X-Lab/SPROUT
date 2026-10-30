@@ -165,9 +165,9 @@ need a definition:
 
 | Field | Meaning |
 | --- | --- |
-| `reward` | 1.0 when the grade resolved the task, and 0.0 otherwise. |
+| `reward` | 1.0 when the grade resolved the task, and 0.0 otherwise. An invalid attempt, which stopped with `format_invalid`, `response_truncated` or `repetition`, is not graded and gets -1.0 (Arctic-SWE's Table 18). |
 | `group` | `root`, `student:<point_id>` or `repair:<point_id>:<n>` in a search, and `null` without one. Miles computes z-scores within a group. |
-| `status`, `stop_reason` | `completed`, or `truncated` with `max_turns_reached`, `timeout` or `interrupted`. The worker cuts an interrupted rollout, which failed midway, at its last valid recovery point. A truncated rollout gets a real grade. |
+| `status`, `stop_reason` | `completed`, or `truncated` with `max_turns_reached`, `timeout`, `max_total_tokens`, `interrupted`, or an invalid attempt's reason. The worker cuts an interrupted rollout, which failed midway, at its last valid recovery point. A truncated rollout gets a real grade, unless it is an invalid attempt. |
 | `metadata.zero_reason` | `null` when the grade gave a verdict. Otherwise the trajectory is missing, and the value says why: `grade_failed`, `grade_expired`, `grade_cancelled` or `grade_no_verdict` (`zero_reason` in `src/sprout/search/outcome.py`). A missing trajectory has the reward 0.0, because the wire needs a number, but Miles leaves it out of a search group. |
 | `metadata.provenance` | See [Provenance and hint removal](#provenance-and-hint-removal). |
 | `metadata.search` | See [`metadata.search`](#metadatasearch). |

@@ -24,7 +24,13 @@ from sprout.contract.mini_history import (
     validate_mini_tools,
 )
 from sprout.worker.agents.mini_swe.sandbox import Workspace
-from sprout.worker.checkpoint.rollback import Checkpoint, branch_checkpoints, closed_turns
+from sprout.worker.checkpoint.rollback import (
+    Checkpoint,
+    branch_checkpoints,
+    closed_in_order,
+    closed_turns,
+    exact_snapshot,
+)
 from sprout.worker.run.events import TOOL_SKIPPED
 from sprout.worker.run.journal import journal_events, read_journal
 
@@ -83,17 +89,23 @@ def index_native(
     events: list[dict[str, Any]] | None = None,
     inherited_native: dict[str, Any] | None = None,
 ) -> list[NativePoint]:
-    """The recovery points of one attempt: its closed turns with an exact snapshot (``index_mini``).
+    """The recovery points of one attempt: its closed turns with an exact snapshot.
 
-    ``events`` are the records of ``journal``. When it is None, the call reads them from ``journal``.
-    Raises ``ValueError`` for a ``slot`` other than ``mini-swe-agent``.
+    ``events`` are the records of ``journal``, read from it when None. Raises ``ValueError`` for a
+    ``slot`` other than ``mini-swe-agent`` (``index_mini``) and ``sprout-harness`` (``index_harness``).
     """
-    if slot != "mini-swe-agent":
+    if slot not in ("mini-swe-agent", "sprout-harness"):
         raise ValueError("Unsupported native history slot")
     if events is None:
         # journal_events splits the bytes. str.splitlines() would also break at U+0085 and
         # U+2028, which a tool's output keeps verbatim.
         events = journal_events(journal)
+    if slot == "sprout-harness":
+        from sprout.worker.agents.harness.history import index_harness
+
+        return index_harness(
+            journal, transcript, session_id, events=list(events), inherited_native=inherited_native
+        )
     return index_mini(journal, transcript, session_id, events=list(events), inherited_native=inherited_native)
 
 
@@ -165,11 +177,13 @@ def index_mini(
             if local:
                 depth = max(journaled.positions[call] for call in local)
                 turn = closed.get(row.get("turn_id"), {})
-                if not _closed_in_order(
+                if not closed_in_order(
                     turn, group=group, depth=depth, local_calls=journaled.local, seen=seen
                 ):
                     break
-                snapshot_id = _exact_snapshot(checkpoints.get(depth), row=row, session_id=session_id)
+                snapshot_id = exact_snapshot(
+                    checkpoints.get(depth), turn_id=row["turn_id"], session_id=session_id
+                )
                 if snapshot_id is not None:
                     points.append(
                         NativePoint(
@@ -275,33 +289,6 @@ def _rejection_confirmed(row: dict[str, Any], *, group: list[str], journaled: _J
     return journaled.rejected_turns.get(tid, {}).get("call_ids") == group and all(
         journaled.rejections.get(call, {}).get("turn_id") == tid for call in group
     )
-
-
-def _closed_in_order(
-    turn: dict[str, Any], *, group: list[str], depth: int, local_calls: list[str], seen: set[str]
-) -> bool:
-    """Whether the journal closed ``turn`` with the calls ``group`` at the tool depth ``depth``.
-
-    It also needs ``seen`` to hold each call of ``local_calls`` up to ``depth``, and none after it."""
-    return (
-        turn.get("call_ids") == group
-        and turn.get("step") == depth
-        and set(local_calls[:depth]) <= seen
-        and not set(local_calls[depth:]) & seen
-    )
-
-
-def _exact_snapshot(checkpoint: Checkpoint | None, *, row: dict[str, Any], session_id: str) -> str | None:
-    """The snapshot of ``checkpoint`` if it is the checkpoint of the turn that ``row`` closes, else None."""
-    # branch_checkpoints keeps complete checkpoints only. The snapshot_id test narrows its type.
-    if (
-        checkpoint
-        and checkpoint.snapshot_id is not None
-        and checkpoint.turn_id == row["turn_id"]
-        and checkpoint.session_ckpt == session_id
-    ):
-        return checkpoint.snapshot_id
-    return None
 
 
 def reference_at(journal: str | Path, step: int, session_id: str) -> dict[str, Any] | None:

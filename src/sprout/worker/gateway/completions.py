@@ -8,6 +8,12 @@ response, so that a transient failure is sent again.
 
 from __future__ import annotations
 
+import re
+
+#: How OpenAI-compatible servers (sglang, vLLM, OpenAI) word a request whose
+#: prompt plus completion budget exceeds the model's context window.
+CONTEXT_EXCEEDED = re.compile(r"maximum context length|context_length_exceeded|context length", re.I)
+
 
 def choice_error_status(body: object) -> int | None:
     """The status in the ``error`` of the only choice of ``body``, if its ``finish_reason`` is ``error``.

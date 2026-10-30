@@ -1,4 +1,4 @@
-"""The training export of a mini-swe-agent attempt, read from its native history.
+"""The training export of a mini-swe-agent or sprout-harness attempt, read from its native history.
 
 The export holds the messages without branch hints, the tools that the model was
 offered, and the provenance of each message that no policy sampled in the attempt.
@@ -12,7 +12,9 @@ import json
 from pathlib import Path
 from typing import Any
 
+from sprout.contract.harness_history import MESSAGE_RECORDS, training_messages
 from sprout.contract.messages import (
+    INVALID_STOP_REASONS,
     LIMIT_STOP_REASONS,
     branch_origin,
     clean_messages,
@@ -28,10 +30,10 @@ def export_messages(
 ) -> list[dict[str, Any]]:
     """The training messages of the native history of ``session_id`` under ``directory``.
 
-    Raises ValueError without a session id, for a slot other than ``mini-swe-agent``, or
-    unless exactly one history exists. ``allow_incomplete_tail`` drops an unfinished last record.
+    Raises ValueError without a session id, for a slot without a native history, or unless exactly
+    one history exists. ``allow_incomplete_tail`` drops an unfinished last record.
     """
-    if not isinstance(session_id, str) or not session_id or slot != "mini-swe-agent":
+    if not isinstance(session_id, str) or not session_id or slot not in MESSAGE_RECORDS:
         raise ValueError("Missing or unsupported native session identity")
     files = list((directory / "native-home").glob(f"**/*{session_id}.jsonl"))
     if len(files) != 1:
@@ -42,11 +44,9 @@ def export_messages(
             raise ValueError("Native history has an incomplete final record")
         data = data[: data.rfind(b"\n") + 1]
     entries = [json.loads(line) for line in data.splitlines() if line.strip()]
-    from sprout.contract.mini_history import training_messages
-
-    # mini writes its formatted observation before it closes the turn. The runtime's own
+    # The slot writes its formatted observation before it closes the turn. The runtime's own
     # presentation in ``tool.finished`` differs, and the export does not use it.
-    return clean_messages(training_messages(entries))
+    return clean_messages(training_messages(entries, slot=slot))
 
 
 def provenance(
@@ -60,7 +60,7 @@ def provenance(
     ``prefix_messages`` counts the leading messages restored from ``recovery``. ``inserted_messages``
     indexes the assistant messages that a reviewer wrote, in this job or in an ancestor that it continues.
     """
-    from sprout.contract.mini_history import read_entries, read_prefix, training_messages
+    from sprout.contract.mini_history import read_entries, read_prefix
 
     files = list((directory / "native-home").glob(f"**/*{session_id}.jsonl"))
     if len(files) != 1:
@@ -68,7 +68,7 @@ def provenance(
     inserted_calls = {
         call["id"]
         for entry in read_entries(files[0].read_bytes())
-        if entry.get("type") == "mini.message"
+        if entry.get("type") in MESSAGE_RECORDS.values()
         and (entry["message"].get("extra") or {}).get("source") == "reviewer"
         for call in entry["message"].get("tool_calls") or []
     }
@@ -80,7 +80,10 @@ def provenance(
     ]
     restored = 0
     if recovery:
-        prefix = clean_messages(training_messages(read_entries(read_prefix(recovery["native"]))))
+        native = recovery["native"]
+        prefix = clean_messages(
+            training_messages(read_entries(read_prefix(native)), slot=native.get("slot", "mini-swe-agent"))
+        )
         if messages[: len(prefix)] != prefix:
             raise ValueError("The exported history does not begin with the branch point's prefix")
         restored = len(prefix)
@@ -98,7 +101,7 @@ def salvage_interrupted(
     The attempt started from the point ``recovery``, if any. The salvaged result is ``truncated``, with
     ``stop_reason: "interrupted"`` and the failure under ``interrupted``. None if ``point`` cannot be rebuilt.
     """
-    from sprout.contract.mini_history import read_entries, read_prefix, training_messages
+    from sprout.contract.mini_history import read_entries, read_prefix
 
     try:
         events = journal_events(directory / "trajectory.jsonl")
@@ -110,7 +113,10 @@ def salvage_interrupted(
         session_id = result.get("native_session_id") or (references[-1] if references else None)
         if not isinstance(session_id, str):
             return None
-        messages = clean_messages(training_messages(read_entries(read_prefix(point["native"]))))
+        native = point["native"]
+        messages = clean_messages(
+            training_messages(read_entries(read_prefix(native)), slot=native.get("slot", "mini-swe-agent"))
+        )
         if not any(message.get("role") == "assistant" for message in messages):
             return None
         usage = [e for e in events if e.get("type") == "rollout.usage"]
@@ -154,7 +160,8 @@ def complete_message_result(
     """
     result = dict(result)
     events = journal_events(directory / "trajectory.jsonl")
-    stopped_by_limit = result.get("stop_reason") in LIMIT_STOP_REASONS
+    # A spent budget, or an invalid attempt (``INVALID_STOP_REASONS``), ends at a known turn.
+    stopped_by_limit = result.get("stop_reason") in LIMIT_STOP_REASONS | INVALID_STOP_REASONS
     unsafe = any(event.get("type") == "execution.uncertain" for event in events)
     if (
         stopped_by_limit
@@ -183,18 +190,19 @@ def complete_message_result(
         )
     except (ValueError, KeyError, TypeError, OSError) as error:
         result["training_export_error"] = str(error)
-        if slot == "mini-swe-agent" and is_truncated_result(result) and not unsafe:
-            # After a timeout between two actions of one response, half the response does not
-            # match the disk. Fall back to the last pair of messages and snapshot that is proven.
-            from sprout.contract.mini_history import read_entries, read_prefix, training_messages
-            from sprout.worker.agents.mini_swe.history import index_mini
+        if slot in MESSAGE_RECORDS and is_truncated_result(result) and not unsafe:
+            # After a timeout between two actions of one response, or during one call, part of the
+            # response does not match the disk. Fall back to the last messages and snapshot that are proven.
+            from sprout.contract.mini_history import read_entries, read_prefix
+            from sprout.worker.agents.mini_swe.history import index_native
 
             files = list((directory / "native-home").glob(f"**/*{session_id}.jsonl"))
             try:
                 points = (
-                    index_mini(
+                    index_native(
                         directory / "trajectory.jsonl",
                         files[0],
+                        slot,
                         session_id,
                         events=events,
                         inherited_native=(recovery or {}).get("native"),
@@ -205,7 +213,7 @@ def complete_message_result(
                 if points:
                     point = points[-1]
                     result["training_messages"] = clean_messages(
-                        training_messages(read_entries(read_prefix(point.native)))
+                        training_messages(read_entries(read_prefix(point.native)), slot=slot)
                     )
                     result["training_tools"] = export_tools(events)
                     result["timeout_fallback"] = {
@@ -223,7 +231,7 @@ def complete_message_result(
                         {key: usage[-1][key] for key in ("model_calls", "tool_calls")} if usage else {}
                     )
             except (ValueError, KeyError, TypeError, OSError) as fallback_error:
-                result["training_export_error"] += f"; mini prefix recovery: {fallback_error}"
+                result["training_export_error"] += f"; native prefix recovery: {fallback_error}"
     if (
         isinstance(session_id, str)
         and result.get("training_messages") is not None

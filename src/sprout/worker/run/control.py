@@ -11,14 +11,21 @@ from typing import Any
 
 import httpx
 
+from sprout.contract.messages import INVALID_STOP_REASONS
+
 
 class RunAborted(RuntimeError):
     """A rollout operation ended because the rollout was stopped. The message is the reason."""
 
 
-#: Stop reasons that end a rollout with a workspace the verifier still grades:
-#: a spent wall-time or turn budget, or a conversation past the model's context.
-GRADABLE_STOP_REASONS = frozenset({"timeout", "max_turns_reached", "context_exhausted"})
+#: Stop reasons that end a rollout with a workspace the verifier still grades: a spent
+#: wall-time, turn or token budget, or a conversation past the model's context.
+GRADABLE_STOP_REASONS = frozenset({"timeout", "max_turns_reached", "context_exhausted", "max_total_tokens"})
+
+
+def ended_by_stop_condition(stop_reason: str | None) -> bool:
+    """Whether ``stop_reason`` ends a rollout at a known end: a spent budget, or an invalid attempt."""
+    return stop_reason in GRADABLE_STOP_REASONS or stop_reason in INVALID_STOP_REASONS
 
 
 class RunControl:

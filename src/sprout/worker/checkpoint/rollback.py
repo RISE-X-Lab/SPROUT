@@ -139,3 +139,29 @@ def branch_checkpoints(
         ):
             eligible[checkpoint.step] = checkpoint
     return eligible
+
+
+def closed_in_order(
+    turn: dict[str, Any], *, group: list[str], depth: int, local_calls: list[str], seen: set[str]
+) -> bool:
+    """Whether the journal closed ``turn`` with the calls ``group`` at the tool depth ``depth``.
+
+    It also needs ``seen`` to hold each call of ``local_calls`` up to ``depth``, and none after it."""
+    return (
+        turn.get("call_ids") == group
+        and turn.get("step") == depth
+        and set(local_calls[:depth]) <= seen
+        and not set(local_calls[depth:]) & seen
+    )
+
+
+def exact_snapshot(checkpoint: Checkpoint | None, *, turn_id: str, session_id: str) -> str | None:
+    """The snapshot of ``checkpoint`` if it is the checkpoint of ``turn_id`` of ``session_id``, else None."""
+    if (
+        checkpoint
+        and checkpoint.snapshot_id is not None
+        and checkpoint.turn_id == turn_id
+        and checkpoint.session_ckpt == session_id
+    ):
+        return checkpoint.snapshot_id
+    return None

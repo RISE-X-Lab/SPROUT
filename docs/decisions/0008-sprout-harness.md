@@ -56,10 +56,18 @@ working directory, and every result names the absolute path.
 | Tool | Arguments | Result |
 |---|---|---|
 | `execute_bash` | `command`, optional `timeout` (s, default 60, at most 600) | exit code, duration, output (head and tail kept past 10,000 chars, with the omitted count); a timeout says so and shows the partial output |
-| `read_file` | `file_path`, optional `offset` (1-based line, default 1), `limit` (lines, default 400) | numbered lines, the range shown, whether the file continues and the `offset` to continue from; clear errors for a missing file or a directory |
-| `write_file` | `file_path`, `content` | created or overwritten, line and byte counts (and the previous size when overwritten) |
+| `read_file` (`full` only) | `file_path`, optional `offset` (1-based line, default 1), `limit` (lines, default 400) | numbered lines, the range shown, whether the file continues and the `offset` to continue from; clear errors for a missing file or a directory |
+| `write_file` (`full` only) | `file_path`, `content` | created or overwritten, line and byte counts (and the previous size when overwritten) |
 | `str_replace` | `file_path`, `old_string`, `new_string` | on success the replaced line range and a numbered snippet around the edit; on failure why (not found, or found N times at which lines) and what to do |
 | `submit` | none | ends the rollout; the workspace is graded as it is |
+
+The default tool set is the paper's three: `execute_bash`, `str_replace` and `submit`. Its system
+message says how to read files with commands (`grep -n`, `sed -n 'START,ENDp'`, and that output past
+10,000 characters keeps only its ends), and the task message and failure hints name commands in
+place of the file tools. `extra.harness.toolset: full` offers all five, as the first overfit run
+did. That run showed why the default dropped two: `write_file` made 0.1% of the calls late in the
+run, and `read_file` returned 5k characters a call, about a quarter of a trajectory's tokens, while
+the model already read with `grep -n` and `sed -n` (see the experiment's log).
 
 Each tool call is one ToolAccess call, so checkpoints and journal steps stay one per call:
 
@@ -102,6 +110,10 @@ canonical text from the structured fields and marks the turn `raw: unavailable`.
 | reasoning is not blank; no prose between `</think>` and `<tool_call>` | (harness, Appendix I.3) |
 | `finish_reason` is `stop` | truncation (a stop condition of its own) |
 
+The check is strict on purpose: a tag string such as `</parameter>` or `<tool_call>` anywhere in
+the reasoning or in an argument value is a flaw too, so the agent cannot write those strings
+literally.
+
 A round-trip diagnostic renders the parsed turn with the template and compares it with the raw
 bytes. By default a mismatch is journaled, not rejected (`strict_roundtrip: false`): the paper's
 check is structural, and whitespace-only mismatches are measured first.
@@ -114,7 +126,7 @@ check is structural, and whitespace-only mismatches are measured first.
 |---|---|---|---|
 | `format_invalid` | a check fails | -1, not graded | feedback message, the turn counts, continue |
 | `response_truncated` | `finish_reason: length` | -1, not graded | feedback, continue |
-| `repetition` | the same call a second time since the last successful edit (detector off by default, as in the paper's main run) | -1, not graded | a note, continue |
+| `repetition` | the same call with the same result `repetition_limit` more times since the last successful edit (off by default, as in the paper's main run) | -1, not graded | a note, continue |
 | `submitted` | `submit` | graded 0/1 | same |
 | `max_turns_reached`, `timeout`, `context_exhausted`, `max_total_tokens` | budgets (the last: prompt plus completion tokens of the latest request past `max_total_tokens`, default 131072) | graded | same |
 
@@ -145,15 +157,20 @@ feedback that quotes the error; it is a message step but not a branch point, as 
 ## Overfit experiment
 
 - **Data:** `PrimeIntellect/SWE-rebench-V2-Filtered-Easy-Verified` (prepared on this host, 150
-  candidates with the smallest image per repo, 96 already pulled). Like the paper's 160-task pool,
-  keep the tasks that Qwen3.5-4B solves at least once in four training-mode rollouts.
+  candidates with the smallest image per repo; the 96 already pulled, since the disk holds no more
+  images). Like the paper's 160-task pool, keep the tasks that Qwen3.5-4B solves at least once in
+  four rollouts, run in evaluation mode: 92% of the base model's trajectories break the format at
+  least once (77% of first flaws are prose before the call), so a training-mode filter would keep
+  only the shortest tasks.
 - **Rollouts:** temperature 1.0, top-p 1, top-k -1, 60 s command timeout, 10k-char output bound;
-  turn and token budgets scaled to two GPUs (start: 50 turns, 16k tokens a response, 64k a
-  trajectory).
+  turn and token budgets scaled to two GPUs: 60 turns, 16k tokens a response, 56k a trajectory
+  (so a trajectory fits the trainer's 80k tokens).
 - **Training:** Miles colocated on the 2 RTX PRO 6000 GPUs, GRPO with group-centered advantages
   (`--disable-grpo-std-normalization`), no KL, no entropy term, AdamW lr 1e-6 with beta2 0.98,
-  5 rollouts a task, token mean over the batch, one optimizer step per rollout batch (so the PPO
-  ratio is 1 and the step is a plain policy gradient), invalid rollouts at -1 kept in the batch.
+  epsilon 1e-15, no weight decay and clipping at 1.0; 16 tasks of 5 rollouts an update (the
+  paper's overfit run takes 32 of 5), token mean over the batch, one optimizer step per rollout
+  batch (so the PPO ratio is 1 and the step is a plain policy gradient), invalid rollouts at -1
+  kept in the batch, groups whose rewards are all equal left out of it.
 - **Metrics:** mean reward and resolve rate per step, invalid rate by stop condition, turns and
   tokens per trajectory, entropy; success is a rising training reward on the pool.
 

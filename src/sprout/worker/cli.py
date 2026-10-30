@@ -81,6 +81,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
     spec = RunSpec(
         prompt=args.prompt,
         slot=args.slot,
+        agent="harness" if args.slot == "sprout-harness" else "mini",
         cwd=args.cwd,
         model=args.model,
         timeout_s=args.timeout,
@@ -308,9 +309,9 @@ def _add_run_options(run: argparse.ArgumentParser) -> None:
     run.add_argument("prompt")
     run.add_argument(
         "--slot",
-        choices=("mini-swe-agent",),
+        choices=("mini-swe-agent", "sprout-harness"),
         default="mini-swe-agent",
-        help="the agent; mini-swe-agent is the only one",
+        help="the agent: mini-swe-agent (the default) or sprout-harness",
     )
     run.add_argument("--cwd", default=".")
     run.add_argument("--model")

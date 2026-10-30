@@ -310,7 +310,7 @@ def test_a_search_request_one_slot_short_of_its_branches_is_refused(fields, slot
         pytest.param(adapter_config(workers=4), "Invalid Miles adapter config", id="unknown-field"),
         pytest.param(
             adapter_config(run_defaults={"slot": "codex"}),
-            "The Miles adapter supports mini-swe-agent only",
+            "The Miles adapter runs the mini agent in mini-swe-agent or the harness in sprout-harness",
             id="other-slot",
         ),
         pytest.param(

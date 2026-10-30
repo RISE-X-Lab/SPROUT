@@ -59,6 +59,9 @@ After you change the podman, restart the worker.
 The `agent` of a rollout says what runs in its sandbox, through `sprout.worker.run.runner.Runner`:
 
 - `mini`, the default: the model, in the slot `mini-swe-agent`
+- `harness`: the model, in the slot `sprout-harness`, Sprout's own harness
+  ([ADR-0008](decisions/0008-sprout-harness.md)). `extra.harness` sets its options, such as
+  `on_invalid` (`feedback` or `terminate`), `toolset` and `max_total_tokens`.
 - `oracle`: the `solution/solve.sh` of the Harbor task `harbor_task`, as Harbor's `oracle` runs it
 - `nop`: nothing
 
@@ -357,7 +360,8 @@ A rollout whose `extra.rollout_contract` sets `message_export` returns its traje
 messages for the [RL driver](RL_DRIVER.md) (`src/sprout/worker/jobs/export.py`). The attempt child
 marks the result `truncated` when all these conditions are true:
 
-- `stop_reason` is `max_turns_reached` or `timeout`.
+- `stop_reason` is `max_turns_reached`, `timeout` or `max_total_tokens`, or it is an invalid
+  attempt's `format_invalid`, `response_truncated` or `repetition` (the harness in training mode).
 - The run has a final snapshot, and the journal has no `execution.uncertain` event.
 - The failure is not an `infrastructure` failure.
 
@@ -365,7 +369,7 @@ The worker settles a truncated result as `succeeded`. The export adds these fiel
 
 | Field | Content |
 |---|---|
-| `training_messages` | The native mini history, without hints. |
+| `training_messages` | The native history of the slot (mini's or the harness's), without hints. |
 | `training_tools` | The tool schemas that the model was offered. |
 | `training_provenance` | The messages that no policy sampled: `prefix_messages` restored from the branch point, and `inserted_messages`. |
 | `training_origin` | For a branch: the `job_id`, `point_id` and `tool_depth` of its point. |

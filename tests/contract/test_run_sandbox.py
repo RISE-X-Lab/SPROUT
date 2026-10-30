@@ -82,7 +82,7 @@ def test_a_run_of_another_slot_than_mini_swe_agent_fails_before_a_sandbox_exists
 
     assert (outcome.status, outcome.error, sandboxes.sessions) == (
         "error",
-        "ValueError: unknown slot 'codex'; the only slot is mini-swe-agent",
+        "ValueError: unknown slot 'codex'; the slots are mini-swe-agent and sprout-harness",
         [],
     )
 

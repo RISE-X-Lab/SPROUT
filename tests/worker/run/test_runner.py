@@ -205,11 +205,13 @@ def test_a_sandbox_that_cannot_be_destroyed_leaves_the_run_completed_and_its_cla
     [
         pytest.param(
             {"agent": "codex"},
-            "ValueError: unknown agent 'codex'; the agents are mini, oracle and nop",
+            "ValueError: unknown agent 'codex'; the agents are mini, harness, oracle and nop",
             id="agent",
         ),
         pytest.param(
-            {"slot": "codex"}, "ValueError: unknown slot 'codex'; the only slot is mini-swe-agent", id="slot"
+            {"slot": "codex"},
+            "ValueError: unknown slot 'codex'; the slots are mini-swe-agent and sprout-harness",
+            id="slot",
         ),
         pytest.param(
             {"agent": "oracle"},

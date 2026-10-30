@@ -23,7 +23,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from sprout.contract.messages import clean_messages, is_truncated_result
+from sprout.contract.messages import INVALID_STOP_REASONS, clean_messages, is_truncated_result
 
 #: What the search samples after roots with each label.
 SHAPES = {
@@ -117,12 +117,24 @@ def export_problem(sample: dict[str, Any]) -> str | None:
     return None
 
 
+def invalid_reason(sample: dict[str, Any]) -> str | None:
+    """The stop reason of an actor that ended as an invalid attempt (``INVALID_STOP_REASONS``), else None.
+
+    No verifier grades such an attempt: it failed, and its reward is ``INVALID_REWARD``."""
+    actor = sample.get("actor") or {}
+    reason = (actor.get("result") or {}).get("stop_reason")
+    return reason if actor.get("state") == "succeeded" and reason in INVALID_STOP_REASONS else None
+
+
 def grade_verdict(sample: dict[str, Any]) -> dict[str, Any] | None:
     """The sample's grade result when it is a verdict, and None otherwise.
 
     A verdict is the result of a grade that succeeded and says whether the task resolved (a bool
-    ``resolved``).
+    ``resolved``). An invalid attempt has the verdict ``{"resolved": False, "invalid": <stop reason>}``.
     """
+    invalid = invalid_reason(sample)
+    if invalid is not None:
+        return {"resolved": False, "invalid": invalid}
     grade = sample.get("grade") or {}
     result = grade.get("result") or {}
     if grade.get("state") != "succeeded" or type(result.get("resolved")) is not bool:

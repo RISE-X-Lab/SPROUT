@@ -14,7 +14,7 @@ from dataclasses import asdict, dataclass, fields
 from typing import Any
 from urllib.parse import urlsplit
 
-from sprout.contract.messages import is_truncated_result
+from sprout.contract.messages import INVALID_REWARD, is_truncated_result
 from sprout.contract.sampling import validate as validate_sampling
 from sprout.rl_driver.driver import Driver
 from sprout.rl_driver.ledger import Conflict
@@ -69,12 +69,16 @@ GRADE_PREPARATION_SECONDS = 120
 def _check_run_defaults(defaults: object) -> None:
     """Raise ValueError unless ``defaults``, the ``run_defaults`` of a Miles section, can go into a rollout.
 
-    It must be an object whose ``slot`` is ``mini-swe-agent``, and whose ``extra`` is an object without
-    ``rollout_contract``. Either key can be absent."""
+    It must be an object whose ``slot`` is ``mini-swe-agent`` with the ``mini`` agent, or ``sprout-harness``
+    with the ``harness`` agent, and whose ``extra`` is an object without ``rollout_contract``. Each key
+    can be absent."""
     if not isinstance(defaults, dict):
         raise ValueError("run_defaults must be a JSON object")
-    if defaults.get("slot", "mini-swe-agent") != "mini-swe-agent":
-        raise ValueError("The Miles adapter supports mini-swe-agent only")
+    pair = (defaults.get("slot", "mini-swe-agent"), defaults.get("agent", "mini"))
+    if pair not in {("mini-swe-agent", "mini"), ("sprout-harness", "harness")}:
+        raise ValueError(
+            "The Miles adapter runs the mini agent in mini-swe-agent or the harness in sprout-harness"
+        )
     extra = defaults.get("extra", {})
     if not isinstance(extra, dict):
         raise ValueError("run_defaults.extra must be a JSON object")
@@ -353,7 +357,7 @@ class MessageAdapter:
                         # group, and branches group by their point and inserted turn.
                         "group": search["group"] if search else None,
                         "tools": output.get("training_tools", []),
-                        "reward": 0.0 if verdict is None else float(verdict["resolved"]),
+                        "reward": _reward(verdict),
                         "status": "truncated" if truncated else "completed",
                         "stop_reason": output.get("stop_reason") if truncated else None,
                         "hints_removed": True,
@@ -546,3 +550,13 @@ class MessageRequest:
         if value["search"] is None:
             del value["search"]
         return value
+
+
+def _reward(verdict: dict[str, Any] | None) -> float:
+    """The reward of a sample with ``verdict``: 0 or 1, ``INVALID_REWARD`` for an invalid attempt, and
+    the 0.0 that the wire needs for a missing one (``zero_reason`` marks it)."""
+    if verdict is None:
+        return 0.0
+    if verdict.get("invalid"):
+        return INVALID_REWARD
+    return float(verdict["resolved"])

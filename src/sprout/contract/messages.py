@@ -93,13 +93,22 @@ def export_tools(events: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
     return [{"type": "function", "function": schema} for schema in schemas.values()]
 
 
-#: The stop reasons of an attempt that its turn limit or its wall-time budget ended.
-LIMIT_STOP_REASONS = frozenset({"max_turns_reached", "timeout"})
+#: The stop reasons of an attempt that its turn limit, its wall-time budget or its token budget ended.
+LIMIT_STOP_REASONS = frozenset({"max_turns_reached", "timeout", "max_total_tokens"})
+
+
+#: The stop reasons of an attempt that was never a well-formed one (Arctic-SWE, Table 18): a malformed
+#: turn, a response cut off by the token limit, or a loop of repeated calls. No verifier grades it.
+INVALID_STOP_REASONS = frozenset({"format_invalid", "response_truncated", "repetition"})
+
+
+#: The reward of an attempt that stopped for one of ``INVALID_STOP_REASONS``: below a failed attempt's 0.
+INVALID_REWARD = -1.0
 
 
 #: The stop reasons of a truncated result. ``interrupted`` marks a failed attempt that
 #: ``sprout.worker.jobs.export.salvage_interrupted`` cut back to its last closed turn.
-TRUNCATION_STOP_REASONS = LIMIT_STOP_REASONS | {"interrupted"}
+TRUNCATION_STOP_REASONS = LIMIT_STOP_REASONS | INVALID_STOP_REASONS | {"interrupted"}
 
 
 #: Seconds that the worker adds to the process timeout of an attempt that exports training messages.

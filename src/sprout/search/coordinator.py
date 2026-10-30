@@ -21,6 +21,7 @@ import httpx
 
 from sprout.search.client import RunStoreClient
 from sprout.search.group import Submitter
+from sprout.search.outcome import invalid_reason
 from sprout.search.rerun import give_up, lost, run_again
 from sprout.search.rounds import REVIEW_SLOT, Search
 from sprout.search.stages import DONE, Stages
@@ -142,6 +143,13 @@ class Coordinator:
                     if sample["actor"]["state"] in DONE:
                         stage.update(state="skipped", error="Actor did not succeed")
                     continue
+                invalid = phase == "grade" and invalid_reason(sample) is not None
+                if invalid and not stage["job_id"] and stage["state"] not in DONE:
+                    # An invalid attempt's reward is fixed: no verifier grades it (Arctic-SWE, Table 18).
+                    stage.update(
+                        state="skipped", invalid=True, error="Invalid attempt: %s" % invalid_reason(sample)
+                    )
+                    continue
                 try:
                     self._stages.advance(document, sample, phase)
                 except (httpx.HTTPError, ValueError, KeyError) as error:
@@ -179,7 +187,8 @@ class Coordinator:
                 "cancelled"
                 if self._stages.cancelled(document)
                 else "failed"
-                if failed or any(stage["state"] != "succeeded" for stage in stages)
+                if failed
+                or any(stage["state"] != "succeeded" and not stage.get("invalid") for stage in stages)
                 else "completed"
             )
         else:
