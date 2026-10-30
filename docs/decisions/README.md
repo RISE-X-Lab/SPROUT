@@ -13,3 +13,4 @@ supersedes it.
 | [0005](0005-eval-runs-as-the-image-user.md) | Manual evaluation runs as the image's user, and no run has a tool primer | Accepted | 2026-10-17 |
 | [0006](0006-worker-heartbeat-and-rerun-from-scratch.md) | Workers report a heartbeat, and a lost attempt runs again from the start | Accepted | 2026-10-18 |
 | [0007](0007-search-affinity-and-host-loss.md) | The jobs of one search run on one host, and a lost host runs the search again | Accepted | 2026-10-18 |
+| [0008](0008-sprout-harness.md) | A native harness slot checks the raw model output and scores invalid rollouts -1 | Accepted | 2026-10-30 |
