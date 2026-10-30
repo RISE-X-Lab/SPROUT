@@ -79,6 +79,18 @@ def test_project_indexes_each_started_call_in_journal_order_with_its_first_respo
     ]
 
 
+def test_a_call_and_a_response_with_a_nul_character_are_indexed_with_a_replacement_character(run_store):
+    claimed = claimed_job(run_store)
+    events = [started("c1", "printf 'a\\0b' # \x00"), finished("c1", "a\x00b")]
+    project(run_store, claimed, events)
+
+    project(run_store, claimed, events)
+
+    call = {"name": "bash", "arguments": {"command": "printf 'a\\0b' # \ufffd"}}
+    indexed = calls(Index(run_store).tools(claimed["active_attempt"]))
+    assert indexed == [(1, "c1", call, finished("c1", "a\ufffdb"))]
+
+
 def test_a_later_projection_adds_a_response_that_arrived_after_its_call(run_store):
     claimed = claimed_job(run_store)
     project(run_store, claimed, [started("c1", "ls")])

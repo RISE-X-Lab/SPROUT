@@ -14,8 +14,8 @@ from typing import Any
 from uuid import uuid4
 
 from sprout.contract.mini_history import NativePoint, valid_prefix
-from sprout.runstore.specs import canonical, digest
-from sprout.runstore.store import Conflict, Store
+from sprout.runstore.specs import digest
+from sprout.runstore.store import Conflict, Store, jsonb
 
 
 def normalized_call(name: object, arguments: object) -> dict[str, Any]:
@@ -66,7 +66,7 @@ class Index:
                 cursor.execute(
                     """INSERT INTO rs_prefix_nodes(node,scope,parent,depth,call)
                     VALUES(%s,%s,%s,%s,%s::jsonb) ON CONFLICT DO NOTHING""",
-                    (node, scope_hash, parent, depth, canonical(call)),
+                    (node, scope_hash, parent, depth, jsonb(call)),
                 )
                 response = results.get(event["call_id"])
                 # A call is indexed once. Its response may arrive later, but the call may not change.
@@ -81,8 +81,8 @@ class Index:
                         job["active_attempt"],
                         depth,
                         event["call_id"],
-                        canonical(call),
-                        canonical(response) if response is not None else None,
+                        jsonb(call),
+                        jsonb(response) if response is not None else None,
                         node,
                     ),
                 )
@@ -106,7 +106,7 @@ class Index:
                         point.tool_depth,
                         nodes[point.tool_depth],
                         point.snapshot_id,
-                        canonical(point.native),
+                        jsonb(point.native),
                     ),
                 )
                 if cursor.rowcount != 1:

@@ -158,6 +158,19 @@ def test_finish_records_the_result_on_the_job_and_its_attempt_and_releases_the_l
     }
 
 
+def test_a_result_and_an_error_with_a_nul_character_are_kept_with_a_replacement_character(run_store):
+    """A rollout's result holds its tool results, which can carry U+0000; PostgreSQL cannot hold it."""
+    claimed = claimed_job(run_store, kind="rollout")
+    result = {"status": "error", "error": "stdout: DIRC\x00", "messages": [{"content": "LASF\x00"}]}
+
+    run_store.finish(claimed["id"], claimed["lease_token"], result, state="failed")
+
+    kept = {"status": "error", "error": "stdout: DIRC\ufffd", "messages": [{"content": "LASF\ufffd"}]}
+    finished, attempt = run_store.get(claimed["id"]), run_store.attempts(claimed["id"])[0]
+    assert projection(finished, "result", "error") == {"result": kept, "error": "stdout: DIRC\ufffd"}
+    assert projection(attempt, "result", "error") == {"result": kept, "error": "stdout: DIRC\ufffd"}
+
+
 def test_a_rerun_job_waits_30_seconds_before_a_claim_takes_it_again(run_store):
     registered(run_store, "worker-2")
     claimed = claimed_job(run_store, kind="grade")

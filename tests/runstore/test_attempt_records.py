@@ -63,6 +63,19 @@ def test_an_event_that_rewrites_a_seq_is_a_conflict_and_the_first_event_stays(ru
     assert run_store.events(claimed["active_attempt"]) == [event(1)]
 
 
+def test_an_event_with_a_nul_character_is_kept_with_a_replacement_character_and_appends_again(run_store):
+    """PostgreSQL cannot hold U+0000, which a command's binary output can carry: ``cat`` of a LAS file."""
+    claimed = claimed_job(run_store)
+    binary = event(1, stdout="LASF\x00\x01", **{"key\x00": "value"})
+    run_store.append_events(claimed["id"], claimed["lease_token"], [binary])
+
+    run_store.append_events(claimed["id"], claimed["lease_token"], [binary])
+
+    assert run_store.events(claimed["active_attempt"]) == [
+        event(1, stdout="LASF\ufffd\x01", **{"key\ufffd": "value"})
+    ]
+
+
 @pytest.mark.parametrize(
     "bad",
     [{"seq": 0}, {"seq": -1}, {"seq": True}, {"seq": "1"}, {"seq": 1.0}, {"type": "tool.started"}],

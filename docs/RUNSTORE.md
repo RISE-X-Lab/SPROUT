@@ -109,6 +109,10 @@ The schema is `resources/runstore/schema.sql`:
 | `rs_tools`, `rs_prefix_nodes` | the tool calls and their prefix DAG |
 | `rs_recoveries` | the recovery points |
 
+PostgreSQL's text and jsonb cannot hold U+0000, which a command's binary output can carry, so the
+Run Store stores each U+0000 in an event, a result, an error or an indexed call as U+FFFD. The
+journal on disk keeps the original.
+
 The disk holds the attempt directories under `artifact_root`, and the snapshots: the store's
 `snapshots/` on podman, and AgentENV's layers on a microVM.
 

@@ -52,6 +52,24 @@ class Fenced(Conflict):
     """The lease token of an attempt no longer owns a live lease on its job."""
 
 
+def without_nul(value: Any) -> Any:
+    """``value`` with each U+0000 in its strings, keys included, replaced by U+FFFD.
+
+    PostgreSQL's text and jsonb cannot hold U+0000, and a command's binary output can carry it."""
+    if isinstance(value, str):
+        return value.replace("\x00", "\ufffd")
+    if isinstance(value, dict):
+        return {without_nul(key): without_nul(item) for key, item in value.items()}
+    if isinstance(value, list | tuple):
+        return [without_nul(item) for item in value]
+    return value
+
+
+def jsonb(value: Any) -> str:
+    """The canonical JSON text of ``value`` (``without_nul``) for a jsonb column."""
+    return canonical(without_nul(value))
+
+
 def _keep_until(rollout: dict[str, Any]) -> datetime:
     """The deadline of the sandbox that a finished rollout job kept, from its ``kept_sandbox`` result.
 
@@ -356,7 +374,7 @@ class Store:
             cursor.execute(
                 """UPDATE rs_attempts SET error=concat(error,%s),data_deleted_at=clock_timestamp()
                 WHERE id=%s AND state='lost'""",
-                (log, attempt_id),
+                (without_nul(log), attempt_id),
             )
 
     def worker_stopped(self, worker_id: str, session: str) -> None:
@@ -604,7 +622,8 @@ class Store:
         """
         with self.transaction() as cursor:
             job = self._fence(cursor, job_id, token)
-            for event in events:
+            # The event as stored, which an event appended again must equal.
+            for event in map(without_nul, events):
                 seq = event.get("seq")
                 if type(seq) is not int or seq < 1:
                     raise ValueError("Journal sequence must be positive")
@@ -664,7 +683,7 @@ class Store:
         cursor.execute(
             """UPDATE rs_attempts SET state=%s,result=%s::jsonb,error=%s,finished_at=clock_timestamp()
             WHERE id=%s""",
-            (state, canonical(result), result.get("error"), job["active_attempt"]),
+            (state, jsonb(result), without_nul(result.get("error")), job["active_attempt"]),
         )
 
     @staticmethod
@@ -680,7 +699,7 @@ class Store:
         cursor.execute(
             """UPDATE rs_jobs SET state=%s,phase=%s,result=%s::jsonb,error=%s,
             lease_until=NULL,lease_token=NULL,updated_at=clock_timestamp() WHERE id=%s""",
-            (state, phase or state, canonical(result), result.get("error"), job["id"]),
+            (state, phase or state, jsonb(result), without_nul(result.get("error")), job["id"]),
         )
 
     def _rerun_or_fail(
@@ -698,7 +717,7 @@ class Store:
                 """UPDATE rs_jobs SET state='queued',phase='retry_wait',result=%s::jsonb,error=%s,
                 lease_until=NULL,lease_token=NULL,updated_at=clock_timestamp(),
                 ready_at=clock_timestamp()+%s*interval '1 second' WHERE id=%s""",
-                (canonical(result), result.get("error"), 30 * job["attempt_count"], job["id"]),
+                (jsonb(result), without_nul(result.get("error")), 30 * job["attempt_count"], job["id"]),
             )
             return
         self._end_attempt(cursor, job, state=last, result=result)
