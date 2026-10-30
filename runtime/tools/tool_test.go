@@ -5,6 +5,7 @@ package tools_test
 import (
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 
 	"github.com/dreamyang-liu/sprout/runtime/tools"
@@ -57,4 +58,15 @@ func TestACallWithoutItsRequiredArgumentIsRefused(t *testing.T) {
 			assertResult(t, got, tools.Result{Success: false, Error: tc.want})
 		})
 	}
+}
+
+// ownerOf returns the uid and gid that own path.
+func ownerOf(t *testing.T, path string) [2]uint32 {
+	t.Helper()
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("stat %s: %v", path, err)
+	}
+	stat := info.Sys().(*syscall.Stat_t)
+	return [2]uint32{stat.Uid, stat.Gid}
 }
