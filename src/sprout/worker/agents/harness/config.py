@@ -2,7 +2,9 @@
 
 ``on_invalid`` decides what a rejected turn does. ``feedback`` (evaluation) tells the model what was
 wrong and lets it answer again. ``terminate`` (training) ends the rollout, as Arctic-SWE's training
-harness does, with the stop reason of the flaw: the RL driver scores such a rollout -1.
+harness does, with the stop reason of the flaw: the RL driver scores such a rollout -1. In training
+mode only a submission can score: a rollout that a turn, token or time budget ended gets 0 without a
+grade (the paper's Tables 5 and 18), unless ``require_submit`` is false.
 """
 
 from __future__ import annotations
@@ -29,6 +31,8 @@ class HarnessConfig:
     max_total_tokens: int = 131_072
     #: The repeats of one call since the last successful edit that end the rollout, 0 for never.
     repetition_limit: int = 0
+    #: Whether a rollout that a budget ended, without submit, scores 0 ungraded. None: in terminate mode.
+    require_submit: bool | None = None
     #: Whether a turn that parses but differs from its canonical text is rejected, not only recorded.
     strict_roundtrip: bool = False
     #: Whether requests ask for log-probs, the source of the raw text that the format check reads.
@@ -62,6 +66,8 @@ class HarnessConfig:
         for name in ("strict_roundtrip", "logprobs"):
             if type(getattr(self, name)) is not bool:
                 raise ValueError("harness %s must be a boolean" % name)
+        if self.require_submit is not None and type(self.require_submit) is not bool:
+            raise ValueError("harness require_submit must be a boolean")
         if self.cwd is not None and (not isinstance(self.cwd, str) or not self.cwd.startswith("/")):
             raise ValueError("harness cwd must be an absolute path")
         if not isinstance(self.parameters, dict) or set(self.parameters) - PARAMETERS:

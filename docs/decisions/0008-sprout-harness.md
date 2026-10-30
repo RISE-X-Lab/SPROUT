@@ -29,8 +29,9 @@ reproduces the paper's Table 6, and the paper's stop and reward contract (Table 
    preferences of Appendix I.3 (non-empty reasoning, one call per turn, no prose between the
    reasoning block and the call).
 3. Evaluation mode gives feedback and continues; training mode ends the rollout (Table 5).
-4. The RL driver gives an invalid trajectory reward -1 without grading it, and grades every
-   budget stop as usual (Table 18). Miles trains on non-search GRPO groups with those rewards.
+4. The RL driver gives an invalid trajectory reward -1 without grading it, and in training mode an
+   unfinished one, which a budget ended before `submit`, 0 without grading it (Tables 5 and 18).
+   Miles trains on non-search GRPO groups with those rewards.
 5. An overfit run on ~150 tasks whose training reward rises over many steps.
 
 ## Non-goals (user: no review and no RAFO for now)
@@ -128,7 +129,8 @@ check is structural, and whitespace-only mismatches are measured first.
 | `response_truncated` | `finish_reason: length` | -1, not graded | feedback, continue |
 | `repetition` | the same call with the same result `repetition_limit` more times since the last successful edit (off by default, as in the paper's main run) | -1, not graded | a note, continue |
 | `submitted` | `submit` | graded 0/1 | same |
-| `max_turns_reached`, `timeout`, `context_exhausted`, `max_total_tokens` | budgets (the last: prompt plus completion tokens of the latest request past `max_total_tokens`, default 131072) | graded | same |
+| `max_turns_reached`, `timeout`, `max_total_tokens` | budgets (the last: prompt plus completion tokens of the latest request past `max_total_tokens`, default 131072) | 0, not graded: only a submission scores (set `require_submit: false` to grade it) | graded |
+| `context_exhausted` | the server's context window | graded | graded |
 
 A rejected turn in evaluation mode keeps the assistant message (with its raw text) and a user-role
 feedback that quotes the error; it is a message step but not a branch point, as in mini.

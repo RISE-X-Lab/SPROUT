@@ -553,8 +553,9 @@ class MessageRequest:
 
 
 def _reward(verdict: dict[str, Any] | None) -> float:
-    """The reward of a sample with ``verdict``: 0 or 1, ``INVALID_REWARD`` for an invalid attempt, and
-    the 0.0 that the wire needs for a missing one (``zero_reason`` marks it)."""
+    """The reward of a sample with ``verdict``: 0 or 1 (0 for an unfinished attempt that its run required
+    to submit), ``INVALID_REWARD`` for an invalid attempt, and the 0.0 that the wire needs for a missing
+    one (``zero_reason`` marks it)."""
     if verdict is None:
         return 0.0
     if verdict.get("invalid"):

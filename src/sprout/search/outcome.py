@@ -23,7 +23,12 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from sprout.contract.messages import INVALID_STOP_REASONS, clean_messages, is_truncated_result
+from sprout.contract.messages import (
+    INVALID_STOP_REASONS,
+    LIMIT_STOP_REASONS,
+    clean_messages,
+    is_truncated_result,
+)
 
 #: What the search samples after roots with each label.
 SHAPES = {
@@ -126,16 +131,36 @@ def invalid_reason(sample: dict[str, Any]) -> str | None:
     return reason if actor.get("state") == "succeeded" and reason in INVALID_STOP_REASONS else None
 
 
+def unfinished_reason(sample: dict[str, Any]) -> str | None:
+    """The budget stop of a harness actor that never submitted, when its run requires a submission.
+
+    Arctic-SWE's training contract rewards a submission only (Tables 5 and 18): such an attempt keeps the
+    0 of an unfinished one, ungraded. Terminate mode requires one unless ``require_submit`` is false. It
+    reads the actor's submission, which only the search's own documents keep: views drop it."""
+    actor = sample.get("actor") or {}
+    reason = (actor.get("result") or {}).get("stop_reason")
+    if actor.get("state") != "succeeded" or reason not in LIMIT_STOP_REASONS:
+        return None
+    spec = (actor.get("submission") or {}).get("spec") or {}
+    harness = (spec.get("extra") or {}).get("harness") or {}
+    required = harness.get("require_submit")
+    if required is None:
+        required = harness.get("on_invalid") == "terminate"
+    return reason if spec.get("agent") == "harness" and required is True else None
+
+
 def grade_verdict(sample: dict[str, Any]) -> dict[str, Any] | None:
     """The sample's grade result when it is a verdict, and None otherwise.
 
     A verdict is the result of a grade that succeeded and says whether the task resolved (a bool
-    ``resolved``). An invalid attempt has the verdict ``{"resolved": False, "invalid": <stop reason>}``.
-    """
+    ``resolved``). An invalid attempt's is ``{"resolved": False, "invalid": <stop reason>}``, and that of
+    an unfinished one whose grade the search skipped ``{"resolved": False, "unfinished": <stop reason>}``."""
     invalid = invalid_reason(sample)
     if invalid is not None:
         return {"resolved": False, "invalid": invalid}
     grade = sample.get("grade") or {}
+    if grade.get("unfinished"):
+        return {"resolved": False, "unfinished": grade["unfinished"]}
     result = grade.get("result") or {}
     if grade.get("state") != "succeeded" or type(result.get("resolved")) is not bool:
         return None

@@ -482,6 +482,64 @@ def test_an_invalid_attempt_is_not_graded_and_returns_with_reward_minus_one(
     assert trajectory["metadata"]["zero_reason"] is None
 
 
+def harness_adapter_config(**harness: object) -> dict[str, object]:
+    """A ``miles`` section that runs the harness with the options ``harness``."""
+    return adapter_config(
+        run_defaults={"slot": "sprout-harness", "agent": "harness", "extra": {"harness": dict(harness)}}
+    )
+
+
+@pytest.mark.parametrize("stop_reason", ["max_turns_reached", "max_total_tokens", "timeout"])
+def test_a_training_harness_rollout_that_a_budget_ended_scores_zero_without_a_grade(
+    fake_run_store, tmp_path, stop_reason
+):
+    """Arctic-SWE's training contract rewards a submission only: an unfinished attempt keeps its 0."""
+    adapter = miles_adapter(
+        fake_run_store, tmp_path / "ledger.sqlite3", harness_adapter_config(on_invalid="terminate")
+    )
+    adapter.submit(miles_request())
+    adapter.driver.tick()
+    finish_open(
+        fake_run_store,
+        "rollout",
+        [succeeded(exported(final_snapshot_id="snap-cut", status="truncated", stop_reason=stop_reason))],
+    )
+    adapter.driver.tick()
+
+    (trajectory,) = adapter.get("rollout-1")["trajectories"]
+
+    assert fake_run_store.ids("grade") == []
+    assert (trajectory["status"], trajectory["stop_reason"], trajectory["reward"]) == (
+        "truncated",
+        stop_reason,
+        0.0,
+    )
+    assert trajectory["metadata"]["zero_reason"] is None
+
+
+@pytest.mark.parametrize(
+    "harness",
+    [{"on_invalid": "feedback"}, {"on_invalid": "terminate", "require_submit": False}],
+    ids=["evaluation mode", "submission not required"],
+)
+def test_a_harness_rollout_that_a_budget_ended_is_graded_unless_a_submission_is_required(
+    fake_run_store, tmp_path, harness
+):
+    adapter = miles_adapter(fake_run_store, tmp_path / "ledger.sqlite3", harness_adapter_config(**harness))
+    adapter.submit(miles_request())
+    run_samples(
+        adapter,
+        fake_run_store,
+        actors=[succeeded(exported(final_snapshot_id="snap-cut", status="truncated", stop_reason="timeout"))],
+        grades=[succeeded(verdict(True))],
+    )
+
+    (trajectory,) = adapter.get("rollout-1")["trajectories"]
+
+    assert fake_run_store.ids("grade") == ["job-1"]
+    assert (trajectory["stop_reason"], trajectory["reward"]) == ("timeout", 1.0)
+
+
 def test_a_group_past_its_execution_deadline_is_still_graded(fake_run_store, tmp_path, clock):
     """The ``finalization_timeout_seconds`` after the execution deadline are for the snapshot and grade."""
     adapter = miles_adapter(fake_run_store, tmp_path / "ledger.sqlite3")

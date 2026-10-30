@@ -21,7 +21,7 @@ import httpx
 
 from sprout.search.client import RunStoreClient
 from sprout.search.group import Submitter
-from sprout.search.outcome import invalid_reason
+from sprout.search.outcome import invalid_reason, unfinished_reason
 from sprout.search.rerun import give_up, lost, run_again
 from sprout.search.rounds import REVIEW_SLOT, Search
 from sprout.search.stages import DONE, Stages
@@ -150,6 +150,13 @@ class Coordinator:
                         state="skipped", invalid=True, error="Invalid attempt: %s" % invalid_reason(sample)
                     )
                     continue
+                unfinished = unfinished_reason(sample) if phase == "grade" else None
+                if unfinished and not stage["job_id"] and stage["state"] not in DONE:
+                    # So is an unfinished one's, when its run requires a submission: it keeps 0.
+                    stage.update(
+                        state="skipped", unfinished=unfinished, error="Unfinished attempt: %s" % unfinished
+                    )
+                    continue
                 try:
                     self._stages.advance(document, sample, phase)
                 except (httpx.HTTPError, ValueError, KeyError) as error:
@@ -188,7 +195,10 @@ class Coordinator:
                 if self._stages.cancelled(document)
                 else "failed"
                 if failed
-                or any(stage["state"] != "succeeded" and not stage.get("invalid") for stage in stages)
+                or any(
+                    stage["state"] != "succeeded" and not stage.get("invalid") and not stage.get("unfinished")
+                    for stage in stages
+                )
                 else "completed"
             )
         else:
