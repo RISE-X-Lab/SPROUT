@@ -25,6 +25,7 @@ def test_the_example_has_the_profiles_and_the_default_sections_that_the_tests_be
 
     assert {name: sorted(profile) for name, profile in profiles.items()} == {
         "mini": ["python", "run_defaults", "worker_env"],
+        "harness": ["python", "run_defaults", "worker_env"],
         "grade": ["grade_defaults", "python"],
         "mini-microvm": ["python", "run_defaults", "snapshot_repository", "worker_env"],
         "grade-microvm": ["grade_defaults", "python"],
@@ -36,6 +37,7 @@ def test_the_example_has_the_profiles_and_the_default_sections_that_the_tests_be
     "profile, section, spec",
     [
         ("mini", "run_defaults", RunSpec),
+        ("harness", "run_defaults", RunSpec),
         ("mini-microvm", "run_defaults", RunSpec),
         ("grade", "grade_defaults", GradeSpec),
         ("grade-microvm", "grade_defaults", GradeSpec),
@@ -51,6 +53,7 @@ def test_each_default_of_an_example_profile_is_a_field_of_its_job_spec(profile, 
     "profile, section, backend",
     [
         ("mini", "run_defaults", "podman"),
+        ("harness", "run_defaults", "podman"),
         ("mini-microvm", "run_defaults", "microvm"),
         ("grade", "grade_defaults", "podman"),
         ("grade-microvm", "grade_defaults", "microvm"),
@@ -67,3 +70,9 @@ def test_each_sandbox_profile_of_the_example_runs_on_an_owned_backend_with_the_r
         backend,
         "/path/to/sprout/runtime/sprout-runtime",
     )
+
+
+def test_the_harness_profile_runs_the_harness_agent_in_its_slot():
+    defaults = read_config(EXAMPLE)["profiles"]["harness"]["run_defaults"]
+
+    assert (defaults["slot"], defaults["agent"]) == ("sprout-harness", "harness")

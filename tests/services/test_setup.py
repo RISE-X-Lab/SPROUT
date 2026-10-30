@@ -27,7 +27,7 @@ NO_MODEL = ["--model-endpoint", "", "--no-start"]
 #: The value of the key variable. No output may hold it.
 KEY = "secret-value-123"
 #: The profiles whose worker_env names the model key.
-KEY_PROFILES = ["mini", "mini-microvm", "review"]
+KEY_PROFILES = ["mini", "harness", "mini-microvm", "review"]
 
 
 @pytest.fixture(autouse=True)
@@ -202,9 +202,10 @@ def test_the_model_step_references_the_key_in_the_actor_and_review_profiles_and_
             "Model name [qwen3.8-27b]: luna",
             "Environment variable that holds the key [SPROUT_MODEL_API_KEY]: LUNA_KEY",
             "      LUNA_KEY is set in this shell.",
-            'Add {"LUNA_KEY": {"$env": "LUNA_KEY"}} to the worker_env of mini, mini-microvm, review? [Y/n] y',
+            'Add {"LUNA_KEY": {"$env": "LUNA_KEY"}} to the worker_env of '
+            "mini, harness, mini-microvm, review? [Y/n] y",
             "SPROUT_MODEL_API_KEY is not set in this shell. Remove its reference from the worker_env of "
-            "mini, mini-microvm, review? [y/N] y",
+            "harness, mini, mini-microvm, review? [y/N] y",
         ],
         {name: {"LUNA_KEY": {"$env": "LUNA_KEY"}} for name in KEY_PROFILES},
         False,

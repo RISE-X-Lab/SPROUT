@@ -136,6 +136,7 @@ def test_read_config_refuses_a_config_that_a_worker_cannot_use(tmp_path, body, e
 def test_the_example_config_is_a_valid_config():
     assert set(read_config(EXAMPLE_CONFIG)["profiles"]) == {
         "mini",
+        "harness",
         "grade",
         "mini-microvm",
         "grade-microvm",

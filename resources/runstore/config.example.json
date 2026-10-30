@@ -25,6 +25,31 @@
         }
       }
     },
+    "harness": {
+      "python": "/path/to/sprout/.venv/bin/python",
+      "run_defaults": {
+        "slot": "sprout-harness",
+        "runtime_bin": "/path/to/sprout/runtime/sprout-runtime",
+        "sandbox_resources": {
+          "cpu": 2,
+          "memory_mb": 12288
+        },
+        "backend": {
+          "backend": "podman",
+          "podman": {
+            "store": "/path/to/sprout-btrfs",
+            "runtime_bin": "/path/to/sprout/runtime/sprout-runtime",
+            "allow_internet": false
+          }
+        },
+        "agent": "harness"
+      },
+      "worker_env": {
+        "SPROUT_MODEL_API_KEY": {
+          "$env": "SPROUT_MODEL_API_KEY"
+        }
+      }
+    },
     "grade": {
       "python": "/path/to/sprout/.venv/bin/python",
       "grade_defaults": {

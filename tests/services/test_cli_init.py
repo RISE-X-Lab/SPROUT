@@ -128,6 +128,7 @@ def test_init_names_the_store_of_sprout_podman_store_in_each_podman_section(path
     config = json.loads((paths.config / "runstore.json").read_text())
     assert podman_stores(config) == {
         "mini.run_defaults": "/path/to/the-store-of-this-host",
+        "harness.run_defaults": "/path/to/the-store-of-this-host",
         "grade.grade_defaults": "/path/to/the-store-of-this-host",
     }
 
@@ -140,4 +141,8 @@ def test_without_sprout_podman_store_init_names_sprout_btrfs_in_the_home_directo
 
     config = json.loads((paths.config / "runstore.json").read_text())
     store = str(Path(os.environ["HOME"]) / "sprout-btrfs")
-    assert podman_stores(config) == {"mini.run_defaults": store, "grade.grade_defaults": store}
+    assert podman_stores(config) == {
+        "mini.run_defaults": store,
+        "harness.run_defaults": store,
+        "grade.grade_defaults": store,
+    }

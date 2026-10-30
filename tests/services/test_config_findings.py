@@ -59,7 +59,7 @@ def test_a_worker_env_variable_unset_in_this_shell_warns_with_its_name_and_its_p
     assert summary(findings) == [
         (
             "warn",
-            "SPROUT_MODEL_API_KEY is not set in this shell, and the worker_env of profiles mini, "
+            "SPROUT_MODEL_API_KEY is not set in this shell, and the worker_env of profiles harness, mini, "
             "mini-microvm, review names it: each job of these profiles fails with KeyError unless the "
             "shell of the worker sets it",
             "export SPROUT_MODEL_API_KEY in the shell that starts the worker, or remove the reference "

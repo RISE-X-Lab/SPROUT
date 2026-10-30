@@ -62,7 +62,7 @@ The `agent` of a rollout says what runs in its sandbox, through `sprout.worker.r
 - `harness`: the model, in the slot `sprout-harness`, Sprout's own harness
   ([ADR-0008](decisions/0008-sprout-harness.md)). `extra.harness` sets its options, such as
   `on_invalid` (`feedback` or `terminate`), `toolset` (`default` or `full`), `max_total_tokens` and
-  `require_submit`.
+  `require_submit`. The example config's `harness` profile runs it on podman.
 - `oracle`: the `solution/solve.sh` of the Harbor task `harbor_task`, as Harbor's `oracle` runs it
 - `nop`: nothing
 

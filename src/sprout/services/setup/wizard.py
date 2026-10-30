@@ -38,7 +38,7 @@ from sprout.services.state import Paths
 DEFAULT_MODEL = "qwen3.8-27b"
 DEFAULT_KEY_ENV = "SPROUT_MODEL_API_KEY"
 #: The profiles of the template whose jobs call the model: the actor's rollouts and the reviews.
-KEY_PROFILES = ("mini", "mini-microvm", "review")
+KEY_PROFILES = ("mini", "harness", "mini-microvm", "review")
 #: The services that the last step starts, and the dependencies that ``up`` starts with them.
 START = ("runstore-api", "runstore-worker")
 #: The output budget of the test request. Arbitrary: enough for a short answer, and cheap.
