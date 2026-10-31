@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <a href="#license"><img src="https://img.shields.io/badge/License-MIT-4BB85E.svg?style=flat-square&amp;labelColor=1F4A33" alt="License: MIT"></a>
+  <a href="#license"><img src="https://img.shields.io/badge/License-Apache_2.0-4BB85E.svg?style=flat-square&amp;labelColor=1F4A33" alt="License: Apache 2.0"></a>
   <img src="https://img.shields.io/badge/python-3.12%2B-4BB85E.svg?style=flat-square&amp;labelColor=1F4A33" alt="Python 3.12 or later">
   <img src="https://img.shields.io/badge/go-1.25%2B-4BB85E.svg?style=flat-square&amp;labelColor=1F4A33" alt="Go 1.25 or later">
   <img src="https://img.shields.io/badge/sandbox-podman%20%7C%20Firecracker-4BB85E.svg?style=flat-square&amp;labelColor=1F4A33" alt="Sandbox: rootless podman or Firecracker microVM">
@@ -175,4 +175,5 @@ rootless [podman](https://podman.io) over [btrfs](https://btrfs.readthedocs.io) 
 
 ## License
 
-[MIT](LICENSE), for everything in this repository including the runtime and the Python SDK.
+[Apache License 2.0](LICENSE), for everything in this repository including the runtime and the
+Python SDK. [NOTICE](NOTICE) holds the copyright notice.
