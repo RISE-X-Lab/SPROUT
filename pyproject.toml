@@ -7,7 +7,7 @@ name = "sprout"
 version = "0.2.0"
 description = "Checkpointed mini-swe-agent rollouts that can be resumed or branched from any step"
 readme = "README.md"
-license = "MIT"
+license = "Apache-2.0"
 requires-python = ">=3.12"
 dependencies = [
     "httpx>=0.27,<1",
