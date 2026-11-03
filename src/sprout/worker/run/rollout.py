@@ -121,6 +121,18 @@ class RolloutControls(ToolInterceptor):
         except ValueError as error:
             return Reject(str(error))
 
+    def status(self) -> dict[str, int | float | None]:
+        """The enforced limits and measured calls of this run; tool calls have no count limit."""
+        with self.lock:
+            return {
+                "model_calls": self.model_calls,
+                "max_turns": self.max_turns,
+                "remaining_turns": max(0, self.max_turns - self.model_calls),
+                "runtime_tool_calls": self.tool_calls,
+                "max_tool_calls": None,
+                "remaining_seconds": max(0.0, self.deadline - time.time()),
+            }
+
     def finish(self) -> None:
         """Disarm the deadline, and journal the call counts as ``rollout.usage``."""
         if self.timer:

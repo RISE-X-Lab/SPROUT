@@ -15,8 +15,8 @@ class RunSpec:
     """Everything one run needs. ``python -m sprout.worker run`` sets the fields that a person types."""
 
     prompt: str
-    #: The harness that a ``mini`` agent runs in. ``mini-swe-agent`` is the only one. The runner
-    #: refuses any other name before it makes a sandbox.
+    #: The model agent implementation: ``mini-swe-agent`` or ``opencollab-base``.
+    #: The runner refuses other names before it makes a sandbox.
     slot: str = "mini-swe-agent"
     #: What the run does in its sandbox: ``mini`` runs the model in ``slot``,
     #: ``oracle`` runs the ``solution/solve.sh`` of ``harbor_task``, ``nop`` does nothing.

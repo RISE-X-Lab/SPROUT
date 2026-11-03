@@ -13,7 +13,7 @@ import time
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any, TypedDict
 
-from sprout.contract.mini_history import load_prefix
+from sprout.contract.agents.history import load_prefix
 from sprout.worker.agents.mini_swe.tools import DEFAULT_COMMAND_TIMEOUT_S
 from sprout.worker.run.control import RunControl
 from sprout.worker.run.journal import JournalWriter
@@ -60,10 +60,16 @@ def resolve_workspace(
     inherited: dict[str, Any] | None = None
     if extra.get("native_prefix"):
         entries = load_prefix(extra["native_prefix"])
-        metadata = next(entry for entry in entries if entry.get("type") == "mini.session")
+        metadata = next(entry for entry in entries if entry.get("type") in {"mini.session", "oc.session"})
         inherited = metadata.get("workspace")
     if inherited and configured not in (None, inherited["cwd"]):
-        raise ValueError("mini branch working directory differs from its inherited workspace")
+        if metadata.get("type") != "oc.session":
+            raise ValueError("mini branch working directory differs from its inherited workspace")
+        alias = session.execute(
+            "shell", {"command": "pwd -P", "working_dir": configured, "timeout": 10}, timeout=20
+        )
+        if _stdout(alias, "inherited working-directory alias") != inherited["cwd"]:
+            raise ValueError("OpenCollab branch working directory differs from its inherited workspace")
     requested = inherited["cwd"] if inherited else configured
     if requested is not None and (not isinstance(requested, str) or not requested.startswith("/")):
         raise ValueError("mini working directory must be an absolute path or omitted for discovery")

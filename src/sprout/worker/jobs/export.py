@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from sprout.contract.agents.history import training_messages
 from sprout.contract.messages import (
     LIMIT_STOP_REASONS,
     branch_origin,
@@ -31,7 +32,7 @@ def export_messages(
     Raises ValueError without a session id, for a slot other than ``mini-swe-agent``, or
     unless exactly one history exists. ``allow_incomplete_tail`` drops an unfinished last record.
     """
-    if not isinstance(session_id, str) or not session_id or slot != "mini-swe-agent":
+    if not isinstance(session_id, str) or not session_id or slot not in {"mini-swe-agent", "opencollab-base"}:
         raise ValueError("Missing or unsupported native session identity")
     files = list((directory / "native-home").glob(f"**/*{session_id}.jsonl"))
     if len(files) != 1:
@@ -42,7 +43,6 @@ def export_messages(
             raise ValueError("Native history has an incomplete final record")
         data = data[: data.rfind(b"\n") + 1]
     entries = [json.loads(line) for line in data.splitlines() if line.strip()]
-    from sprout.contract.mini_history import training_messages
 
     # mini writes its formatted observation before it closes the turn. The runtime's own
     # presentation in ``tool.finished`` differs, and the export does not use it.
@@ -60,7 +60,7 @@ def provenance(
     ``prefix_messages`` counts the leading messages restored from ``recovery``. ``inserted_messages``
     indexes the assistant messages that a reviewer wrote, in this job or in an ancestor that it continues.
     """
-    from sprout.contract.mini_history import read_entries, read_prefix, training_messages
+    from sprout.contract.mini_history import read_entries, read_prefix
 
     files = list((directory / "native-home").glob(f"**/*{session_id}.jsonl"))
     if len(files) != 1:
@@ -72,11 +72,31 @@ def provenance(
         and (entry["message"].get("extra") or {}).get("source") == "reviewer"
         for call in entry["message"].get("tool_calls") or []
     }
+    oc_inserted = set()
+    records = read_entries(files[0].read_bytes())
+    if records and records[0].get("type") == "oc.session":
+        events = journal_events(directory / "trajectory.jsonl")
+        sampled = [
+            choice["message"]
+            for e in events
+            if e.get("type") == "raw.opencollab-base"
+            for choice in e.get("response", {}).get("choices", [])
+        ]
+        for index, message in enumerate(messages):
+            if message["role"] == "assistant" and not any(
+                (message.get("content") or "") == (candidate.get("content") or "")
+                and (message.get("tool_calls") or []) == (candidate.get("tool_calls") or [])
+                for candidate in sampled
+            ):
+                oc_inserted.add(index)
     inserted = [
         index
         for index, message in enumerate(messages)
-        if message["role"] == "assistant"
-        and {call["id"] for call in message.get("tool_calls") or []} & inserted_calls
+        if index in oc_inserted
+        or (
+            message["role"] == "assistant"
+            and {call["id"] for call in message.get("tool_calls") or []} & inserted_calls
+        )
     ]
     restored = 0
     if recovery:
@@ -98,7 +118,7 @@ def salvage_interrupted(
     The attempt started from the point ``recovery``, if any. The salvaged result is ``truncated``, with
     ``stop_reason: "interrupted"`` and the failure under ``interrupted``. None if ``point`` cannot be rebuilt.
     """
-    from sprout.contract.mini_history import read_entries, read_prefix, training_messages
+    from sprout.contract.mini_history import read_entries, read_prefix
 
     try:
         events = journal_events(directory / "trajectory.jsonl")
@@ -186,7 +206,7 @@ def complete_message_result(
         if slot == "mini-swe-agent" and is_truncated_result(result) and not unsafe:
             # After a timeout between two actions of one response, half the response does not
             # match the disk. Fall back to the last pair of messages and snapshot that is proven.
-            from sprout.contract.mini_history import read_entries, read_prefix, training_messages
+            from sprout.contract.mini_history import read_entries, read_prefix
             from sprout.worker.agents.mini_swe.history import index_mini
 
             files = list((directory / "native-home").glob(f"**/*{session_id}.jsonl"))

@@ -18,6 +18,7 @@ dependencies = [
 [project.optional-dependencies]
 # The agent and the trial runner the evaluations pin.
 mini = ["mini-swe-agent==2.4.6"]
+opencollab = ["opencollab @ git+https://github.com/RISE-X-Lab/OpenCollab.git@c69a2076f4b54cc97891df432bf81273e3c5ebf1"]
 harbor = ["harbor==0.22.0"]
 # The Run Store queue and the RL driver.
 runstore = ["psycopg2-binary>=2.9,<3", "fastapi>=0.110,<1", "uvicorn>=0.29,<1"]
@@ -28,6 +29,9 @@ docs = ["fonttools>=4", "uharfbuzz>=0.39"]
 
 [project.urls]
 Homepage = "https://github.com/dreamyang-liu/sprout"
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/sprout", "src/sprout_sandbox"]
@@ -59,6 +63,10 @@ warn_unreachable = true
 # Harbor ships no type information; its imports are Any.
 [[tool.mypy.overrides]]
 module = ["harbor.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["opencollab.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

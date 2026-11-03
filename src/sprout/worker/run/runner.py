@@ -147,11 +147,15 @@ class Runner:
                 detach = self._follow_reboards(spec, provisioned, claim)
                 _emit_sandbox_created(spec=spec, journal=journal, sandbox_id=provisioned.sandbox_id)
                 if spec.agent == "mini":
-                    from sprout.worker.agents.mini_swe.sandbox import resolve_workspace
+                    if spec.slot == "opencollab-base":
+                        from sprout.worker.agents.opencollab.workspace import resolve_workspace
+                    else:
+                        from sprout.worker.agents.mini_swe.sandbox import resolve_workspace
 
                     extra = resolve_workspace(provisioned.session, extra, journal)
                 tools = self._tool_access(spec, journal, provisioned, control, rollout_controls)
                 task = _task_spec(spec=spec, extra=extra, control=control, session=provisioned.session)
+                task.extra["rollout_controls"] = rollout_controls
                 gateway = self._wire_gateway(spec, journal, task, run_id, controls=rollout_controls)
                 result = slot.run(task, journal, tools)
                 error = _stop_error(control=control, result=result)
@@ -475,9 +479,13 @@ def _image_reference(spec: RunSpec) -> str | None:
 
 def _agent_slot(spec: RunSpec) -> AgentSlot:
     """The slot that runs ``spec.agent``. Raises ValueError for a slot or an agent that no slot runs."""
-    if spec.slot != "mini-swe-agent":
+    if spec.slot not in {"mini-swe-agent", "opencollab-base"}:
         raise ValueError("unknown slot %r; the only slot is mini-swe-agent" % spec.slot)
     if spec.agent == "mini":
+        if spec.slot == "opencollab-base":
+            from sprout.worker.agents.opencollab.slot import OpenCollabSlot
+
+            return OpenCollabSlot()
         return MiniSweSlot()
     if spec.agent == "nop":
         return NopSlot()

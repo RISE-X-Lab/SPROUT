@@ -10,8 +10,8 @@ import secrets
 from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
+from sprout.contract.agents.history import load_prefix
 from sprout.contract.continuation import Continuation, prepare
-from sprout.contract.mini_history import load_prefix
 from sprout.runstore.config import merge
 from sprout.runstore.index import Index
 from sprout.runstore.specs import (

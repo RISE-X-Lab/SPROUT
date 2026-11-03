@@ -18,8 +18,8 @@ from functools import partial
 from pathlib import Path
 from typing import Any, Protocol
 
-from sprout.contract.mini_history import load_prefix, training_messages, validate_assistant_turn
-from sprout.worker.agents.mini_swe.history import actor_tools_at, conversation_restore, reference_at
+from sprout.contract.agents.history import load_prefix, training_messages, validate_assistant_turn
+from sprout.worker.agents.history import actor_tools_at, conversation_restore, reference_at
 from sprout.worker.checkpoint.rollback import Checkpoint, load_checkpoints
 from sprout.worker.jobs.review import structured_review
 from sprout.worker.jobs.review.branch_plan import (
@@ -83,7 +83,7 @@ MAX_ROLLOUTS = 128
 def require_mini_parent(journal: Path) -> None:
     """Raises ValueError unless ``journal`` has runs, and each of them is a mini-swe-agent run."""
     slots = {e["slot"] for e in read_journal(journal) if e.get("type") == "run.started" and e.get("slot")}
-    if slots != {"mini-swe-agent"}:
+    if slots not in ({"mini-swe-agent"}, {"opencollab-base"}):
         raise ValueError("This branch mode accepts only mini-swe-agent parent trajectories")
 
 
@@ -110,15 +110,19 @@ def reviewer_context(journal: Path, checkpoints: Mapping[int, Checkpoint]) -> di
     }
     count, cuts = 0, {}
     for entry in prefix:
-        if entry["type"] == "mini.message" and entry["message"].get("role") != "exit":
+        if entry["type"] in {"mini.message", "oc.message"} and entry["message"].get("role") != "exit":
             count += 1
-        elif entry["type"] == "mini.turn":
+        elif entry["type"] == "oc.context":
+            count = len(entry["messages"])
+        elif entry["type"] in {"mini.turn", "oc.turn"}:
             step = closed.get(entry["turn_id"])
             if step in checkpoints:
                 cuts[str(step)] = count
     if set(cuts) != {str(step) for step in checkpoints}:
         raise ValueError("Reviewer mini history does not cover every eligible checkpoint")
-    workspace = next((e.get("workspace") for e in prefix if e["type"] == "mini.session"), None)
+    workspace = next(
+        (e.get("workspace") for e in prefix if e["type"] in {"mini.session", "oc.session"}), None
+    )
     return {
         "messages": training_messages(prefix),
         "prefix_message_counts": cuts,
@@ -330,13 +334,17 @@ def prepare_branches(
             try:
                 assistant_turn = validate_assistant_turn(
                     proposed,
-                    history=[e["message"] for e in native if e["type"] == "mini.message"],
+                    history=training_messages(native),
                     tools=tools,
+                    slot="opencollab-base" if native[0].get("type") == "oc.session" else "mini-swe-agent",
                 )
             except ValueError as error:
                 raise ReviewerPlanError(f"branch {index} ({base_name}@{step}): {error}") from error
             for call_no, call in enumerate(assistant_turn["tool_calls"], 1):
-                if SUBMISSION_MARKER in call["function"]["arguments"]:
+                if (
+                    call["function"]["name"] == "submit_patch"
+                    or SUBMISSION_MARKER in call["function"]["arguments"]
+                ):
                     raise ReviewerPlanError(
                         f"branch {index} ({base_name}@{step}): a reviewer-authored turn never submits; "
                         f"command {call_no} contains {SUBMISSION_MARKER}"
@@ -610,7 +618,12 @@ def review(
     result: tuple[dict[str, Any], list[BranchChoice]] | None = review_with_feedback(
         _reviewer_request(transport, model=model, schema=schema),
         fit(),
-        _reply_parser(guidance_mode, round_no=round_no, structured=schema is not None),
+        _reply_parser(
+            guidance_mode,
+            round_no=round_no,
+            structured=schema is not None,
+            tools_by_base={row["name"]: row.get("native_history", {}).get("tools", []) for row in reports},
+        ),
         validate,
         max_attempts=reviewer_max_attempts,
         record=record,
@@ -633,7 +646,7 @@ def _eligible_points(
     eligible: Mapping[str, Collection[int]] | None,
 ) -> dict[str, dict[int, Checkpoint]]:
     """Each attempt's branch points up to the last step of its report, narrowed by ``eligible``."""
-    from sprout.worker.agents.mini_swe.history import available_branch_points
+    from sprout.worker.agents.history import available_branch_points
 
     available = {a.name: available_branch_points(a.outcome.journal_path) for a in attempts}
     return {
@@ -795,13 +808,22 @@ def _prompt_fitter(
     return fit, reduce
 
 
-def _reply_parser(guidance_mode: str, *, round_no: int, structured: bool) -> Callable[[str], Any]:
+def _reply_parser(
+    guidance_mode: str,
+    *,
+    round_no: int,
+    structured: bool,
+    tools_by_base: dict[str, list[dict[str, Any]]] | None = None,
+) -> Callable[[str], Any]:
     """The parser that reads the branch plan from a reviewer reply in ``guidance_mode``."""
     parsers: dict[str, Callable[[str], Any]] = {
         "user-hint": extract_json,
         "none": extract_branch_plan,
         "assistant-turn": partial(
-            structured_review.extract_assistant_turn_plan, round_no=round_no, json_only=structured
+            structured_review.extract_assistant_turn_plan,
+            round_no=round_no,
+            json_only=structured,
+            tools_by_base=tools_by_base,
         ),
     }
     return parsers[guidance_mode]

@@ -32,10 +32,10 @@ from functools import partial
 from pathlib import Path
 from typing import Any
 
+from sprout.contract.agents.history import training_messages
 from sprout.contract.messages import clean_messages
-from sprout.contract.mini_history import training_messages
 from sprout.runstore.specs import ReviewSpec
-from sprout.worker.agents.mini_swe.history import available_branch_points
+from sprout.worker.agents.history import available_branch_points
 from sprout.worker.jobs.review.branching import (
     Attempt,
     BranchChoice,

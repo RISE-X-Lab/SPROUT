@@ -132,6 +132,8 @@ worker of step 3. The worker grades
 [SWE-rebench V2](https://github.com/SWE-rebench/SWE-rebench-V2) tasks with a port of its official
 harness.
 
+OpenCollab Single2 is an optional agent slot; see [OpenCollab setup and RL integration](docs/OPENCOLLAB.md).
+
 ## Learn more
 
 | Guide | What it covers |

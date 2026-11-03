@@ -125,7 +125,9 @@ def _validate(schema: dict[str, Any], value: object, where: str) -> None:
         ) from error
 
 
-def _assistant_turn(branch: dict[str, Any], *, round_no: int, index: int) -> dict[str, Any]:
+def _assistant_turn(
+    branch: dict[str, Any], *, round_no: int, index: int, command_tool: str = "bash"
+) -> dict[str, Any]:
     """The wire message for a flat branch: its text, and one bash call per command."""
     calls = []
     for call, command in enumerate(branch["commands"], 1):
@@ -138,7 +140,7 @@ def _assistant_turn(branch: dict[str, Any], *, round_no: int, index: int) -> dic
             {
                 "id": CALL_ID.format(round_no=round_no, branch=index + 1, call=call),
                 "type": "function",
-                "function": {"name": "bash", "arguments": {"command": command}},
+                "function": {"name": command_tool, "arguments": {"command": command}},
             }
         )
     if not branch["content"].strip():
@@ -146,7 +148,13 @@ def _assistant_turn(branch: dict[str, Any], *, round_no: int, index: int) -> dic
     return {"role": "assistant", "content": branch["content"], "tool_calls": calls}
 
 
-def extract_assistant_turn_plan(text: str, *, round_no: int = 0, json_only: bool = False) -> dict[str, Any]:
+def extract_assistant_turn_plan(
+    text: str,
+    *,
+    round_no: int = 0,
+    json_only: bool = False,
+    tools_by_base: dict[str, list[dict[str, Any]]] | None = None,
+) -> dict[str, Any]:
     """The plan in ``text`` with each branch in the nested form, and each call's arguments as a JSON string.
 
     A branch gives ``content`` and ``commands``, or a whole ``assistant_turn``. The calls built from
@@ -157,6 +165,9 @@ def extract_assistant_turn_plan(text: str, *, round_no: int = 0, json_only: bool
     result: dict[str, Any] = deepcopy(plan)
     for index, branch in enumerate(result["branches"]):
         where = "branches.%d" % index
+        tools = (tools_by_base or {}).get(branch.get("base"), [])
+        names = {tool["function"]["name"] for tool in tools}
+        command_tool = "run_command" if "run_command" in names else "bash"
         flat = {"content", "commands"} & set(branch)
         if flat and "assistant_turn" in branch:
             raise ValueError(
@@ -165,12 +176,19 @@ def extract_assistant_turn_plan(text: str, *, round_no: int = 0, json_only: bool
             )
         if flat:
             _validate(FLAT_BRANCH, branch, where)
-            turn = _assistant_turn(branch, round_no=round_no, index=index)
+            turn = _assistant_turn(branch, round_no=round_no, index=index, command_tool=command_tool)
             for key in ("content", "commands"):
                 del branch[key]
             branch["assistant_turn"] = turn
         elif "assistant_turn" in branch:
-            _validate(NESTED_BRANCH, branch, where)
+            nested = deepcopy(NESTED_BRANCH)
+            if names:
+                function = nested["properties"]["assistant_turn"]["properties"]["tool_calls"]["items"][
+                    "properties"
+                ]["function"]["properties"]
+                function["name"]["enum"] = sorted(names)
+                function["arguments"] = {"type": "object"}
+            _validate(nested, branch, where)
         else:
             raise ValueError("Structured branch-plan field %s: a branch needs content and commands" % where)
         for number, call in enumerate(branch["assistant_turn"]["tool_calls"]):
